@@ -1,6 +1,6 @@
 # consts-AFK
 
-RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full bar lights up](screenshots/inventory-full.jpg)
 
@@ -22,9 +22,10 @@ The **Preset** dropdown sits at the very top of the plugin config. You can also 
 | Mining | Idle, Logout, Random, Inventory Full |
 | Woodcutting | Idle, Logout, Random, Inventory Full, Forestry |
 | Fishing | Idle, Logout, Random, Inventory Full |
-| Sailing AFK | Cargo Hold only |
+| Salvaging Active | Logout, Random, Inventory Full, Salvage, Cargo Hold |
+| Salvaging AFK | Cargo Hold only |
 
-Cannon and Salvage aren't in any preset; turn them on under **Custom**.
+Cannon isn't in any preset; turn it on under **Custom**.
 
 Presets only choose which alerts are on. Thresholds, colors and iteration counts always come from your settings. A preset overrides the Enable toggles; switch back to **Custom** to use them again (your toggles are left untouched).
 
@@ -54,7 +55,7 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 ### AFK salvaging with crew
 
 1. Put two crewmates on salvaging hooks at a shipwreck.
-2. Pick **Sailing AFK**.
+2. Pick **Salvaging AFK**.
 3. When the hold fills, the crew's chat message starts the Cargo Hold alert. Click anywhere to silence it, then empty the hold.
 
 The crew message arrives as a filtered (spam) game message; consts-AFK listens on that channel.

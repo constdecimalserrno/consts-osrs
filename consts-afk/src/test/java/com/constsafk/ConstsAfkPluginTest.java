@@ -107,9 +107,9 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void sailingAfkPresetShouldOnlyEnableCargoHold()
+    public void salvagingAfkPresetShouldOnlyEnableCargoHold()
     {
-        when(config.preset()).thenReturn(Preset.SAILING_AFK);
+        when(config.preset()).thenReturn(Preset.SALVAGING_AFK);
         when(config.enableCargoHoldAlert()).thenReturn(false);
         when(config.enableHealthAlert()).thenReturn(true);
 
@@ -123,6 +123,15 @@ public class ConstsAfkPluginTest
 
         assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT,
             AlertType.POTION, AlertType.RANDOM), enabledAlerts());
+    }
+
+    @Test
+    public void salvagingActivePresetShouldCoverTheHookTheInventoryAndTheHold()
+    {
+        when(config.preset()).thenReturn(Preset.SALVAGING_ACTIVE);
+
+        assertEquals(EnumSet.of(AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.SALVAGE,
+            AlertType.CARGO), enabledAlerts());
     }
 
     @Test
@@ -149,7 +158,7 @@ public class ConstsAfkPluginTest
     @Test
     public void presetsShouldBeInDropdownOrder()
     {
-        assertEquals("[Custom, Chinning, Crabbing, Mining, Woodcutting, Fishing, Sailing AFK]",
+        assertEquals("[Custom, Chinning, Crabbing, Mining, Woodcutting, Fishing, Salvaging Active, Salvaging AFK]",
             Arrays.toString(Preset.values()));
     }
 
@@ -172,8 +181,8 @@ public class ConstsAfkPluginTest
     @Test
     public void applyPresetShouldPersistSelection()
     {
-        plugin.applyPreset(Preset.SAILING_AFK);
-        verify(configManager).setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.PRESET_KEY, Preset.SAILING_AFK);
+        plugin.applyPreset(Preset.SALVAGING_AFK);
+        verify(configManager).setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.PRESET_KEY, Preset.SALVAGING_AFK);
     }
 
     // Chat triggers
@@ -235,7 +244,7 @@ public class ConstsAfkPluginTest
     @Test
     public void disabledAlertShouldIgnoreItsChatTrigger() throws Exception
     {
-        when(config.preset()).thenReturn(Preset.SAILING_AFK);
+        when(config.preset()).thenReturn(Preset.SALVAGING_AFK);
 
         plugin.onChatMessage(chat(ChatMessageType.GAMEMESSAGE, "Your super attack potion is about to expire."));
         Thread.sleep(100);

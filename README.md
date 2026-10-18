@@ -4,7 +4,7 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 
 | Plugin | What it does |
 |---|---|
-| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and Sailing AFK, Forestry events included: beeps, screen flashes and a status panel. |
+| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
 
 ![consts-AFK flashing the screen magenta when the inventory fills while woodcutting](consts-afk/screenshots/inventory-full.jpg)
 
@@ -58,14 +58,20 @@ consts-osrs/
 ├── build.gradle                  # Shared config: Java 11, RuneLite, tests
 ├── settings.gradle               # One include per plugin
 ├── run.sh                        # Build and launch
-├── runelite-plugin.properties    # Plugin metadata
+├── scripts/publish-hub-branch.sh # Cut a plugin's Plugin Hub branch
 ├── src/test/java/com/osrs/
 │   └── PluginLauncher.java       # Loads every plugin into one RuneLite client
 └── consts-afk/
+    ├── runelite-plugin.properties  # Plugin Hub metadata
+    ├── icon.png                    # Plugin Hub icon, 48×72
     └── src/main/java/com/constsafk/...
 ```
 
 Each plugin is a Gradle subproject. Shared settings live in the root `build.gradle`; a plugin's own `build.gradle` holds only its overrides.
+
+## Plugin Hub
+
+The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets its own branch, `plugin-hub/<plugin>`, holding just its folder. `scripts/publish-hub-branch.sh consts-afk` cuts it from `main` with `git subtree split`, pushes it, and prints the `repository=` and `commit=` lines for the plugin's manifest in [runelite/plugin-hub](https://github.com/runelite/plugin-hub). The Hub replaces the plugin's `build.gradle` (`build=standard`), so a plugin may only depend on RuneLite itself.
 
 ## Adding a plugin
 
@@ -73,7 +79,7 @@ Each plugin is a Gradle subproject. Shared settings live in the root `build.grad
 2. Add `new-plugin/build.gradle` (a comment is enough).
 3. Add `include 'new-plugin'` to `settings.gradle` and `implementation project(':new-plugin')` to the root `build.gradle` dependencies.
 4. Write `NewPlugin.java` (extends `Plugin`, has `@PluginDescriptor`) and `NewPluginConfig.java` (extends `Config`, has `@ConfigGroup`).
-5. Add `NewPlugin.class` to `ExternalPluginManager.loadBuiltin(...)` in `PluginLauncher.java`, and to `plugins=` in `runelite-plugin.properties`.
+5. Add `NewPlugin.class` to `ExternalPluginManager.loadBuiltin(...)` in `PluginLauncher.java`, and give the plugin its own `new-plugin/runelite-plugin.properties` (copy consts-afk's).
 6. `./run.sh all`.
 
 ## License

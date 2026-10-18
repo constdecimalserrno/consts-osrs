@@ -23,7 +23,11 @@ public enum Preset
         AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
     FISHING("Fishing",
         AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
-    SAILING_AFK("Sailing AFK",
+    // On a hook yourself: the wreck running dry, a full inventory and a full hold all need you.
+    SALVAGING_ACTIVE("Salvaging Active",
+        AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO),
+    // Crewmates on the hooks: the only thing that needs you is a full cargo hold.
+    SALVAGING_AFK("Salvaging AFK",
         AlertType.CARGO);
 
     private final String label;

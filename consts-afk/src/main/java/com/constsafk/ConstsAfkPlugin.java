@@ -49,7 +49,7 @@ import net.runelite.client.util.Text;
 
 @PluginDescriptor(
     name = "consts-AFK",
-    description = "AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and Sailing AFK: Forestry events, cargo hold full, salvage, inventory full, health, prayer, aggro and more",
+    description = "AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging: Forestry events, cargo hold full, salvage, inventory full, health, prayer, aggro and more",
     tags = {"afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
 )
 public class ConstsAfkPlugin extends Plugin
