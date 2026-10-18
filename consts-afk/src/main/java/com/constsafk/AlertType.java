@@ -19,7 +19,7 @@ enum AlertType
     IDLE("Idle", "Time since last activity (movement, animation, combat, XP).",
         ConstsAfkConfig::enableIdleAlert, ConstsAfkConfig::idleFlashColor,
         ConstsAfkConfig::idleDismissOnClick),
-    AGGRO("Aggro", "Time until NPC aggression wears off. Right-click the panel to reset.",
+    AGGRO("Aggro", "Time until NPC aggression wears off. Leave the area, or right-click the panel, to reset it.",
         ConstsAfkConfig::enableTimerAlert, ConstsAfkConfig::timerFlashColor,
         ConstsAfkConfig::aggroDismissOnClick),
     LOGOUT("Logout", "Time until the 25-minute inactivity logout. Clicks and keys reset it.",

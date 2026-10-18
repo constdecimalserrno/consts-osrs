@@ -120,6 +120,9 @@ public class ConstsAfkPlugin extends Plugin
     private ConstsAfkStatusOverlay statusOverlay;
 
     @Inject
+    private ConstsAfkAggroAreaOverlay aggroAreaOverlay;
+
+    @Inject
     private WorldService worldService;
 
     // Worlds worth hopping to for the preset that's on, shown in the status panel.
@@ -147,7 +150,8 @@ public class ConstsAfkPlugin extends Plugin
     private volatile boolean playerMovingThisTick;
     private long lastRandomEventTriggerMillis;
 
-    private WorldPoint aggroAnchor;
+    // The game's unaggressive area, followed every tick whatever the preset, so it is right whenever Aggro turns on.
+    private final AggroArea aggroArea = new AggroArea();
     private volatile long nextAggroAlertMillis;
     private volatile long aggroFlashUntilMillis;
     private volatile boolean aggroAlertPending;
@@ -180,6 +184,7 @@ public class ConstsAfkPlugin extends Plugin
     {
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
+        overlayManager.add(aggroAreaOverlay);
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
         updateSuggestedWorlds();
@@ -200,13 +205,16 @@ public class ConstsAfkPlugin extends Plugin
         mouseManager.unregisterMouseListener(clickListener);
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
+        overlayManager.remove(aggroAreaOverlay);
         shutdownScheduler();
+        aggroArea.clear();
     }
 
     @Subscribe
     public void onGameStateChanged(GameStateChanged event)
     {
         GameState state = event.getGameState();
+        followAggroAreaAcrossLogins(state);
         if (state == GameState.LOGGED_IN)
         {
             if (!sessionActive)
@@ -229,7 +237,8 @@ public class ConstsAfkPlugin extends Plugin
     @Subscribe
     public void onConfigChanged(ConfigChanged event)
     {
-        if (!ConstsAfkConfig.GROUP.equals(event.getGroup()))
+        // The aggro area saves itself per RuneScape profile in this group at logout and login. Those aren't settings.
+        if (!ConstsAfkConfig.GROUP.equals(event.getGroup()) || event.getProfile() != null)
         {
             return;
         }
@@ -261,6 +270,7 @@ public class ConstsAfkPlugin extends Plugin
     public void onGameTick(GameTick event)
     {
         updateActivityFromHybridSignals();
+        updateAggroArea();
         evaluateAlerts();
     }
 
@@ -459,11 +469,7 @@ public class ConstsAfkPlugin extends Plugin
     {
         loops.values().forEach(LoopAlert::stop);
         bursts.values().forEach(BurstAlert::clear);
-        stopAggroTimer();
-        aggroExpiredAwaitingReset = false;
-        aggroAlertPending = false;
-        aggroFlashUntilMillis = 0L;
-        aggroAnchor = null;
+        clearAggroAlert();
         alertsPausedUntilMillis = 0L;
         lastRandomEventTriggerMillis = 0L;
         playerMovingThisTick = false;
@@ -578,8 +584,6 @@ public class ConstsAfkPlugin extends Plugin
         WorldPoint currentPoint = localPlayer.getWorldLocation();
         if (currentPoint != null)
         {
-            maybeAutoResetAggroFromMovement(currentPoint);
-
             if (lastPlayerWorldPoint != null && !lastPlayerWorldPoint.equals(currentPoint))
             {
                 active = true;
@@ -622,10 +626,6 @@ public class ConstsAfkPlugin extends Plugin
         {
             lastPlayerWorldPoint = localPlayer.getWorldLocation();
             lastPlayerAnimation = localPlayer.getAnimation();
-            if (aggroAnchor == null)
-            {
-                aggroAnchor = lastPlayerWorldPoint;
-            }
         }
 
         for (Skill skill : Skill.values())
@@ -763,14 +763,29 @@ public class ConstsAfkPlugin extends Plugin
 
     // Aggro timer
 
+    /** OSRS mode follows the game's own timer and unaggressive area; Custom Minutes is a plain repeating timer. */
+    boolean usesAggroArea()
+    {
+        return config.timerMode() == TimerMode.OSRS_AGGRO_10_MIN;
+    }
+
+    AggroArea getAggroArea()
+    {
+        return aggroArea;
+    }
+
+    /** Show Area Lines, in OSRS mode, while the preset (or Custom) has Aggro on. */
+    boolean shouldShowAggroAreaLines()
+    {
+        return config.showAggroAreaLines() && usesAggroArea() && isAlertEnabled(AlertType.AGGRO)
+            && client.getGameState() == GameState.LOGGED_IN;
+    }
+
     private void evaluateAggroTimer()
     {
         if (!isAlertEnabled(AlertType.AGGRO))
         {
-            stopAggroTimer();
-            aggroExpiredAwaitingReset = false;
-            aggroAlertPending = false;
-            aggroFlashUntilMillis = 0L;
+            clearAggroAlert();
             return;
         }
 
@@ -780,26 +795,23 @@ public class ConstsAfkPlugin extends Plugin
             return;
         }
 
-        if (!aggroExpiredAwaitingReset)
+        if (!usesAggroArea())
         {
             startAggroTimer();
         }
+        else if (!aggroExpiredAwaitingReset && aggroArea.hasExpired(System.currentTimeMillis()))
+        {
+            // Checked every tick rather than scheduled: walking, teleporting and logging in all move the game's timer.
+            onAggroTimerDue();
+        }
     }
 
+    // Custom Minutes only. In OSRS mode the countdown is the area's.
     private void startAggroTimer()
     {
         if (isActive(aggroFuture))
         {
             return;
-        }
-
-        if (config.timerMode() == TimerMode.OSRS_AGGRO_10_MIN && aggroAnchor == null)
-        {
-            Player localPlayer = client.getLocalPlayer();
-            if (localPlayer != null)
-            {
-                aggroAnchor = localPlayer.getWorldLocation();
-            }
         }
 
         scheduleAggroAlert(getAggroIntervalMillis());
@@ -822,7 +834,7 @@ public class ConstsAfkPlugin extends Plugin
 
         if (config.timerMode() == TimerMode.OSRS_AGGRO_10_MIN)
         {
-            // Aggro has worn off: keep alerting until the player walks away or resets the timer.
+            // Aggro has worn off: keep alerting until the player leaves the area or resets the timer.
             aggroExpiredAwaitingReset = true;
             aggroAlertPending = false;
             nextAggroAlertMillis = 0L;
@@ -856,46 +868,65 @@ public class ConstsAfkPlugin extends Plugin
         aggroFlashUntilMillis = System.currentTimeMillis() + AGGRO_FLASH_WINDOW_MS;
     }
 
-    private void maybeAutoResetAggroFromMovement(WorldPoint currentPoint)
-    {
-        if (!isAlertEnabled(AlertType.AGGRO) || config.timerMode() != TimerMode.OSRS_AGGRO_10_MIN)
-        {
-            return;
-        }
-
-        if (aggroAnchor == null)
-        {
-            aggroAnchor = currentPoint;
-            return;
-        }
-
-        int thresholdTiles = Math.max(5, config.aggroResetDistanceTiles());
-        int dx = currentPoint.getX() - aggroAnchor.getX();
-        int dy = currentPoint.getY() - aggroAnchor.getY();
-        if (aggroAnchor.getPlane() != currentPoint.getPlane() || dx * dx + dy * dy >= thresholdTiles * thresholdTiles)
-        {
-            resetAggroTimer(currentPoint);
-        }
-    }
-
-    void resetAggroTimer()
+    /** Follows the area one tick. When it moves, the game has restarted its timer, so a running alert is over. */
+    private void updateAggroArea()
     {
         Player localPlayer = client.getLocalPlayer();
-        resetAggroTimer(localPlayer != null ? localPlayer.getWorldLocation() : null);
+        WorldPoint location = localPlayer != null ? localPlayer.getWorldLocation() : null;
+        if (location != null && aggroArea.update(location, System.currentTimeMillis()) && usesAggroArea())
+        {
+            clearAggroAlert();
+        }
     }
 
-    private void resetAggroTimer(WorldPoint newAnchor)
+    /** Only logging out and in touch the area: logging out saves it per RuneScape profile, the next login reads it. */
+    private void followAggroAreaAcrossLogins(GameState state)
+    {
+        long now = System.currentTimeMillis();
+        switch (state)
+        {
+            case LOGGING_IN:
+                aggroArea.loggingIn();
+                break;
+            case LOGGED_IN:
+            {
+                Player localPlayer = client.getLocalPlayer();
+                aggroArea.loggedIn(configManager, localPlayer != null ? localPlayer.getWorldLocation() : null, now);
+                break;
+            }
+            case LOGIN_SCREEN:
+                aggroArea.loggedOut(configManager, now);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Right-click Reset Aggro Timer. In OSRS mode the tile you stand on becomes a fresh area center, as if you had just
+     * left both areas; in Custom Minutes the interval starts over.
+     */
+    void resetAggroTimer()
+    {
+        if (usesAggroArea())
+        {
+            Player localPlayer = client.getLocalPlayer();
+            aggroArea.reset(localPlayer != null ? localPlayer.getWorldLocation() : null, System.currentTimeMillis());
+        }
+
+        clearAggroAlert();
+        if (isTracking() && isAlertEnabled(AlertType.AGGRO) && !usesAggroArea())
+        {
+            startAggroTimer();
+        }
+    }
+
+    private void clearAggroAlert()
     {
         stopAggroTimer();
         aggroExpiredAwaitingReset = false;
         aggroAlertPending = false;
         aggroFlashUntilMillis = 0L;
-        aggroAnchor = newAnchor;
-
-        if (isTracking() && isAlertEnabled(AlertType.AGGRO))
-        {
-            startAggroTimer();
-        }
     }
 
     private void stopAggroTimer()
@@ -907,18 +938,19 @@ public class ConstsAfkPlugin extends Plugin
 
     long getAggroIntervalMillis()
     {
-        if (config.timerMode() == TimerMode.OSRS_AGGRO_10_MIN)
+        if (usesAggroArea())
         {
-            return TimeUnit.MINUTES.toMillis(10L);
+            return AggroArea.AGGRESSIVE_TIME_MS;
         }
         return TimeUnit.MINUTES.toMillis(Math.max(1, config.timerMinutes()));
     }
 
     // Status panel readouts
 
+    /** When Aggro is due: in OSRS mode the area's timer, which is 0 until the area is known. */
     long getNextAggroAlertMillis()
     {
-        return nextAggroAlertMillis;
+        return usesAggroArea() ? aggroArea.getEndMillis() : nextAggroAlertMillis;
     }
 
     long getIdleDurationMillis()

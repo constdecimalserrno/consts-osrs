@@ -55,7 +55,7 @@ Six sections, and every alert has the same block in the same order: its on/off (
 | Health | HP below threshold (`25`) | HP recovers | Green |
 | Prayer | Prayer below threshold (`20`) | Prayer recovers | Blue |
 | Idle | No movement, new animation, combat or XP for `6 s` | Activity resumes | Yellow |
-| Aggro | 10-minute OSRS aggro timer (or custom interval) runs out | You walk `20` tiles away or right-click → Reset Aggro Timer | Red |
+| Aggro | The game's 10-minute aggro timer runs out (or a custom interval), tracked like RuneLite's NPC Aggression Timer: see [Aggro area](#aggro-area) | You leave the area or right-click → Reset Aggro Timer | Red |
 | Logout | No click/key for `24 min` | You click or press a key | Orange |
 | Potion | Chat: `… is about to …` (potion/effect expiry) | A click, or Give Up After | Black |
 | Random | A random event NPC targets you: yours only, not someone else's nearby (`20 s` cooldown) | A click, or Give Up After | White |
@@ -66,6 +66,17 @@ Six sections, and every alert has the same block in the same order: its on/off (
 | Forestry | A Forestry event you picked starts nearby | A click, or Give Up After | Lime |
 
 "A click" means with **Dismiss on Click** on. **Give Up After** (General, `2 min`) ends a one-off alert nobody clicks away.
+
+### Aggro area
+
+In **OSRS** mode (the default), Aggro follows the game's own rule, the way RuneLite's NPC Aggression Timer does:
+
+- The game remembers two tiles, each with a 21×21 area around it. While you stay within 10 tiles of either one, the 10-minute timer keeps running. Step outside both and the older tile moves to where you stand: NPCs are aggressive again for another 10 minutes.
+- **Area lines** outline the area on the ground: translucent yellow while NPCs are still aggressive, solid yellow once they've stopped. Walk past them to reset the timer. **Aggro: Show Area Lines** (on), **Aggro: Aggressive Color** and **Aggro: Unaggressive Color** are at the end of Aggro's block in Combat. The lines only show while the preset, or Custom, has Aggro on.
+- **Finding the area.** Until consts-AFK knows where both tiles are (right after you turn it on, or after logging in somewhere new), the bar reads `Aggro ?`. Teleport or take a dungeon entrance: that leaves both areas, so the timer starts and one area is known (`Aggro ? 9:59`). Walk out of it once and the second is known too, and the `?` goes away. Going back near where you teleported from before then makes it unknown again. Or right-click the panel → **Reset Aggro Timer** to start a fresh area where you stand.
+- **Logging out** saves the area and the time left for that account. Log back in on the same tile and Aggro carries on; anywhere else it starts over, unknown.
+
+In **Custom Minutes** mode Aggro is a plain repeating timer, with no area and no lines.
 
 ### Forestry events
 
@@ -88,13 +99,13 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 ### Chinning
 
 - **Where:** Maniacal monkeys in Kruk's Dungeon, after Monkey Madness II. Grey, red or black chinchompas by Ranged level.
-- **What the alerts mean:** Aggro says the monkeys have stopped being aggressive after ten minutes: run out of the area and back. Health and Prayer catch you before you run low. Potion says your Ranging potion is wearing off. Logout keeps you from getting logged out.
+- **What the alerts mean:** Aggro says the monkeys have stopped being aggressive after ten minutes: run out past the area lines and back. Health and Prayer catch you before you run low. Potion says your Ranging potion is wearing off. Logout keeps you from getting logged out.
 - **Tune:** Set Health and Prayer thresholds to where you would drink, and turn off Dismiss on Click for both so a stray click can't silence them.
 
 ### Crabbing
 
 - **Where:** Sand crabs on Crabclaw Isle or the Hosidius coast, ammonite crabs on Fossil Island, rock crabs near Rellekka. Stand where two or three crabs can reach you.
-- **What the alerts mean:** Aggro is the one that matters: after ten minutes the crabs stop attacking. Walk 20 tiles away and back and the timer resets itself. Health tells you to eat; Idle means everything around you is asleep or dead.
+- **What the alerts mean:** Aggro is the one that matters: after ten minutes the crabs stop attacking. Leave the area, past its lines, and come back, and the timer resets itself. Health tells you to eat; Idle means everything around you is asleep or dead.
 - **Tune:** At low levels raise the Health threshold to about half your Hitpoints. No Prayer here, so a low Prayer level never beeps.
 
 ### Mining
@@ -139,7 +150,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 - **Quiet After Dismiss** (`60 s`): a one-off alert you click away ignores its own trigger for this long, so a repeating message doesn't start it again while you sort, bank or drop.
 - **Give Up After** (`2 min`): a one-off alert nobody clicks away stops on its own.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
-- **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out does.
+- **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out stops running alerts and starts the timers over, except Aggro in OSRS mode: its area and time left are saved per account and carry on if you log back in where you logged out.
 - **Sound**: the system beep by default. **Alert Sound** swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Game Sound Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
 - **Suggested worlds**: the status panel's `Worlds` row names three worlds to hop to for the preset: the busiest Forestry worlds for Woodcutting, Salvaging worlds for salvaging, otherwise the quietest regular members worlds. It reads RuneLite's live world list and never suggests PvP, high-risk, skill-total, free or offline worlds. Hover it for player counts.
 - **Status panel**: shows the active preset, suggested worlds, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
@@ -147,3 +158,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 ## Running it
 
 From the repo root: `./run.sh all`. Setup, including the one-time Jagex account step, is in the [root README](../README.md#run-it).
+
+## Credits
+
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header.
