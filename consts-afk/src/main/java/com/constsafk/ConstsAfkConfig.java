@@ -14,6 +14,7 @@ public interface ConstsAfkConfig extends Config
     // Group name from before the consts-AFK rename, kept so saved settings carry over.
     String GROUP = "afkcombatalerts";
     String PRESET_KEY = "preset";
+    String SIDEBAR_GUIDE_KEY = "showSidebarGuide";
 
     @ConfigItem(
         keyName = PRESET_KEY,
@@ -164,6 +165,18 @@ public interface ConstsAfkConfig extends Config
     default boolean showAnimationId()
     {
         return false;
+    }
+
+    @ConfigItem(
+        keyName = SIDEBAR_GUIDE_KEY,
+        name = "Show Sidebar Guide",
+        description = "A consts-AFK tab in the sidebar with a preset switcher and a short training guide for each preset",
+        section = generalSection,
+        position = 3
+    )
+    default boolean showSidebarGuide()
+    {
+        return true;
     }
 
     // Screen flash

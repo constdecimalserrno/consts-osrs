@@ -2,6 +2,8 @@
 
 RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
+![The status panel on the Woodcutting preset: Idle fills and flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
+
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full bar lights up](screenshots/inventory-full.jpg)
 
 | Idle | Inventory full |
@@ -60,6 +62,58 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 
 The crew message arrives as a filtered (spam) game message; consts-AFK listens on that channel.
 
+## Training guide
+
+The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sidebar shows the entry for the preset that's on, and its dropdown switches presets. Turn the tab off with **Show Sidebar Guide** under General.
+
+### Chinning
+
+- **Where:** Maniacal monkeys in Kruk's Dungeon, after Monkey Madness II. Grey, red or black chinchompas by Ranged level.
+- **What the alerts mean:** Aggro says the monkeys have stopped being aggressive after ten minutes: run out of the area and back. Health and Prayer catch you before you run low. Boost says your Ranging potion is wearing off. Idle means you are out of chins or out of targets.
+- **Tune:** Set Health and Prayer thresholds to where you would drink, and turn on Emit Immediately for both so a stray click can't silence them.
+
+### Crabbing
+
+- **Where:** Sand crabs on Crabclaw Isle or the Hosidius coast, ammonite crabs on Fossil Island, rock crabs near Rellekka. Stand where two or three crabs can reach you.
+- **What the alerts mean:** Aggro is the one that matters: after ten minutes the crabs stop attacking. Walk 20 tiles away and back and the timer resets itself. Health tells you to eat; Idle means everything around you is asleep or dead.
+- **Tune:** At low levels raise the Health threshold to about half your Hitpoints. No Prayer here, so a low Prayer level never beeps.
+
+### Mining
+
+- **Where:** Rocks that last: amethyst in the Mining Guild (92 Mining), or pay-dirt in the Motherlode Mine (30 Mining).
+- **What the alerts mean:** Idle fires when your rock or vein runs out. Inv Full says it is time to bank or fill the hopper. Random and Logout keep you from getting dragged off or logged out.
+- **Tune:** If the pauses between ores trip Idle, raise its time a little.
+
+### Woodcutting
+
+- **Where:** Chop where other people chop: Forestry events turn up more often with company, and pay out anima-infused bark for Forestry rewards. Long-lived trees like teaks, mahogany or redwoods keep you going.
+- **What the alerts mean:** Forestry flashes lime and names the event, so you can tell a Leprechaun from an Ent at a glance. Idle fires when your tree falls; Inv Full when it is time to bank.
+- **Tune:** Untick the Forestry events you would rather chop through. One alert per event, however many entlings show up.
+
+### Fishing
+
+- **Where:** Spots you can sit at: barbarian fishing at Otto's Grotto, or any spot where you drop fish as you go.
+- **What the alerts mean:** Idle fires when the spot moves, and when your inventory fills, since you stop fishing either way. Random and Logout as always.
+- **Tune:** Nothing to tune for most spots.
+
+### Salvaging Active
+
+- **Where:** Working a salvaging hook at a shipwreck yourself.
+- **What the alerts mean:** Salvage fires when the wreck is picked clean or you have nothing left to sort. Inv Full when your inventory fills, Cargo when the hold is full.
+- **Tune:** Salvage and Cargo beep 100 times by default; lower their iterations if you are always at the keyboard.
+
+### Salvaging AFK
+
+- **Where:** Two crewmates on salvaging hooks at a shipwreck, and you somewhere else.
+- **What the alerts mean:** Only Cargo: when the hold fills, the crew says so in chat and the screen goes violet. Click to silence it, then empty the hold.
+- **Tune:** Nothing. It is one alert on purpose.
+
+### Custom
+
+- **Where:** Anything the presets don't cover, including a cannon.
+- **What the alerts mean:** Each alert's own Enable toggle decides. Cannon is only here.
+- **Tune:** Switching to a preset never touches your Custom toggles, so you can always come back.
+
 ## Shared behavior
 
 - **Interaction Pause** (`3 s`): every click or key press silences alerts briefly and acknowledges any one-off (chat or NPC) alert.
@@ -67,6 +121,7 @@ The crew message arrives as a filtered (spam) game message; consts-AFK listens o
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out does.
 - **Sound**: all alerts use the system beep. `Repeat Interval` (`1.2 s`) sets the gap between beeps.
+- **Sidebar guide**: a consts-AFK tab with a preset switcher and the Training guide above. **Show Sidebar Guide** (General) hides it.
 - **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. `Show Animation ID` (General) adds your current animation id for tuning the idle alert.
 
 ## Running it

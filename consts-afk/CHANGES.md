@@ -34,4 +34,7 @@ Planned work, not history. Git log has the history.
 
 ## Release
 
-- [ ] Plugin Hub submission: metadata check, screenshots/gif, QA on Windows/macOS/Linux.
+- [x] Plugin Hub prep: `runelite-plugin.properties` with `build=standard`, `icon.png`, a GIF and screenshots, and
+  `scripts/publish-hub-branch.sh`. Compiles under the Hub's standard build files.
+- [ ] Clean-up pass, then play-test in a client built from consts-osrs.
+- [ ] Plugin Hub submission: cut the hub branch, open the PR to `runelite/plugin-hub`. QA on Windows/macOS/Linux.

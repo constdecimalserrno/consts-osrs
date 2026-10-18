@@ -72,8 +72,7 @@ class ConstsAfkStatusOverlay extends OverlayPanel
             return renderWithHoverTooltips(graphics, hoverTargets);
         }
 
-        Preset preset = config.preset();
-        add(hoverTargets, line("Preset", String.valueOf(preset != null ? preset : Preset.CUSTOM), INFO_COLOR),
+        add(hoverTargets, line("Preset", String.valueOf(plugin.currentPreset()), INFO_COLOR),
             "Which alerts are on. Right-click the panel to switch.");
 
         for (AlertType type : AlertType.values())

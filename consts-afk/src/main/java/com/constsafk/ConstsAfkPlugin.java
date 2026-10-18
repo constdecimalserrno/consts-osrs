@@ -17,6 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
+import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -44,13 +45,16 @@ import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 
 @PluginDescriptor(
     name = "consts-AFK",
-    description = "AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging: Forestry events, cargo hold full, salvage, inventory full, health, prayer, aggro and more",
-    tags = {"afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
+    description = "AFK alerts you can't sleep through: beeps, screen flashes and a status panel, with presets per activity and Forestry events.",
+    tags = {"afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
 )
 public class ConstsAfkPlugin extends Plugin
 {
@@ -112,6 +116,13 @@ public class ConstsAfkPlugin extends Plugin
     @Inject
     private ConstsAfkStatusOverlay statusOverlay;
 
+    @Inject
+    private ClientToolbar clientToolbar;
+
+    private ConstsAfkGuidePanel guidePanel;
+    private NavigationButton guideButton;
+    private boolean guideButtonShown;
+
     private final Map<AlertType, LoopAlert> loops = new EnumMap<>(AlertType.class);
     private final Map<AlertType, BurstAlert> bursts = new EnumMap<>(AlertType.class);
     private final Map<Skill, Integer> skillXpCache = new EnumMap<>(Skill.class);
@@ -169,6 +180,15 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(statusOverlay);
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
+        guidePanel = new ConstsAfkGuidePanel(this);
+        guidePanel.showPreset(currentPreset());
+        guideButton = NavigationButton.builder()
+            .tooltip("consts-AFK guide")
+            .icon(ImageUtil.loadImageResource(getClass(), "guide_icon.png"))
+            .priority(10)
+            .panel(guidePanel)
+            .build();
+        updateGuideButton();
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
         clientThread.invokeLater(() ->
         {
@@ -184,6 +204,11 @@ public class ConstsAfkPlugin extends Plugin
     {
         endSession();
         mouseManager.unregisterMouseListener(clickListener);
+        if (guideButtonShown)
+        {
+            clientToolbar.removeNavigation(guideButton);
+            guideButtonShown = false;
+        }
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
         shutdownScheduler();
@@ -218,6 +243,15 @@ public class ConstsAfkPlugin extends Plugin
         if (!ConstsAfkConfig.GROUP.equals(event.getGroup()))
         {
             return;
+        }
+
+        if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()) && guidePanel != null)
+        {
+            SwingUtilities.invokeLater(() -> guidePanel.showPreset(currentPreset()));
+        }
+        else if (ConstsAfkConfig.SIDEBAR_GUIDE_KEY.equals(event.getKey()))
+        {
+            SwingUtilities.invokeLater(this::updateGuideButton);
         }
 
         clientThread.invokeLater(() ->
@@ -330,8 +364,33 @@ public class ConstsAfkPlugin extends Plugin
 
     boolean isAlertEnabled(AlertType type)
     {
+        return currentPreset().enables(type, config);
+    }
+
+    /** The preset that is on; one saved under a name that no longer exists reads as Custom. */
+    Preset currentPreset()
+    {
         Preset preset = config.preset();
-        return (preset != null ? preset : Preset.CUSTOM).enables(type, config);
+        return preset != null ? preset : Preset.CUSTOM;
+    }
+
+    private void updateGuideButton()
+    {
+        if (guideButton == null)
+        {
+            return;
+        }
+
+        boolean show = config.showSidebarGuide();
+        if (show && !guideButtonShown)
+        {
+            clientToolbar.addNavigation(guideButton);
+        }
+        else if (!show && guideButtonShown)
+        {
+            clientToolbar.removeNavigation(guideButton);
+        }
+        guideButtonShown = show;
     }
 
     void applyPreset(Preset preset)

@@ -8,6 +8,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import javax.swing.JComboBox;
 import net.runelite.api.Actor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -38,6 +41,8 @@ import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.input.MouseManager;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 import org.junit.After;
 import org.junit.Before;
@@ -622,12 +627,63 @@ public class ConstsAfkPluginTest
         setField("mouseManager", mock(MouseManager.class));
         setField("flashOverlay", mock(ConstsAfkFlashOverlay.class));
         setField("statusOverlay", mock(ConstsAfkStatusOverlay.class));
+        setField("clientToolbar", mock(ClientToolbar.class));
 
         plugin.startUp();
 
         assertTrue((boolean) getField("sessionActive"));
         assertEquals(player.getWorldLocation(), getField("lastPlayerWorldPoint"));
         assertEquals(player.getWorldLocation(), getField("aggroAnchor"));
+    }
+
+    // Sidebar guide
+
+    @Test
+    public void everyPresetShouldHaveAGuide()
+    {
+        for (Preset preset : Preset.values())
+        {
+            PresetGuide guide = PresetGuide.of(preset);
+            assertTrue(preset + " has no guide", guide != null && !guide.getWhere().isEmpty()
+                && !guide.getAlerts().isEmpty() && !guide.getTune().isEmpty());
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void guidePanelShouldApplyWhatYouPickButNotWhatItShows() throws Exception
+    {
+        ConstsAfkGuidePanel panel = new ConstsAfkGuidePanel(plugin);
+        panel.showPreset(Preset.MINING);
+        verify(configManager, never()).setConfiguration(any(), any(), any(Object.class));
+
+        Field box = ConstsAfkGuidePanel.class.getDeclaredField("presetBox");
+        box.setAccessible(true);
+        ((JComboBox<Preset>) box.get(panel)).setSelectedItem(Preset.FISHING);
+
+        verify(configManager).setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.PRESET_KEY, Preset.FISHING);
+    }
+
+    @Test
+    public void sidebarGuideShouldFollowItsSetting() throws Exception
+    {
+        ClientToolbar toolbar = mock(ClientToolbar.class);
+        setField("overlayManager", mock(OverlayManager.class));
+        setField("mouseManager", mock(MouseManager.class));
+        setField("flashOverlay", mock(ConstsAfkFlashOverlay.class));
+        setField("statusOverlay", mock(ConstsAfkStatusOverlay.class));
+        setField("clientToolbar", toolbar);
+        when(config.showSidebarGuide()).thenReturn(true);
+
+        plugin.startUp();
+        verify(toolbar, times(1)).addNavigation(any(NavigationButton.class));
+
+        when(config.showSidebarGuide()).thenReturn(false);
+        invokePrivate("updateGuideButton");
+        verify(toolbar, times(1)).removeNavigation(any(NavigationButton.class));
+
+        plugin.shutDown();
+        verify(toolbar, times(1)).removeNavigation(any(NavigationButton.class));
     }
 
     private Set<AlertType> enabledAlerts()
