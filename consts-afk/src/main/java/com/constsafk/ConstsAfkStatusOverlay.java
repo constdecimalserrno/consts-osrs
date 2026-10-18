@@ -126,6 +126,13 @@ class ConstsAfkStatusOverlay extends OverlayPanel
                 long remainingMs = plugin.getLogoutTimerRemainingMillis();
                 return bar(type, formatClock(remainingMs), remainingMs, ConstsAfkPlugin.LOGOUT_TIMEOUT_MS);
             }
+            case FORESTRY:
+            {
+                // Names the event while it fires, e.g. "Forestry Leprechaun".
+                boolean firing = plugin.isAlertFiring(type);
+                ForestryEvent event = plugin.getLastForestryEvent();
+                return bar(type, firing && event != null ? event.getLabel() : "0/1", firing ? 1L : 0L, 1L);
+            }
             default:
             {
                 // One-off alerts (chat or NPC triggered) fill up while they are firing.

@@ -1,6 +1,6 @@
 # consts-AFK
 
-RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): combat, skilling and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): combat, skilling, woodcutting and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full bar lights up](screenshots/inventory-full.jpg)
 
@@ -19,6 +19,7 @@ The **Preset** dropdown sits at the very top of the plugin config. You can also 
 | Custom (default) | Whatever each section's **Enable** toggle says |
 | Combat | Health, Prayer, Idle, Aggro, Logout, Boost, Random, Cannon |
 | Skilling | Idle, Logout, Random, Inventory Full |
+| Woodcutting | Idle, Logout, Random, Inventory Full, Forestry |
 | Sailing | Logout, Random, Inventory Full, Salvage, Cargo Hold |
 | Sailing AFK | Cargo Hold only |
 
@@ -39,6 +40,13 @@ Presets only choose which alerts are on. Thresholds, colors and iteration counts
 | Inventory Full | Chat: `Your inventory is too full to hold any more …` | `100` beeps or a click | Magenta |
 | Salvage | Chat: `You salvage all you can from the shipwreck…` or `You have no more salvage to sort…` | `100` beeps or a click | Cyan |
 | Cargo Hold | Chat: `…cargo hold is full` (e.g. `Your crewmate on the salvaging hook cannot salvage as the cargo hold is full.`) | `100` beeps or a click | Violet |
+| Forestry | A Forestry event you picked starts nearby | `30` beeps or a click | Lime |
+
+### Forestry events
+
+Each event has its own checkbox in the **Forestry Alert** section, all on by default: Rising Roots, Struggling Sapling, Flowering Tree, Woodcutting Leprechaun, Beehive, Friendly Ent, Poachers, Pheasant Control and Enchantment Ritual. Untick the ones you don't care for.
+
+An event is spotted by the NPCs or objects that mark it, the same ones RuneLite's own Woodcutting plugin uses. It alerts once per event: more entlings, a withering sapling or a loading screen don't set it off again. While it fires, the status panel names it, e.g. `Forestry Leprechaun`. Pheasant Control's Freaky Forester no longer counts as a random event.
 
 ### AFK salvaging with crew
 

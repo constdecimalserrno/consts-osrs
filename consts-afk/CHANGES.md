@@ -1,11 +1,14 @@
 # consts-AFK backlog
 
-Last updated: 2026-10-06
+Last updated: 2026-10-18
 
 Planned work, not history. Git log has the history.
 
 ## Next up
 
+- [ ] Verify the Forestry alert in game, event by event.
+  - Each of the nine should alert once, name itself on the panel, and not re-fire while it runs.
+  - Pheasant Control should not also set off the Random alert.
 - [ ] Verify the Cargo Hold alert in game.
   - Confirm the crew message still reads `…cargo hold is full`.
   - If it repeats while you unload the hold, add a re-trigger cooldown (like Random Event's).

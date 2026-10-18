@@ -2,6 +2,7 @@ package com.constsafk;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,17 +14,26 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import net.runelite.api.Actor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.gameval.NpcID;
+import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.input.MouseManager;
@@ -124,6 +134,15 @@ public class ConstsAfkPluginTest
         Set<AlertType> enabled = enabledAlerts();
         assertTrue(enabled.containsAll(EnumSet.of(AlertType.SALVAGE, AlertType.CARGO, AlertType.INVENTORY_FULL)));
         assertFalse(enabled.contains(AlertType.PRAYER));
+    }
+
+    @Test
+    public void woodcuttingPresetShouldAddForestryToTheSkillingAlerts()
+    {
+        when(config.preset()).thenReturn(Preset.WOODCUTTING);
+
+        assertEquals(EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL,
+            AlertType.FORESTRY), enabledAlerts());
     }
 
     @Test
@@ -240,6 +259,132 @@ public class ConstsAfkPluginTest
 
         plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
         assertFalse(plugin.isAlertFiring(AlertType.CARGO));
+    }
+
+    // Forestry
+
+    @Test
+    public void forestryMarkersShouldMapToTheirEvents()
+    {
+        assertEquals(ForestryEvent.LEPRECHAUN, ForestryEvent.forNpc(NpcID.GATHERING_EVENT_WOODCUTTING_LEPRECHAUN));
+        assertEquals(ForestryEvent.PHEASANT_CONTROL, ForestryEvent.forNpc(NpcID.GATHERING_EVENT_PHEASANT_FORESTER));
+        assertEquals(ForestryEvent.FLOWERING_TREE, ForestryEvent.forNpc(NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL05));
+        assertEquals(ForestryEvent.RISING_ROOTS, ForestryEvent.forObject(ObjectID.GATHERING_EVENT_RISING_ROOTS_SPECIAL));
+        assertEquals(ForestryEvent.STRUGGLING_SAPLING, ForestryEvent.forObject(ObjectID.GATHERING_EVENT_SAPLING_WITHERING_2X2));
+        assertNull("a saved sapling means the event is over", ForestryEvent.forObject(ObjectID.GATHERING_EVENT_SAPLING_SAVED_2X2));
+        assertNull("the trap is not what announces Poachers", ForestryEvent.forNpc(NpcID.GATHERING_EVENT_POACHERS_TRAP));
+    }
+
+    @Test
+    public void forestryEventShouldFireAndNameItself() throws Exception
+    {
+        pickAllForestryEvents();
+
+        plugin.onNpcSpawned(new NpcSpawned(npc(NpcID.GATHERING_EVENT_WOODCUTTING_LEPRECHAUN, "Leprechaun")));
+
+        awaitTrue("forestry alert should start firing", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+        assertEquals(ForestryEvent.LEPRECHAUN, plugin.getLastForestryEvent());
+    }
+
+    @Test
+    public void unpickedForestryEventShouldNotFire() throws Exception
+    {
+        pickAllForestryEvents();
+        when(config.forestryLeprechaun()).thenReturn(false);
+
+        plugin.onNpcSpawned(new NpcSpawned(npc(NpcID.GATHERING_EVENT_WOODCUTTING_LEPRECHAUN, "Leprechaun")));
+        Thread.sleep(100);
+
+        assertFalse(plugin.isAlertFiring(AlertType.FORESTRY));
+    }
+
+    @Test
+    public void forestryEventShouldFireOnceForAllItsMarkers() throws Exception
+    {
+        pickAllForestryEvents();
+        when(config.interactionPauseMs()).thenReturn(0);
+
+        plugin.onNpcSpawned(new NpcSpawned(npc(NpcID.GATHERING_EVENT_ENTLINGS_NPC_01, "Entling")));
+        awaitTrue("forestry alert should start firing", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+        invokePrivate("onUserInteraction");
+
+        plugin.onNpcSpawned(new NpcSpawned(npc(NpcID.GATHERING_EVENT_ENTLINGS_NPC_01, "Entling")));
+        Thread.sleep(100);
+
+        assertFalse("a second entling is the same Friendly Ent event", plugin.isAlertFiring(AlertType.FORESTRY));
+    }
+
+    @Test
+    public void witheringSaplingShouldNotRefireItsEvent() throws Exception
+    {
+        pickAllForestryEvents();
+        when(config.interactionPauseMs()).thenReturn(0);
+
+        plugin.onGameObjectSpawned(objectSpawned(ObjectID.GATHERING_EVENT_SAPLING_2X2));
+        awaitTrue("forestry alert should start firing", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+        invokePrivate("onUserInteraction");
+
+        plugin.onGameObjectDespawned(objectDespawned(ObjectID.GATHERING_EVENT_SAPLING_2X2));
+        plugin.onGameObjectSpawned(objectSpawned(ObjectID.GATHERING_EVENT_SAPLING_WITHERING_2X2));
+        Thread.sleep(100);
+
+        assertFalse("the same sapling changing state is not a new event", plugin.isAlertFiring(AlertType.FORESTRY));
+    }
+
+    @Test
+    public void loadingScreenShouldNotRefireTheSameForestryEvent() throws Exception
+    {
+        pickAllForestryEvents();
+        when(config.interactionPauseMs()).thenReturn(0);
+        NPC dryad = npc(NpcID.GATHERING_EVENT_ENCHANTED_RITUAL_DRYAD, "Dryad");
+
+        plugin.onNpcSpawned(new NpcSpawned(dryad));
+        awaitTrue("forestry alert should start firing", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+        invokePrivate("onUserInteraction");
+
+        plugin.onGameStateChanged(gameState(GameState.LOADING));
+        plugin.onNpcSpawned(new NpcSpawned(dryad));
+        Thread.sleep(100);
+
+        assertFalse("the ritual seen again after a load is the same event", plugin.isAlertFiring(AlertType.FORESTRY));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void forestryEventShouldRefireOnceItHasBeenGoneAWhile() throws Exception
+    {
+        pickAllForestryEvents();
+        when(config.interactionPauseMs()).thenReturn(0);
+
+        plugin.onGameObjectSpawned(objectSpawned(ObjectID.GATHERING_EVENT_RISING_ROOTS));
+        awaitTrue("forestry alert should start firing", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+        invokePrivate("onUserInteraction");
+        plugin.onGameObjectDespawned(objectDespawned(ObjectID.GATHERING_EVENT_RISING_ROOTS));
+
+        Map<ForestryEvent, Long> goneSince = (Map<ForestryEvent, Long>) getField("forestryGoneSince");
+        goneSince.put(ForestryEvent.RISING_ROOTS, System.currentTimeMillis() - ConstsAfkPlugin.FORESTRY_REARM_MS - 1L);
+        plugin.onGameObjectSpawned(objectSpawned(ObjectID.GATHERING_EVENT_RISING_ROOTS));
+
+        awaitTrue("roots after a long gap are a new event", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+    }
+
+    @Test
+    public void pheasantControlForesterShouldNotCountAsARandomEvent() throws Exception
+    {
+        when(config.preset()).thenReturn(Preset.WOODCUTTING);
+        pickAllForestryEvents();
+
+        plugin.onNpcSpawned(new NpcSpawned(npc(NpcID.GATHERING_EVENT_PHEASANT_FORESTER, "Freaky Forester")));
+
+        awaitTrue("Pheasant Control should raise the forestry alert", () -> plugin.isAlertFiring(AlertType.FORESTRY));
+        assertFalse("its Freaky Forester is not the random event", plugin.isAlertFiring(AlertType.RANDOM));
+    }
+
+    @Test
+    public void forestryNpcsShouldLeaveOtherNpcsToTheRandomAlert()
+    {
+        assertNull(ForestryEvent.forNpc(0));
+        assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("Freaky Forester"));
     }
 
     // Activity tracking
@@ -470,6 +615,49 @@ public class ConstsAfkPluginTest
             }
         }
         return enabled;
+    }
+
+    private void pickAllForestryEvents()
+    {
+        when(config.enableForestryAlert()).thenReturn(true);
+        when(config.forestryRisingRoots()).thenReturn(true);
+        when(config.forestryStrugglingSapling()).thenReturn(true);
+        when(config.forestryFloweringTree()).thenReturn(true);
+        when(config.forestryLeprechaun()).thenReturn(true);
+        when(config.forestryBeehive()).thenReturn(true);
+        when(config.forestryFriendlyEnt()).thenReturn(true);
+        when(config.forestryPoachers()).thenReturn(true);
+        when(config.forestryPheasantControl()).thenReturn(true);
+        when(config.forestryEnchantmentRitual()).thenReturn(true);
+    }
+
+    private static NPC npc(int id, String name)
+    {
+        NPC npc = mock(NPC.class);
+        when(npc.getId()).thenReturn(id);
+        when(npc.getName()).thenReturn(name);
+        return npc;
+    }
+
+    private static GameObjectSpawned objectSpawned(int id)
+    {
+        GameObjectSpawned event = new GameObjectSpawned();
+        event.setGameObject(gameObject(id));
+        return event;
+    }
+
+    private static GameObjectDespawned objectDespawned(int id)
+    {
+        GameObjectDespawned event = new GameObjectDespawned();
+        event.setGameObject(gameObject(id));
+        return event;
+    }
+
+    private static GameObject gameObject(int id)
+    {
+        GameObject object = mock(GameObject.class);
+        when(object.getId()).thenReturn(id);
+        return object;
     }
 
     private static ChatMessage chat(ChatMessageType type, String message)

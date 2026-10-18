@@ -31,7 +31,9 @@ enum AlertType
     SALVAGE("Salvage", "Lights up when a shipwreck is depleted or you run out of salvage to sort.",
         ConstsAfkConfig::enableSailingAlert, ConstsAfkConfig::sailingFlashColor),
     CARGO("Cargo", "Lights up when your crew can't salvage because the cargo hold is full.",
-        ConstsAfkConfig::enableCargoHoldAlert, ConstsAfkConfig::cargoHoldFlashColor);
+        ConstsAfkConfig::enableCargoHoldAlert, ConstsAfkConfig::cargoHoldFlashColor),
+    FORESTRY("Forestry", "Lights up when a Forestry event you picked starts nearby, and names it.",
+        ConstsAfkConfig::enableForestryAlert, ConstsAfkConfig::forestryFlashColor);
 
     private static final int PHASE_SLOTS = values().length;
 

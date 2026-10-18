@@ -16,6 +16,8 @@ public enum Preset
         AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM, AlertType.CANNON),
     SKILLING("Skilling",
         AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
+    WOODCUTTING("Woodcutting",
+        AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
     SAILING("Sailing",
         AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO),
     SAILING_AFK("Sailing AFK",

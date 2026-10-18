@@ -117,6 +117,13 @@ public interface ConstsAfkConfig extends Config
     )
     String sailingSection = "sailing";
 
+    @ConfigSection(
+        name = "Forestry Alert",
+        description = "Alert when a Forestry event starts nearby, for the events you pick",
+        position = 14
+    )
+    String forestrySection = "forestry";
+
     // General
 
     @Range(min = 0, max = 60_000)
@@ -754,5 +761,152 @@ public interface ConstsAfkConfig extends Config
     default Color cargoHoldFlashColor()
     {
         return new Color(150, 110, 255);
+    }
+
+    // Forestry
+
+    @ConfigItem(
+        keyName = "enableForestryAlert",
+        name = "Enable Forestry Alert",
+        description = "Alert when a Forestry event you picked below starts nearby (Custom preset only)",
+        section = forestrySection,
+        position = 0
+    )
+    default boolean enableForestryAlert()
+    {
+        return true;
+    }
+
+    @Range(min = 1, max = 500)
+    @ConfigItem(
+        keyName = "forestryAlertIterations",
+        name = "Alert Iterations",
+        description = "How many beeps per Forestry event",
+        section = forestrySection,
+        position = 1
+    )
+    default int forestryAlertIterations()
+    {
+        return 30;
+    }
+
+    @ConfigItem(
+        keyName = "forestryFlashColor",
+        name = "Forestry Flash Color",
+        description = "Screen flash and panel color for Forestry alerts",
+        section = forestrySection,
+        position = 2
+    )
+    default Color forestryFlashColor()
+    {
+        return new Color(170, 240, 40);
+    }
+
+    @ConfigItem(
+        keyName = "forestryRisingRoots",
+        name = "Rising Roots",
+        description = "Alert when a Rising Roots event starts: anima-infused roots sprout around the tree",
+        section = forestrySection,
+        position = 3
+    )
+    default boolean forestryRisingRoots()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryStrugglingSapling",
+        name = "Struggling Sapling",
+        description = "Alert when a Struggling Sapling event starts: a sapling needs the right mulch",
+        section = forestrySection,
+        position = 4
+    )
+    default boolean forestryStrugglingSapling()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryFloweringTree",
+        name = "Flowering Tree",
+        description = "Alert when a Flowering Tree event starts: flowering bushes need pollinating",
+        section = forestrySection,
+        position = 5
+    )
+    default boolean forestryFloweringTree()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryLeprechaun",
+        name = "Woodcutting Leprechaun",
+        description = "Alert when a Woodcutting Leprechaun event starts: a leprechaun shows up by the trees",
+        section = forestrySection,
+        position = 6
+    )
+    default boolean forestryLeprechaun()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryBeehive",
+        name = "Beehive",
+        description = "Alert when a Beehive event starts: a swarm needs a hive built",
+        section = forestrySection,
+        position = 7
+    )
+    default boolean forestryBeehive()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryFriendlyEnt",
+        name = "Friendly Ent",
+        description = "Alert when a Friendly Ent event starts: entlings need pruning",
+        section = forestrySection,
+        position = 8
+    )
+    default boolean forestryFriendlyEnt()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryPoachers",
+        name = "Poachers",
+        description = "Alert when a Poachers event starts: a fox is caught in a poacher's trap",
+        section = forestrySection,
+        position = 9
+    )
+    default boolean forestryPoachers()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryPheasantControl",
+        name = "Pheasant Control",
+        description = "Alert when a Pheasant Control event starts: the Freaky Forester wants pheasant eggs",
+        section = forestrySection,
+        position = 10
+    )
+    default boolean forestryPheasantControl()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "forestryEnchantmentRitual",
+        name = "Enchantment Ritual",
+        description = "Alert when an Enchantment Ritual event starts: a dryad's ritual needs the right circle",
+        section = forestrySection,
+        position = 11
+    )
+    default boolean forestryEnchantmentRitual()
+    {
+        return true;
     }
 }

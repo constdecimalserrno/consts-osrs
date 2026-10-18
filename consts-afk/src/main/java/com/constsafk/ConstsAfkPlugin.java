@@ -27,9 +27,12 @@ import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClientTick;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.NpcChanged;
+import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.callback.ClientThread;
@@ -46,8 +49,8 @@ import net.runelite.client.util.Text;
 
 @PluginDescriptor(
     name = "consts-AFK",
-    description = "AFK alerts with presets for combat, skilling and Sailing: cargo hold full, salvage, inventory full, health, prayer, aggro and more",
-    tags = {"afk", "combat", "skilling", "sailing", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
+    description = "AFK alerts with presets for combat, skilling, woodcutting and Sailing: Forestry events, cargo hold full, salvage, inventory full, health, prayer, aggro and more",
+    tags = {"afk", "combat", "skilling", "woodcutting", "forestry", "sailing", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
 )
 public class ConstsAfkPlugin extends Plugin
 {
@@ -58,11 +61,15 @@ public class ConstsAfkPlugin extends Plugin
     private static final long AGGRO_FLASH_WINDOW_MS = 1500L;
     private static final long BURST_FLASH_WINDOW_MS = 1500L;
     private static final long BURST_PANEL_WINDOW_MS = BURST_FLASH_WINDOW_MS * 10L;
+    // A Forestry event whose markers all vanished this recently is the same event coming back (a sapling withering,
+    // a loading screen), not a new one.
+    static final long FORESTRY_REARM_MS = 30_000L;
 
     private static final Set<AlertType> LOOP_ALERTS = EnumSet.of(
         AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.LOGOUT);
     private static final Set<AlertType> BURST_ALERTS = EnumSet.of(
-        AlertType.POTION, AlertType.RANDOM, AlertType.CANNON, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO);
+        AlertType.POTION, AlertType.RANDOM, AlertType.CANNON, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO,
+        AlertType.FORESTRY);
 
     private static final Set<ChatMessageType> TRIGGER_CHAT_TYPES = EnumSet.of(
         ChatMessageType.GAMEMESSAGE, ChatMessageType.SPAM, ChatMessageType.MESBOX);
@@ -108,6 +115,10 @@ public class ConstsAfkPlugin extends Plugin
     private final Map<AlertType, LoopAlert> loops = new EnumMap<>(AlertType.class);
     private final Map<AlertType, BurstAlert> bursts = new EnumMap<>(AlertType.class);
     private final Map<Skill, Integer> skillXpCache = new EnumMap<>(Skill.class);
+    // Markers of each Forestry event on screen now, and when each event's last marker went away.
+    private final Map<ForestryEvent, Integer> forestryMarkers = new EnumMap<>(ForestryEvent.class);
+    private final Map<ForestryEvent, Long> forestryGoneSince = new EnumMap<>(ForestryEvent.class);
+    private volatile ForestryEvent lastForestryEvent;
 
     private ScheduledExecutorService scheduler;
     private volatile ScheduledFuture<?> aggroFuture;
@@ -189,9 +200,14 @@ public class ConstsAfkPlugin extends Plugin
                 startSession();
             }
         }
-        else if (state != GameState.LOADING)
+        else if (state == GameState.LOADING)
         {
-            // Loading screens (teleports, region crossings) keep the session; anything else ends it.
+            // Loading screens (teleports, region crossings) keep the session. The scene reloads, so any Forestry event
+            // on screen counts as just gone: seen again after the load, it is the same event.
+            markForestryEventsGone();
+        }
+        else
+        {
             endSession();
         }
     }
@@ -258,7 +274,27 @@ public class ConstsAfkPlugin extends Plugin
     @Subscribe
     public void onNpcSpawned(NpcSpawned event)
     {
-        maybeTriggerRandomEventAlert(event.getNpc());
+        NPC npc = event.getNpc();
+        forestryMarkerAppeared(ForestryEvent.forNpc(npc.getId()));
+        maybeTriggerRandomEventAlert(npc);
+    }
+
+    @Subscribe
+    public void onNpcDespawned(NpcDespawned event)
+    {
+        forestryMarkerGone(ForestryEvent.forNpc(event.getNpc().getId()));
+    }
+
+    @Subscribe
+    public void onGameObjectSpawned(GameObjectSpawned event)
+    {
+        forestryMarkerAppeared(ForestryEvent.forObject(event.getGameObject().getId()));
+    }
+
+    @Subscribe
+    public void onGameObjectDespawned(GameObjectDespawned event)
+    {
+        forestryMarkerGone(ForestryEvent.forObject(event.getGameObject().getId()));
     }
 
     @Subscribe
@@ -357,6 +393,8 @@ public class ConstsAfkPlugin extends Plugin
         sessionActive = false;
         resetAlertState();
         skillXpCache.clear();
+        forestryMarkers.clear();
+        forestryGoneSince.clear();
         lastPlayerWorldPoint = null;
         lastPlayerAnimation = -1;
         lastKeyboardIdleTicks = -1;
@@ -452,6 +490,8 @@ public class ConstsAfkPlugin extends Plugin
                 return config.sailingAlertIterations();
             case CARGO:
                 return config.cargoHoldAlertIterations();
+            case FORESTRY:
+                return config.forestryAlertIterations();
             default:
                 return 1;
         }
@@ -576,7 +616,9 @@ public class ConstsAfkPlugin extends Plugin
 
     private void maybeTriggerRandomEventAlert(NPC npc)
     {
-        if (npc == null || !isTracking() || !isAlertEnabled(AlertType.RANDOM) || !isLikelyRandomEventNpc(npc))
+        // Forestry NPCs are not random events, though Pheasant Control's is also called Freaky Forester.
+        if (npc == null || !isTracking() || !isAlertEnabled(AlertType.RANDOM)
+            || ForestryEvent.forNpc(npc.getId()) != null || !isLikelyRandomEventNpc(npc))
         {
             return;
         }
@@ -638,6 +680,61 @@ public class ConstsAfkPlugin extends Plugin
             }
         }
         return false;
+    }
+
+    // Forestry events
+
+    private void forestryMarkerAppeared(ForestryEvent forestryEvent)
+    {
+        if (forestryEvent == null || forestryMarkers.merge(forestryEvent, 1, Integer::sum) > 1)
+        {
+            return;
+        }
+
+        // First marker on screen: a new event, unless this one only just went away.
+        Long goneSince = forestryGoneSince.remove(forestryEvent);
+        if (goneSince != null && System.currentTimeMillis() - goneSince < FORESTRY_REARM_MS)
+        {
+            return;
+        }
+
+        if (isTracking() && isAlertEnabled(AlertType.FORESTRY) && forestryEvent.isWanted(config))
+        {
+            lastForestryEvent = forestryEvent;
+            bursts.get(AlertType.FORESTRY).trigger();
+        }
+    }
+
+    private void forestryMarkerGone(ForestryEvent forestryEvent)
+    {
+        Integer markers = forestryEvent != null ? forestryMarkers.get(forestryEvent) : null;
+        if (markers == null)
+        {
+            return;
+        }
+
+        if (markers > 1)
+        {
+            forestryMarkers.put(forestryEvent, markers - 1);
+        }
+        else
+        {
+            forestryMarkers.remove(forestryEvent);
+            forestryGoneSince.put(forestryEvent, System.currentTimeMillis());
+        }
+    }
+
+    private void markForestryEventsGone()
+    {
+        long now = System.currentTimeMillis();
+        forestryMarkers.keySet().forEach(forestryEvent -> forestryGoneSince.put(forestryEvent, now));
+        forestryMarkers.clear();
+    }
+
+    /** The Forestry event that last raised the alert, named on the panel while it fires. */
+    ForestryEvent getLastForestryEvent()
+    {
+        return lastForestryEvent;
     }
 
     // Aggro timer
