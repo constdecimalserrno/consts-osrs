@@ -66,7 +66,7 @@ The crew message arrives as a filtered (spam) game message; consts-AFK listens o
 
 ## Training guide
 
-The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sidebar shows the entry for the preset that's on, and its dropdown switches presets. Turn the tab off with **Show Sidebar Guide** under General.
+Where each preset shines, what its alerts are telling you, and what to tune.
 
 ### Chinning
 
@@ -123,8 +123,8 @@ The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sideba
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out does.
 - **Sound**: the system beep by default. **Alert Sound** swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Game Sound Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
-- **Sidebar guide**: a consts-AFK tab with a preset switcher, suggested worlds for the preset (the busiest Forestry worlds for Woodcutting, Salvaging worlds for salvaging, otherwise the quietest regular members worlds, live from RuneLite's world list) and the Training guide above. **Show Sidebar Guide** (General) hides it.
-- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
+- **Suggested worlds**: the status panel's `Worlds` row names three worlds to hop to for the preset: the busiest Forestry worlds for Woodcutting, Salvaging worlds for salvaging, otherwise the quietest regular members worlds. It reads RuneLite's live world list and never suggests PvP, high-risk, skill-total, free or offline worlds. Hover it for player counts.
+- **Status panel**: shows the active preset, suggested worlds, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
 
 ## Running it
 

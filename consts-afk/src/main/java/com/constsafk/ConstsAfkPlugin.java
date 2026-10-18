@@ -17,7 +17,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
-import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -48,10 +47,7 @@ import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.ui.ClientToolbar;
-import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
-import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldResult;
@@ -124,14 +120,10 @@ public class ConstsAfkPlugin extends Plugin
     private ConstsAfkStatusOverlay statusOverlay;
 
     @Inject
-    private ClientToolbar clientToolbar;
-
-    @Inject
     private WorldService worldService;
 
-    private ConstsAfkGuidePanel guidePanel;
-    private NavigationButton guideButton;
-    private boolean guideButtonShown;
+    // Worlds worth hopping to for the preset that's on, shown in the status panel.
+    private volatile List<World> suggestedWorlds = Collections.emptyList();
 
     private final Map<AlertType, LoopAlert> loops = new EnumMap<>(AlertType.class);
     private final Map<AlertType, BurstAlert> bursts = new EnumMap<>(AlertType.class);
@@ -190,15 +182,7 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(statusOverlay);
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
-        guidePanel = new ConstsAfkGuidePanel(this);
-        guidePanel.showPreset(currentPreset());
-        guideButton = NavigationButton.builder()
-            .tooltip("consts-AFK guide")
-            .icon(ImageUtil.loadImageResource(getClass(), "guide_icon.png"))
-            .priority(10)
-            .panel(guidePanel)
-            .build();
-        updateGuideButton();
+        updateSuggestedWorlds();
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
         clientThread.invokeLater(() ->
         {
@@ -214,11 +198,6 @@ public class ConstsAfkPlugin extends Plugin
     {
         endSession();
         mouseManager.unregisterMouseListener(clickListener);
-        if (guideButtonShown)
-        {
-            clientToolbar.removeNavigation(guideButton);
-            guideButtonShown = false;
-        }
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
         shutdownScheduler();
@@ -255,13 +234,9 @@ public class ConstsAfkPlugin extends Plugin
             return;
         }
 
-        if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()) && guidePanel != null)
+        if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()))
         {
-            SwingUtilities.invokeLater(() -> guidePanel.showPreset(currentPreset()));
-        }
-        else if (ConstsAfkConfig.SIDEBAR_GUIDE_KEY.equals(event.getKey()))
-        {
-            SwingUtilities.invokeLater(this::updateGuideButton);
+            updateSuggestedWorlds();
         }
         else if (SOUND_KEYS.contains(event.getKey()))
         {
@@ -279,10 +254,7 @@ public class ConstsAfkPlugin extends Plugin
     @Subscribe
     public void onWorldsFetch(WorldsFetch event)
     {
-        if (guidePanel != null)
-        {
-            SwingUtilities.invokeLater(guidePanel::refreshWorlds);
-        }
+        updateSuggestedWorlds();
     }
 
     @Subscribe
@@ -404,30 +376,17 @@ public class ConstsAfkPlugin extends Plugin
         return preset != null ? preset : Preset.CUSTOM;
     }
 
-    /** Worlds worth hopping to for a preset, from RuneLite's world list; empty until it has loaded. */
-    List<World> getSuggestedWorlds(Preset preset)
+    /** Worlds worth hopping to for the preset that's on; empty until RuneLite's world list has loaded. */
+    List<World> getSuggestedWorlds()
     {
-        WorldResult result = worldService != null ? worldService.getWorlds() : null;
-        return WorldSuggestions.suggest(preset, result != null ? result.getWorlds() : null);
+        return suggestedWorlds;
     }
 
-    private void updateGuideButton()
+    // Re-read on start, on a preset change and whenever RuneLite refreshes its world list, not every frame.
+    private void updateSuggestedWorlds()
     {
-        if (guideButton == null)
-        {
-            return;
-        }
-
-        boolean show = config.showSidebarGuide();
-        if (show && !guideButtonShown)
-        {
-            clientToolbar.addNavigation(guideButton);
-        }
-        else if (!show && guideButtonShown)
-        {
-            clientToolbar.removeNavigation(guideButton);
-        }
-        guideButtonShown = show;
+        WorldResult result = worldService != null ? worldService.getWorlds() : null;
+        suggestedWorlds = WorldSuggestions.suggest(currentPreset(), result != null ? result.getWorlds() : null);
     }
 
     void applyPreset(Preset preset)
