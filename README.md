@@ -5,10 +5,11 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 | Plugin | What it does |
 |---|---|
 | [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
+| [consts-Destination](consts-destination/) | Highlights the tile under your cursor, and keeps the tile you clicked to walk to lit until your next click. |
 
 ![The consts-AFK status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-afk/screenshots/status-panel.gif)
 
-More on the plugin: [constdecimalserrno.dev/consts-afk](https://constdecimalserrno.dev/consts-afk/).
+More on both: [constdecimalserrno.dev/consts-osrs](https://constdecimalserrno.dev/consts-osrs/).
 
 ## Run it
 
@@ -49,7 +50,7 @@ The plugin shows up in RuneLite's plugin list. Its settings live under the wrenc
 
 ## Releases
 
-Each [release](https://github.com/constdecimalserrno/consts-osrs/releases) attaches the compiled plugin jars. Build them yourself with `./gradlew jar`; they land in `<plugin>/build/libs/`.
+Each [release](https://github.com/constdecimalserrno/consts-osrs/releases) attaches a compiled plugin jar. Plugins are versioned and tagged on their own: `consts-destination-v1.0.0`, and consts-AFK from `consts-afk-v1.8.0` on (its earlier releases are tagged `v1.0.0` to `v1.7.0`). Build them yourself with `./gradlew jar`; they land in `<plugin>/build/libs/`.
 
 ## Project structure
 
@@ -61,13 +62,17 @@ consts-osrs/
 ├── scripts/publish-hub-branch.sh # Cut a plugin's Plugin Hub branch
 ├── src/test/java/com/osrs/
 │   └── PluginLauncher.java       # Loads every plugin into one RuneLite client
-└── consts-afk/
-    ├── runelite-plugin.properties  # Plugin Hub metadata
-    ├── icon.png                    # Plugin Hub icon, 48×72
-    └── src/main/java/com/constsafk/...
+├── consts-afk/
+│   ├── runelite-plugin.properties  # Plugin Hub metadata
+│   ├── icon.png                    # Plugin Hub icon, 48×72
+│   └── src/main/java/com/constsafk/...
+└── consts-destination/
+    ├── runelite-plugin.properties
+    ├── icon.png
+    └── src/main/java/com/constsdestination/...
 ```
 
-Each plugin is a Gradle subproject. Shared settings live in the root `build.gradle`; a plugin's own `build.gradle` holds only its overrides.
+Each plugin is a Gradle subproject with its own version. Shared settings live in the root `build.gradle`; a plugin's own `build.gradle` holds its `version` and any overrides.
 
 ## Plugin Hub
 

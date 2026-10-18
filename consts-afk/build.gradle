@@ -1,1 +1,2 @@
-// Plugin-specific config — shared config inherited from root build.gradle
+// Plugin-specific config; shared config comes from the root build.gradle
+version = '1.7.0'
