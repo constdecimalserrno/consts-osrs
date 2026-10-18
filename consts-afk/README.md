@@ -164,4 +164,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header.
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE); the rest of consts-AFK is [MIT](LICENSE).

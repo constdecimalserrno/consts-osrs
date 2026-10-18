@@ -89,6 +89,6 @@ The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets
 
 ## License
 
-[BSD 2-Clause](LICENSE), the license RuneLite and its Plugin Hub use.
+[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Two files in consts-AFK are ported from RuneLite's NPC Aggression Timer and keep its BSD 2-Clause license; [consts-afk/NOTICE](consts-afk/NOTICE) has it.
 
 Not affiliated with Jagex or RuneLite. Old School RuneScape is a trademark of Jagex Ltd.

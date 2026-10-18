@@ -15,4 +15,5 @@ RuneLite plugins for Old School RuneScape, published under the pseudonym `constd
 
 - Test: `./gradlew test`. The launcher needs JDK 17+ for Gradle and JDK 11 for the client (see the root README).
 - Release: bump `version` in the plugin's own `build.gradle`, build `<plugin>/build/libs/<plugin>-<version>.jar`, then `gh release create <plugin>-v<version>` with the jar attached. consts-AFK's releases before 1.8.0 are tagged plain `v<version>`.
+- License: MIT. Every plugin folder keeps its own `LICENSE` (the Hub refuses a build without one at the root of what it builds). Code ported from elsewhere keeps its license, credited in the plugin's `NOTICE` and README.
 - Plugin Hub: `scripts/publish-hub-branch.sh <plugin>` cuts the `plugin-hub/<plugin>` branch and prints the manifest lines; each plugin is its own Hub entry. The Hub's standard build compiles only `<plugin>/src/main` against RuneLite, so use nothing outside the RuneLite client and API: no third-party libraries, no core plugin classes.
