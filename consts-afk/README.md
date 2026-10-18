@@ -156,8 +156,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out stops running alerts and starts the timers over, except Aggro in OSRS mode: its area and time left are saved per account and carry on if you log back in where you logged out.
 - **Sound**: the system beep by default. **Alert Sound** swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Game Sound Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
-- **Suggested worlds**: the status panel's `Worlds` row names three worlds to hop to for the preset: the busiest Forestry worlds for Woodcutting, Salvaging worlds for salvaging, otherwise the quietest regular members worlds. It reads RuneLite's live world list and never suggests PvP, high-risk, skill-total, free or offline worlds. Hover it for player counts.
-- **Status panel**: shows the active preset, suggested worlds, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
+- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
 
 ## Running it
 

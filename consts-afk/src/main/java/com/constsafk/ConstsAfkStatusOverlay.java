@@ -6,7 +6,6 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -22,7 +21,6 @@ import net.runelite.client.ui.overlay.components.ProgressBarComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
-import net.runelite.http.api.worlds.World;
 
 /** Top-right panel: the active preset, one bar per enabled alert, and the interaction pause countdown. */
 @Singleton
@@ -81,16 +79,6 @@ class ConstsAfkStatusOverlay extends OverlayPanel
 
         add(hoverTargets, line("Preset", String.valueOf(plugin.currentPreset()), INFO_COLOR),
             "Which alerts are on. Right-click the panel to switch.");
-
-        List<World> worlds = plugin.getSuggestedWorlds();
-        if (!worlds.isEmpty())
-        {
-            add(hoverTargets,
-                line("Worlds", worlds.stream().map(w -> String.valueOf(w.getId())).collect(Collectors.joining(", ")), INFO_COLOR),
-                WorldSuggestions.describe(plugin.currentPreset()) + worlds.stream()
-                    .map(w -> "</br>World " + w.getId() + ": " + String.format("%,d", w.getPlayers()) + " players")
-                    .collect(Collectors.joining()));
-        }
 
         for (AlertType type : AlertType.values())
         {

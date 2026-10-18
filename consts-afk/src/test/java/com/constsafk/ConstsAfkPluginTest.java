@@ -48,10 +48,6 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.game.WorldService;
-import net.runelite.http.api.worlds.World;
-import net.runelite.http.api.worlds.WorldResult;
-import net.runelite.http.api.worlds.WorldType;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 import org.junit.After;
@@ -988,31 +984,6 @@ public class ConstsAfkPluginTest
         // Like NPC Aggression Timer: no area, and so no timer, until a teleport or a reset shows where it is.
         assertFalse(aggroArea().hasArea());
         assertEquals(0L, plugin.getNextAggroAlertMillis());
-    }
-
-    // Suggested worlds
-
-    @Test
-    public void presetChangeShouldRefreshTheSuggestedWorlds() throws Exception
-    {
-        WorldService worldService = mock(WorldService.class);
-        WorldResult result = new WorldResult();
-        result.setWorlds(Arrays.asList(
-            World.builder().id(445).activity("Forestry").players(900).types(EnumSet.of(WorldType.MEMBERS)).build(),
-            World.builder().id(330).activity("-").players(40).types(EnumSet.of(WorldType.MEMBERS)).build()));
-        when(worldService.getWorlds()).thenReturn(result);
-        setField("worldService", worldService);
-        ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(ConstsAfkConfig.GROUP);
-        changed.setKey(ConstsAfkConfig.PRESET_KEY);
-
-        when(config.preset()).thenReturn(Preset.WOODCUTTING);
-        plugin.onConfigChanged(changed);
-        assertEquals(445, plugin.getSuggestedWorlds().get(0).getId());
-
-        when(config.preset()).thenReturn(Preset.CUSTOM);
-        plugin.onConfigChanged(changed);
-        assertTrue(plugin.getSuggestedWorlds().isEmpty());
     }
 
     private AggroArea aggroArea()

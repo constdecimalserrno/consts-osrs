@@ -41,8 +41,6 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.events.WorldsFetch;
-import net.runelite.client.game.WorldService;
 import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
@@ -50,8 +48,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.Text;
-import net.runelite.http.api.worlds.World;
-import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
     name = "consts-AFK",
@@ -128,12 +124,6 @@ public class ConstsAfkPlugin extends Plugin
     @Inject
     private ConstsAfkAggroAreaOverlay aggroAreaOverlay;
 
-    @Inject
-    private WorldService worldService;
-
-    // Worlds worth hopping to for the preset that's on, shown in the status panel.
-    private volatile List<World> suggestedWorlds = Collections.emptyList();
-
     private final Map<AlertType, LoopAlert> loops = new EnumMap<>(AlertType.class);
     private final Map<AlertType, BurstAlert> bursts = new EnumMap<>(AlertType.class);
     private final Map<Skill, Integer> skillXpCache = new EnumMap<>(Skill.class);
@@ -193,7 +183,6 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(aggroAreaOverlay);
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
-        updateSuggestedWorlds();
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
         clientThread.invokeLater(() ->
         {
@@ -252,7 +241,6 @@ public class ConstsAfkPlugin extends Plugin
         if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()))
         {
             keepCustom(event.getOldValue(), event.getNewValue());
-            updateSuggestedWorlds();
         }
         else if (SOUND_KEYS.contains(event.getKey()))
         {
@@ -265,12 +253,6 @@ public class ConstsAfkPlugin extends Plugin
             resetAlertState();
             evaluateAlerts();
         });
-    }
-
-    @Subscribe
-    public void onWorldsFetch(WorldsFetch event)
-    {
-        updateSuggestedWorlds();
     }
 
     @Subscribe
@@ -447,18 +429,6 @@ public class ConstsAfkPlugin extends Plugin
         return preset == null || preset.isEmpty() || Preset.CUSTOM.name().equals(preset);
     }
 
-    /** Worlds worth hopping to for the preset that's on; empty until RuneLite's world list has loaded. */
-    List<World> getSuggestedWorlds()
-    {
-        return suggestedWorlds;
-    }
-
-    // Re-read on start, on a preset change and whenever RuneLite refreshes its world list, not every frame.
-    private void updateSuggestedWorlds()
-    {
-        WorldResult result = worldService != null ? worldService.getWorlds() : null;
-        suggestedWorlds = WorldSuggestions.suggest(currentPreset(), result != null ? result.getWorlds() : null);
-    }
 
     void applyPreset(Preset preset)
     {
