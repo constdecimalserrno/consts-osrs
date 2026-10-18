@@ -1,0 +1,78 @@
+plugins {
+    id 'java'
+}
+
+def runeLiteVersion = 'latest.release'
+
+allprojects {
+    repositories {
+        mavenLocal()
+        maven { url = 'https://repo.runelite.net' }
+        mavenCentral()
+    }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    group = 'com.constdecimalserrno'
+    version = '1.0.0'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(11)
+        }
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    dependencies {
+        compileOnly "net.runelite:client:${runeLiteVersion}"
+
+        testImplementation "net.runelite:client:${runeLiteVersion}"
+        testImplementation 'junit:junit:4.13.2'
+        testImplementation 'org.mockito:mockito-core:5.12.0'
+    }
+
+    tasks.named('test') {
+        // Some subprojects only have launcher mains, not JUnit tests
+        failOnNoDiscoveredTests = false
+    }
+}
+
+// Root project — unified launcher that loads all plugins
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+dependencies {
+    implementation project(':consts-afk')
+
+    testImplementation "net.runelite:client:${runeLiteVersion}"
+    testImplementation "net.runelite:jshell:${runeLiteVersion}"
+}
+
+tasks.named('test') {
+    // Root project only has the launcher, no JUnit tests
+    failOnNoDiscoveredTests = false
+}
+
+def runeliteJavaHome = System.getenv('RUNELITE_JAVA_HOME') ?: System.getenv('JAVA_HOME')
+
+tasks.register('runClient', JavaExec) {
+    group = 'runelite'
+    description = 'Launch RuneLite with all plugins loaded'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.osrs.PluginLauncher'
+    jvmArgs '-ea'
+    if (System.getProperty('os.name').toLowerCase().contains('mac')) {
+        jvmArgs '--add-exports=java.desktop/com.apple.eawt=ALL-UNNAMED'
+    }
+    if (file("${runeliteJavaHome}/bin/java").exists()) {
+        executable = "${runeliteJavaHome}/bin/java"
+    }
+}

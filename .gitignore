@@ -1,0 +1,22 @@
+# Gradle / Java build output
+.gradle/
+.gradle-home/
+build/
+out/
+
+# IDE/editor files
+.idea/
+.vscode/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs / JVM crash dumps
+*.log
+hs_err_pid*
+
+# Local env files
+.env
+.env.*
