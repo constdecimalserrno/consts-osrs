@@ -14,8 +14,8 @@ final class PresetGuide
     static
     {
         put(Preset.CUSTOM,
-            "Anything the presets don't cover, including a cannon.",
-            "Each alert's own Enable toggle decides. Cannon is only here.",
+            "Anything the presets don't cover, including a cannon and random events.",
+            "Each alert's own Enable toggle decides. Cannon and Random are only here.",
             "Switching to a preset never touches your Custom toggles, so you can always come back.");
         put(Preset.CHINNING,
             "Maniacal monkeys in Kruk's Dungeon, after Monkey Madness II. Grey, red or black chinchompas by Ranged level.",
@@ -34,8 +34,8 @@ final class PresetGuide
                 + "level never beeps.");
         put(Preset.MINING,
             "Rocks that last: amethyst in the Mining Guild (92 Mining), or pay-dirt in the Motherlode Mine (30 Mining).",
-            "Idle fires when your rock or vein runs out. Inv Full says it is time to bank or fill the hopper. Random "
-                + "and Logout keep you from getting dragged off or logged out.",
+            "Idle fires when your rock or vein runs out. Inv Full says it is time to bank or fill the hopper. Logout "
+                + "keeps you from getting logged out.",
             "If the pauses between ores trip Idle, raise its time a little.");
         put(Preset.WOODCUTTING,
             "Chop where other people chop: Forestry events turn up more often with company, and pay out "
@@ -48,7 +48,7 @@ final class PresetGuide
         put(Preset.FISHING,
             "Spots you can sit at: barbarian fishing at Otto's Grotto, or any spot where you drop fish as you go.",
             "Idle fires when the spot moves, and when your inventory fills, since you stop fishing either way. "
-                + "Random and Logout as always.",
+                + "Logout as always.",
             "Nothing to tune for most spots.");
         put(Preset.SALVAGING_ACTIVE,
             "Working a salvaging hook at a shipwreck yourself.",

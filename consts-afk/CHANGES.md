@@ -19,7 +19,7 @@ Planned work, not history. Git log has the history.
 
 ## Ideas
 
-- [ ] Per-alert volume or custom sounds (all alerts share the system beep today).
+- [ ] Per-alert sounds (one Alert Sound covers every alert today).
 - [ ] Alert cooldown guardrails: max repeats per window, minimum silence after the first beep.
 - [ ] Overlay layout options: compact single-line mode, larger mode.
 - [ ] Idle detection toggles: pick which signals count as activity (XP, movement, animation, interacting).

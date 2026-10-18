@@ -3,6 +3,8 @@ package com.constsafk;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -13,6 +15,7 @@ import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.http.api.worlds.World;
 
 /**
  * The sidebar guide: a Preset dropdown that is the plugin's own (picking one applies it), and the training guide for
@@ -27,6 +30,9 @@ class ConstsAfkGuidePanel extends PluginPanel
     private final JLabel where = body();
     private final JLabel alerts = body();
     private final JLabel tune = body();
+    private final JLabel worldsNote = body();
+    private final JLabel worlds = body();
+    private Preset shown = Preset.CUSTOM;
     private boolean showing;
 
     ConstsAfkGuidePanel(ConstsAfkPlugin plugin)
@@ -61,6 +67,10 @@ class ConstsAfkGuidePanel extends PluginPanel
         });
         content.add(presetBox);
 
+        section(content, "Suggested worlds", worldsNote);
+        content.add(Box.createVerticalStrut(3));
+        addLeft(content, worlds);
+        worlds.setForeground(Color.WHITE);
         section(content, "Where", where);
         section(content, "What the alerts mean", alerts);
         section(content, "Tune", tune);
@@ -71,7 +81,7 @@ class ConstsAfkGuidePanel extends PluginPanel
     /** Shows the preset that is on, without applying it again. */
     void showPreset(Preset preset)
     {
-        Preset shown = preset != null ? preset : Preset.CUSTOM;
+        shown = preset != null ? preset : Preset.CUSTOM;
         showing = true;
         try
         {
@@ -86,6 +96,25 @@ class ConstsAfkGuidePanel extends PluginPanel
         where.setText(wrap(guide.getWhere()));
         alerts.setText(wrap(guide.getAlerts()));
         tune.setText(wrap(guide.getTune()));
+        refreshWorlds();
+    }
+
+    /** Re-reads the suggestions, for when RuneLite's world list changes. */
+    void refreshWorlds()
+    {
+        worldsNote.setText(wrap(WorldSuggestions.describe(shown)));
+        if (shown == Preset.CUSTOM)
+        {
+            worlds.setText("");
+            return;
+        }
+
+        List<World> picks = plugin.getSuggestedWorlds(shown);
+        worlds.setText(picks.isEmpty()
+            ? wrap("None right now. RuneLite's world list may still be loading.")
+            : "<html>" + picks.stream()
+                .map(w -> "World " + w.getId() + " &middot; " + String.format("%,d", w.getPlayers()) + " players")
+                .collect(Collectors.joining("<br>")) + "</html>");
     }
 
     private static void section(JPanel content, String heading, JLabel text)

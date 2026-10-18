@@ -13,19 +13,19 @@ public enum Preset
     CUSTOM("Custom"),
     CHINNING("Chinning",
         AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO,
-        AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM),
+        AlertType.LOGOUT, AlertType.POTION),
     // Crabs stop attacking after ten minutes, so Aggro is the one that matters. No Prayer: crabbing doesn't use it.
     CRABBING("Crabbing",
-        AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM),
+        AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION),
     MINING("Mining",
-        AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
+        AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL),
     WOODCUTTING("Woodcutting",
-        AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
+        AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
     FISHING("Fishing",
-        AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
+        AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL),
     // On a hook yourself: the wreck running dry, a full inventory and a full hold all need you.
     SALVAGING_ACTIVE("Salvaging Active",
-        AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO),
+        AlertType.LOGOUT, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO),
     // Crewmates on the hooks: the only thing that needs you is a full cargo hold.
     SALVAGING_AFK("Salvaging AFK",
         AlertType.CARGO);
@@ -44,6 +44,12 @@ public enum Preset
     boolean enables(AlertType type, ConstsAfkConfig config)
     {
         return this == CUSTOM ? type.isToggledOn(config) : alerts.contains(type);
+    }
+
+    /** Every preset is for AFK play, so Idle waits for the animation to stop; Custom asks the Idle section. */
+    boolean holdsIdleWhileAnimating(ConstsAfkConfig config)
+    {
+        return this != CUSTOM || config.idleRequireNoAnimation();
     }
 
     @Override

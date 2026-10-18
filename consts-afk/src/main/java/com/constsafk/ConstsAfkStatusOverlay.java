@@ -90,12 +90,17 @@ class ConstsAfkStatusOverlay extends OverlayPanel
                 "Alerts are silenced briefly after each click or key press.");
         }
 
-        if (config.showAnimationId())
+        // Whenever Idle waits for the animation to stop, show the animation, so a quiet Idle explains itself.
+        boolean holdingIdle = plugin.isAlertEnabled(AlertType.IDLE)
+            && plugin.currentPreset().holdsIdleWhileAnimating(config);
+        if (config.showAnimationId() || holdingIdle)
         {
             int animationId = plugin.getCurrentAnimationId();
             boolean animating = animationId != -1;
-            add(hoverTargets, line("Animation", animating ? String.valueOf(animationId) : "Idle", animating ? ON_COLOR : OFF_COLOR),
-                "Current local player animation id.");
+            add(hoverTargets, line("Animation", animating ? String.valueOf(animationId) : "None", animating ? ON_COLOR : OFF_COLOR),
+                holdingIdle
+                    ? "Your current animation. Idle waits until it stops, so it doesn't ding while you're busy."
+                    : "Current local player animation id.");
         }
 
         return renderWithHoverTooltips(graphics, hoverTargets);

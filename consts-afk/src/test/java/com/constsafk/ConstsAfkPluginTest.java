@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,17 +30,20 @@ import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
+import net.runelite.api.SoundEffectID;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
@@ -127,7 +131,7 @@ public class ConstsAfkPluginTest
         when(config.preset()).thenReturn(Preset.CHINNING);
 
         assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT,
-            AlertType.POTION, AlertType.RANDOM), enabledAlerts());
+            AlertType.POTION), enabledAlerts());
     }
 
     @Test
@@ -135,7 +139,7 @@ public class ConstsAfkPluginTest
     {
         when(config.preset()).thenReturn(Preset.SALVAGING_ACTIVE);
 
-        assertEquals(EnumSet.of(AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.SALVAGE,
+        assertEquals(EnumSet.of(AlertType.LOGOUT, AlertType.INVENTORY_FULL, AlertType.SALVAGE,
             AlertType.CARGO), enabledAlerts());
     }
 
@@ -144,14 +148,14 @@ public class ConstsAfkPluginTest
     {
         when(config.preset()).thenReturn(Preset.CRABBING);
 
-        assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION,
-            AlertType.RANDOM), enabledAlerts());
+        assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION),
+            enabledAlerts());
     }
 
     @Test
     public void miningAndFishingPresetsShouldCoverTheSkillingAlerts()
     {
-        Set<AlertType> skilling = EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL);
+        Set<AlertType> skilling = EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL);
 
         when(config.preset()).thenReturn(Preset.MINING);
         assertEquals(skilling, enabledAlerts());
@@ -172,8 +176,44 @@ public class ConstsAfkPluginTest
     {
         when(config.preset()).thenReturn(Preset.WOODCUTTING);
 
-        assertEquals(EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL,
+        assertEquals(EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL,
             AlertType.FORESTRY), enabledAlerts());
+    }
+
+    @Test
+    public void noPresetShouldIncludeRandomEvents()
+    {
+        for (Preset preset : Preset.values())
+        {
+            when(config.preset()).thenReturn(preset);
+            if (preset != Preset.CUSTOM)
+            {
+                assertFalse(preset + " includes Random", plugin.isAlertEnabled(AlertType.RANDOM));
+            }
+        }
+    }
+
+    @Test
+    public void presetsShouldHoldIdleWhileAnimatingAndCustomShouldAsk() throws Exception
+    {
+        when(config.idleThresholdMs()).thenReturn(6000);
+        setField("lastActivityMillis", System.currentTimeMillis() - 60_000L);
+        when(player.getAnimation()).thenReturn(867); // chopping
+
+        when(config.preset()).thenReturn(Preset.WOODCUTTING);
+        invokePrivate("evaluateAlerts");
+        assertFalse("a preset holds Idle while you are still chopping", plugin.isAlertFiring(AlertType.IDLE));
+
+        when(player.getAnimation()).thenReturn(-1);
+        invokePrivate("evaluateAlerts");
+        assertTrue("Idle fires once the animation stops", plugin.isAlertFiring(AlertType.IDLE));
+
+        when(config.preset()).thenReturn(Preset.CUSTOM);
+        when(config.enableIdleAlert()).thenReturn(true);
+        when(config.idleRequireNoAnimation()).thenReturn(false);
+        when(player.getAnimation()).thenReturn(867);
+        invokePrivate("evaluateAlerts");
+        assertTrue("Custom with the option off alerts mid-animation", plugin.isAlertFiring(AlertType.IDLE));
     }
 
     @Test
@@ -402,10 +442,13 @@ public class ConstsAfkPluginTest
     @Test
     public void pheasantControlForesterShouldNotCountAsARandomEvent() throws Exception
     {
-        when(config.preset()).thenReturn(Preset.WOODCUTTING);
+        // Custom, so both alerts are on: Random is in no preset.
+        when(config.enableRandomEventAlert()).thenReturn(true);
         pickAllForestryEvents();
 
-        plugin.onNpcSpawned(new NpcSpawned(npc(NpcID.GATHERING_EVENT_PHEASANT_FORESTER, "Freaky Forester")));
+        NPC forester = npc(NpcID.GATHERING_EVENT_PHEASANT_FORESTER, "Freaky Forester");
+        plugin.onNpcSpawned(new NpcSpawned(forester));
+        plugin.onInteractingChanged(new InteractingChanged(forester, player));
 
         awaitTrue("Pheasant Control should raise the forestry alert", () -> plugin.isAlertFiring(AlertType.FORESTRY));
         assertFalse("its Freaky Forester is not the random event", plugin.isAlertFiring(AlertType.RANDOM));
@@ -416,6 +459,100 @@ public class ConstsAfkPluginTest
     {
         assertNull(ForestryEvent.forNpc(0));
         assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("Freaky Forester"));
+    }
+
+    // Random events
+
+    @Test
+    public void yourRandomEventShouldFire() throws Exception
+    {
+        when(config.enableRandomEventAlert()).thenReturn(true);
+
+        plugin.onInteractingChanged(new InteractingChanged(npc(1, "Genie"), player));
+
+        awaitTrue("a random targeting you is yours", () -> plugin.isAlertFiring(AlertType.RANDOM));
+    }
+
+    @Test
+    public void someoneElsesRandomEventShouldNotFire() throws Exception
+    {
+        when(config.enableRandomEventAlert()).thenReturn(true);
+        NPC genie = npc(1, "Genie");
+
+        plugin.onNpcSpawned(new NpcSpawned(genie));
+        plugin.onInteractingChanged(new InteractingChanged(genie, mock(Player.class)));
+        Thread.sleep(100);
+
+        assertFalse("a random targeting another player is theirs", plugin.isAlertFiring(AlertType.RANDOM));
+    }
+
+    @Test
+    public void talkingToSomeoneElsesRandomEventShouldNotFire() throws Exception
+    {
+        when(config.enableRandomEventAlert()).thenReturn(true);
+        NPC genie = npc(1, "Genie");
+        when(player.getInteracting()).thenReturn(genie);
+
+        plugin.onInteractingChanged(new InteractingChanged(genie, player));
+        Thread.sleep(100);
+
+        assertFalse("it faces you because you clicked it, not because it is yours", plugin.isAlertFiring(AlertType.RANDOM));
+    }
+
+    // Sounds
+
+    @Test
+    public void gameSoundShouldPlayAtTheChosenVolume() throws Exception
+    {
+        runOnClientThread();
+        when(config.enableAllSoundAlerts()).thenReturn(true);
+        when(config.alertSound()).thenReturn(AlertSound.COINS);
+        when(config.soundVolume()).thenReturn(96);
+
+        invokePrivate("beep");
+
+        verify(client).playSoundEffect(SoundEffectID.GE_COIN_TINKLE, 96);
+    }
+
+    @Test
+    public void customSoundShouldPlayItsIdWithTheVolumeKeptInRange() throws Exception
+    {
+        runOnClientThread();
+        when(config.enableAllSoundAlerts()).thenReturn(true);
+        when(config.alertSound()).thenReturn(AlertSound.CUSTOM);
+        when(config.customSoundId()).thenReturn(3813);
+        when(config.soundVolume()).thenReturn(500);
+
+        invokePrivate("beep");
+
+        verify(client).playSoundEffect(3813, 127);
+    }
+
+    @Test
+    public void systemBeepShouldNotTouchTheGamesSounds() throws Exception
+    {
+        runOnClientThread();
+        when(config.enableAllSoundAlerts()).thenReturn(true);
+        when(config.alertSound()).thenReturn(AlertSound.SYSTEM_BEEP);
+
+        invokePrivate("beep");
+
+        verify(client, never()).playSoundEffect(anyInt(), anyInt());
+    }
+
+    @Test
+    public void pickingASoundShouldPlayItOnce() throws Exception
+    {
+        runOnClientThread();
+        when(config.alertSound()).thenReturn(AlertSound.TOWN_CRIER_BELL);
+        when(config.soundVolume()).thenReturn(96);
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsAfkConfig.GROUP);
+        changed.setKey(ConstsAfkConfig.ALERT_SOUND_KEY);
+
+        plugin.onConfigChanged(changed);
+
+        verify(client).playSoundEffect(SoundEffectID.TOWN_CRIER_BELL_DING, 96);
     }
 
     // Activity tracking
@@ -697,6 +834,17 @@ public class ConstsAfkPluginTest
             }
         }
         return enabled;
+    }
+
+    private void runOnClientThread() throws Exception
+    {
+        ClientThread clientThread = (ClientThread) getField("clientThread");
+        doAnswer(invocation ->
+        {
+            Runnable runnable = invocation.getArgument(0);
+            runnable.run();
+            return null;
+        }).when(clientThread).invoke(any(Runnable.class));
     }
 
     private void pickAllForestryEvents()

@@ -25,6 +25,7 @@ import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
+import net.runelite.api.SoundEffectVolume;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClientTick;
@@ -32,7 +33,7 @@ import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.NpcChanged;
+import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.StatChanged;
@@ -40,6 +41,8 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.WorldsFetch;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
@@ -50,6 +53,8 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
+import net.runelite.http.api.worlds.World;
+import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
     name = "consts-AFK",
@@ -68,6 +73,8 @@ public class ConstsAfkPlugin extends Plugin
     // A Forestry event whose markers all vanished this recently is the same event coming back (a sapling withering,
     // a loading screen), not a new one.
     static final long FORESTRY_REARM_MS = 30_000L;
+    private static final Set<String> SOUND_KEYS = Set.of(
+        ConstsAfkConfig.ALERT_SOUND_KEY, ConstsAfkConfig.CUSTOM_SOUND_KEY, ConstsAfkConfig.SOUND_VOLUME_KEY);
 
     private static final Set<AlertType> LOOP_ALERTS = EnumSet.of(
         AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.LOGOUT);
@@ -118,6 +125,9 @@ public class ConstsAfkPlugin extends Plugin
 
     @Inject
     private ClientToolbar clientToolbar;
+
+    @Inject
+    private WorldService worldService;
 
     private ConstsAfkGuidePanel guidePanel;
     private NavigationButton guideButton;
@@ -253,12 +263,26 @@ public class ConstsAfkPlugin extends Plugin
         {
             SwingUtilities.invokeLater(this::updateGuideButton);
         }
+        else if (SOUND_KEYS.contains(event.getKey()))
+        {
+            // A preview, so you hear what you picked.
+            playAlertSound();
+        }
 
         clientThread.invokeLater(() ->
         {
             resetAlertState();
             evaluateAlerts();
         });
+    }
+
+    @Subscribe
+    public void onWorldsFetch(WorldsFetch event)
+    {
+        if (guidePanel != null)
+        {
+            SwingUtilities.invokeLater(guidePanel::refreshWorlds);
+        }
     }
 
     @Subscribe
@@ -308,9 +332,7 @@ public class ConstsAfkPlugin extends Plugin
     @Subscribe
     public void onNpcSpawned(NpcSpawned event)
     {
-        NPC npc = event.getNpc();
-        forestryMarkerAppeared(ForestryEvent.forNpc(npc.getId()));
-        maybeTriggerRandomEventAlert(npc);
+        forestryMarkerAppeared(ForestryEvent.forNpc(event.getNpc().getId()));
     }
 
     @Subscribe
@@ -332,9 +354,17 @@ public class ConstsAfkPlugin extends Plugin
     }
 
     @Subscribe
-    public void onNpcChanged(NpcChanged event)
+    public void onInteractingChanged(InteractingChanged event)
     {
-        maybeTriggerRandomEventAlert(event.getNpc());
+        // A random event NPC targets the player it is for. Only yours counts: one targeting someone else is theirs,
+        // and one facing you because you are talking to it is someone else's that you clicked on.
+        Player localPlayer = client.getLocalPlayer();
+        if (!(event.getSource() instanceof NPC) || localPlayer == null || event.getTarget() != localPlayer
+            || localPlayer.getInteracting() == event.getSource())
+        {
+            return;
+        }
+        maybeTriggerRandomEventAlert((NPC) event.getSource());
     }
 
     static Set<AlertType> matchChatTriggers(String rawMessage)
@@ -372,6 +402,13 @@ public class ConstsAfkPlugin extends Plugin
     {
         Preset preset = config.preset();
         return preset != null ? preset : Preset.CUSTOM;
+    }
+
+    /** Worlds worth hopping to for a preset, from RuneLite's world list; empty until it has loaded. */
+    List<World> getSuggestedWorlds(Preset preset)
+    {
+        WorldResult result = worldService != null ? worldService.getWorlds() : null;
+        return WorldSuggestions.suggest(preset, result != null ? result.getWorlds() : null);
     }
 
     private void updateGuideButton()
@@ -491,7 +528,7 @@ public class ConstsAfkPlugin extends Plugin
         loops.get(AlertType.PRAYER).setFiring(isAlertEnabled(AlertType.PRAYER)
             && client.getBoostedSkillLevel(Skill.PRAYER) < config.prayerThreshold());
         loops.get(AlertType.IDLE).setFiring(isAlertEnabled(AlertType.IDLE)
-            && !(config.idleRequireNoAnimation() && getCurrentAnimationId() != -1)
+            && !(currentPreset().holdsIdleWhileAnimating(config) && getCurrentAnimationId() != -1)
             && now - lastActivityMillis >= config.idleThresholdMs());
         loops.get(AlertType.LOGOUT).setFiring(isAlertEnabled(AlertType.LOGOUT)
             && now - lastUserInteractionMillis >= Math.max(60_000L, config.logoutWarningMs()));
@@ -560,8 +597,23 @@ public class ConstsAfkPlugin extends Plugin
     {
         if (config.enableAllSoundAlerts() && !isStartupDelayActive())
         {
-            Toolkit.getDefaultToolkit().beep();
+            playAlertSound();
         }
+    }
+
+    /** The system beep, or the chosen game sound at the chosen volume, on the client thread it needs. */
+    private void playAlertSound()
+    {
+        AlertSound sound = config.alertSound();
+        int soundEffectId = sound != null ? sound.soundEffectId(config) : -1;
+        if (soundEffectId < 0)
+        {
+            Toolkit.getDefaultToolkit().beep();
+            return;
+        }
+
+        int volume = Math.max(1, Math.min(SoundEffectVolume.HIGH, config.soundVolume()));
+        clientThread.invoke(() -> client.playSoundEffect(soundEffectId, volume));
     }
 
     // Activity tracking
@@ -709,19 +761,7 @@ public class ConstsAfkPlugin extends Plugin
             return false;
         }
 
-        String[] actions = composition.getActions();
-        if (hasAction(actions, "dismiss"))
-        {
-            return true;
-        }
-
-        // Fallback: a talkable, non-combat NPC that is following the local player.
-        Player localPlayer = client.getLocalPlayer();
-        boolean followsLocalPlayer = localPlayer != null && npc.getInteracting() == localPlayer;
-        return followsLocalPlayer
-            && hasAction(actions, "talk-to")
-            && !hasAction(actions, "attack")
-            && npc.getCombatLevel() <= 0;
+        return hasAction(composition.getActions(), "dismiss");
     }
 
     private static boolean hasAction(String[] actions, String actionName)

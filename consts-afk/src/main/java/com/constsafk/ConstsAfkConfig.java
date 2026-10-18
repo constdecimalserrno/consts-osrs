@@ -1,6 +1,8 @@
 package com.constsafk;
 
 import java.awt.Color;
+import net.runelite.api.SoundEffectID;
+import net.runelite.api.SoundEffectVolume;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -15,6 +17,9 @@ public interface ConstsAfkConfig extends Config
     String GROUP = "afkcombatalerts";
     String PRESET_KEY = "preset";
     String SIDEBAR_GUIDE_KEY = "showSidebarGuide";
+    String ALERT_SOUND_KEY = "alertSound";
+    String CUSTOM_SOUND_KEY = "customSoundId";
+    String SOUND_VOLUME_KEY = "soundVolume";
 
     @ConfigItem(
         keyName = PRESET_KEY,
@@ -248,6 +253,44 @@ public interface ConstsAfkConfig extends Config
         return 1200;
     }
 
+    @ConfigItem(
+        keyName = ALERT_SOUND_KEY,
+        name = "Alert Sound",
+        description = "What alerts sound like: the system beep, or one of the game's own sounds. Picking one plays it once.",
+        section = soundSection,
+        position = 2
+    )
+    default AlertSound alertSound()
+    {
+        return AlertSound.SYSTEM_BEEP;
+    }
+
+    @Range(min = -1, max = 100_000)
+    @ConfigItem(
+        keyName = CUSTOM_SOUND_KEY,
+        name = "Custom Sound ID",
+        description = "The game sound effect to play when Alert Sound is Custom sound ID (the OSRS Wiki lists them)",
+        section = soundSection,
+        position = 3
+    )
+    default int customSoundId()
+    {
+        return SoundEffectID.TOWN_CRIER_BELL_DING;
+    }
+
+    @Range(min = 1, max = SoundEffectVolume.HIGH)
+    @ConfigItem(
+        keyName = SOUND_VOLUME_KEY,
+        name = "Game Sound Volume",
+        description = "How loud a game sound plays (1-127), even with the game's own sound effects turned off",
+        section = soundSection,
+        position = 4
+    )
+    default int soundVolume()
+    {
+        return SoundEffectVolume.MEDIUM_HIGH;
+    }
+
     // Health
 
     @ConfigItem(
@@ -381,13 +424,13 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = "idleRequireNoAnimation",
         name = "Suppress While Animating",
-        description = "Only alert once your character stops animating. Repeating animations (woodcutting, fishing) hold the alert off.",
+        description = "Only alert once your character stops animating, so a repeating animation (chopping, mining, fishing, fighting) holds the alert off. Every preset but Custom always does this.",
         section = idleSection,
         position = 2
     )
     default boolean idleRequireNoAnimation()
     {
-        return false;
+        return true;
     }
 
     @ConfigItem(

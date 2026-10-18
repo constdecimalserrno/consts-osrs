@@ -19,15 +19,17 @@ The **Preset** dropdown sits at the very top of the plugin config. You can also 
 | Preset | Alerts on |
 |---|---|
 | Custom (default) | Whatever each section's **Enable** toggle says |
-| Chinning | Health, Prayer, Idle, Aggro, Logout, Boost, Random |
-| Crabbing | Health, Idle, Aggro, Logout, Boost, Random |
-| Mining | Idle, Logout, Random, Inventory Full |
-| Woodcutting | Idle, Logout, Random, Inventory Full, Forestry |
-| Fishing | Idle, Logout, Random, Inventory Full |
-| Salvaging Active | Logout, Random, Inventory Full, Salvage, Cargo Hold |
+| Chinning | Health, Prayer, Idle, Aggro, Logout, Boost |
+| Crabbing | Health, Idle, Aggro, Logout, Boost |
+| Mining | Idle, Logout, Inventory Full |
+| Woodcutting | Idle, Logout, Inventory Full, Forestry |
+| Fishing | Idle, Logout, Inventory Full |
+| Salvaging Active | Logout, Inventory Full, Salvage, Cargo Hold |
 | Salvaging AFK | Cargo Hold only |
 
-Cannon isn't in any preset; turn it on under **Custom**.
+Cannon and Random aren't in any preset; turn them on under **Custom**.
+
+Every preset holds Idle while your character is animating, so a long chop or a slow catch doesn't ding you mid-action; the status panel then shows your current animation. Under **Custom**, **Suppress While Animating** (Idle, on by default) decides.
 
 Presets only choose which alerts are on. Thresholds, colors and iteration counts always come from your settings. A preset overrides the Enable toggles; switch back to **Custom** to use them again (your toggles are left untouched).
 
@@ -41,7 +43,7 @@ Presets only choose which alerts are on. Thresholds, colors and iteration counts
 | Aggro | 10-minute OSRS aggro timer (or custom interval) runs out | You walk `20` tiles away or right-click → Reset Aggro Timer | Red |
 | Logout | No click/key for `24 min` | You click or press a key | Orange |
 | Boost | Chat: `… is about to …` (potion/effect expiry) | `9` beeps or a click | Black |
-| Random | A random event NPC appears (`20 s` cooldown) | `9` beeps or a click | White |
+| Random | A random event NPC targets you: yours only, not someone else's nearby (`20 s` cooldown) | `9` beeps or a click | White |
 | Cannon | Chat: `Your cannon is out of ammo!` | `100` beeps or a click | Dark orange |
 | Inventory Full | Chat: `Your inventory is too full to hold any more …` | `100` beeps or a click | Magenta |
 | Salvage | Chat: `You salvage all you can from the shipwreck…` or `You have no more salvage to sort…` | `100` beeps or a click | Cyan |
@@ -81,7 +83,7 @@ The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sideba
 ### Mining
 
 - **Where:** Rocks that last: amethyst in the Mining Guild (92 Mining), or pay-dirt in the Motherlode Mine (30 Mining).
-- **What the alerts mean:** Idle fires when your rock or vein runs out. Inv Full says it is time to bank or fill the hopper. Random and Logout keep you from getting dragged off or logged out.
+- **What the alerts mean:** Idle fires when your rock or vein runs out. Inv Full says it is time to bank or fill the hopper. Logout keeps you from getting logged out.
 - **Tune:** If the pauses between ores trip Idle, raise its time a little.
 
 ### Woodcutting
@@ -93,7 +95,7 @@ The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sideba
 ### Fishing
 
 - **Where:** Spots you can sit at: barbarian fishing at Otto's Grotto, or any spot where you drop fish as you go.
-- **What the alerts mean:** Idle fires when the spot moves, and when your inventory fills, since you stop fishing either way. Random and Logout as always.
+- **What the alerts mean:** Idle fires when the spot moves, and when your inventory fills, since you stop fishing either way. Logout as always.
 - **Tune:** Nothing to tune for most spots.
 
 ### Salvaging Active
@@ -110,8 +112,8 @@ The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sideba
 
 ### Custom
 
-- **Where:** Anything the presets don't cover, including a cannon.
-- **What the alerts mean:** Each alert's own Enable toggle decides. Cannon is only here.
+- **Where:** Anything the presets don't cover, including a cannon and random events.
+- **What the alerts mean:** Each alert's own Enable toggle decides. Cannon and Random are only here.
 - **Tune:** Switching to a preset never touches your Custom toggles, so you can always come back.
 
 ## Shared behavior
@@ -120,9 +122,9 @@ The same guide is in the game: the **consts-AFK guide** tab in RuneLite's sideba
 - **Emit Immediately** (Health, Prayer, Boost, Cannon): keep beeping through the pause. For Boost and Cannon, clicks also no longer cancel the alert.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out does.
-- **Sound**: all alerts use the system beep. `Repeat Interval` (`1.2 s`) sets the gap between beeps.
-- **Sidebar guide**: a consts-AFK tab with a preset switcher and the Training guide above. **Show Sidebar Guide** (General) hides it.
-- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. `Show Animation ID` (General) adds your current animation id for tuning the idle alert.
+- **Sound**: the system beep by default. **Alert Sound** swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Game Sound Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
+- **Sidebar guide**: a consts-AFK tab with a preset switcher, suggested worlds for the preset (the busiest Forestry worlds for Woodcutting, Salvaging worlds for salvaging, otherwise the quietest regular members worlds, live from RuneLite's world list) and the Training guide above. **Show Sidebar Guide** (General) hides it.
+- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
 
 ## Running it
 
