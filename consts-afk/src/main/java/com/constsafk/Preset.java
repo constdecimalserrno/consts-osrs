@@ -14,6 +14,9 @@ public enum Preset
     CHINNING("Chinning",
         AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO,
         AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM),
+    // Crabs stop attacking after ten minutes, so Aggro is the one that matters. No Prayer: crabbing doesn't use it.
+    CRABBING("Crabbing",
+        AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM),
     MINING("Mining",
         AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
     WOODCUTTING("Woodcutting",

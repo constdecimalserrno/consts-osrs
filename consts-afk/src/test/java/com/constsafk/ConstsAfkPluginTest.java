@@ -126,6 +126,15 @@ public class ConstsAfkPluginTest
     }
 
     @Test
+    public void crabbingPresetShouldCoverAggroWithoutPrayer()
+    {
+        when(config.preset()).thenReturn(Preset.CRABBING);
+
+        assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION,
+            AlertType.RANDOM), enabledAlerts());
+    }
+
+    @Test
     public void miningAndFishingPresetsShouldCoverTheSkillingAlerts()
     {
         Set<AlertType> skilling = EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL);
@@ -138,9 +147,9 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void presetsShouldBeTheSixInDropdownOrder()
+    public void presetsShouldBeInDropdownOrder()
     {
-        assertEquals("[Custom, Chinning, Mining, Woodcutting, Fishing, Sailing AFK]",
+        assertEquals("[Custom, Chinning, Crabbing, Mining, Woodcutting, Fishing, Sailing AFK]",
             Arrays.toString(Preset.values()));
     }
 
