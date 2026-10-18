@@ -18,6 +18,14 @@ public class ConstsAfkStatusOverlayTest
     }
 
     @Test
+    public void aggroBarShouldMarkAnUnsettledAreaWithAQuestionMark()
+    {
+        assertEquals("9:41", ConstsAfkStatusOverlay.aggroValueText(581_000L, true, true));
+        assertEquals("? 9:41", ConstsAfkStatusOverlay.aggroValueText(581_000L, false, true));
+        assertEquals("?", ConstsAfkStatusOverlay.aggroValueText(0L, false, false));
+    }
+
+    @Test
     public void overlappingAlertsShouldFlashOutOfPhase()
     {
         long interval = 300L;

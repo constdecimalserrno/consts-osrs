@@ -1,5 +1,6 @@
 package com.constsafk;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -7,6 +8,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,8 +18,10 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -95,7 +100,6 @@ public class ConstsAfkPluginTest
         when(config.forestryDismissOnClick()).thenReturn(true);
         when(config.enableCargoHoldAlert()).thenReturn(true);
         when(config.enablePotionExpiryAlert()).thenReturn(true);
-        when(config.aggroResetDistanceTiles()).thenReturn(20);
         when(config.interactionPauseMs()).thenReturn(3000);
         when(config.logoutWarningMs()).thenReturn(1_440_000);
         when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
@@ -682,15 +686,16 @@ public class ConstsAfkPluginTest
     public void expiredAggroShouldWaitForResetInOsrsMode() throws Exception
     {
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
-        setField("nextAggroAlertMillis", 1234L);
-
-        invokePrivate("onAggroTimerDue");
-
-        assertTrue((boolean) getField("aggroExpiredAwaitingReset"));
-        assertEquals(0L, plugin.getNextAggroAlertMillis());
+        long expiredAt = System.currentTimeMillis() - 1000L;
+        aggroArea().reset(new WorldPoint(3200, 3200, 0), expiredAt - AggroArea.AGGRESSIVE_TIME_MS);
 
         invokePrivate("evaluateAggroTimer");
-        assertEquals("evaluating must not restart an expired timer", 0L, plugin.getNextAggroAlertMillis());
+
+        assertTrue((boolean) getField("aggroExpiredAwaitingReset"));
+        assertTrue(plugin.isAlertFiring(AlertType.AGGRO));
+
+        invokePrivate("evaluateAggroTimer");
+        assertEquals("evaluating must not restart an expired timer", expiredAt, plugin.getNextAggroAlertMillis());
         assertTrue(plugin.isAlertFiring(AlertType.AGGRO));
     }
 
@@ -708,31 +713,145 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void aggroShouldReanchorAfterWalkingPastResetDistance() throws Exception
+    public void leavingBothAreasShouldEndTheAlertAndRestartTheTimer() throws Exception
     {
-        WorldPoint anchor = new WorldPoint(3200, 3200, 0);
-        WorldPoint movedFar = new WorldPoint(3225, 3200, 0);
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
-        setField("aggroAnchor", anchor);
+        WorldPoint older = new WorldPoint(3200, 3200, 0);
+        WorldPoint newer = new WorldPoint(3215, 3200, 0);
+        WorldPoint outsideBoth = new WorldPoint(3207, 3215, 0);
+        long longAgo = System.currentTimeMillis() - AggroArea.AGGRESSIVE_TIME_MS - 1000L;
+        aggroArea().reset(older, longAgo);
+        aggroArea().reset(newer, longAgo);
+        invokePrivate("evaluateAggroTimer");
+        assertTrue(plugin.isAlertFiring(AlertType.AGGRO));
 
-        invokePrivate("maybeAutoResetAggroFromMovement", movedFar);
+        when(player.getWorldLocation()).thenReturn(outsideBoth);
+        invokePrivate("updateAggroArea");
 
-        assertEquals(movedFar, getField("aggroAnchor"));
-        assertTrue("timer should restart", plugin.getNextAggroAlertMillis() > System.currentTimeMillis());
+        assertArrayEquals(new WorldPoint[]{newer, outsideBoth}, aggroArea().getSafeCenters());
+        assertFalse((boolean) getField("aggroExpiredAwaitingReset"));
+        assertFalse(plugin.isAlertFiring(AlertType.AGGRO));
+        assertTrue("timer should restart",
+            plugin.getNextAggroAlertMillis() > System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(9L));
     }
 
     @Test
-    public void aggroShouldKeepAnchorForShortMoves() throws Exception
+    public void walkingWithinEitherAreaShouldKeepTheTimer() throws Exception
     {
-        WorldPoint anchor = new WorldPoint(3200, 3200, 0);
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
-        setField("aggroAnchor", anchor);
-        setField("nextAggroAlertMillis", 1234L);
+        aggroArea().reset(new WorldPoint(3200, 3200, 0), 1234L);
+        aggroArea().reset(new WorldPoint(3215, 3200, 0), 1234L);
+        long endMillis = plugin.getNextAggroAlertMillis();
 
-        invokePrivate("maybeAutoResetAggroFromMovement", new WorldPoint(3210, 3200, 0));
+        // Left the newer area, still inside the older one: 25 tiles from where the timer started, and no reset.
+        when(player.getWorldLocation()).thenReturn(new WorldPoint(3190, 3200, 0));
+        invokePrivate("updateAggroArea");
 
-        assertEquals(anchor, getField("aggroAnchor"));
-        assertEquals(1234L, plugin.getNextAggroAlertMillis());
+        assertEquals(endMillis, plugin.getNextAggroAlertMillis());
+    }
+
+    @Test
+    public void resetAggroTimerShouldStartAFreshCenterWhereYouStand() throws Exception
+    {
+        when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
+        WorldPoint here = new WorldPoint(3200, 3200, 0);
+        when(player.getWorldLocation()).thenReturn(here);
+        invokePrivate("onAggroTimerDue");
+
+        plugin.resetAggroTimer();
+
+        assertEquals(here, aggroArea().getSafeCenters()[1]);
+        assertFalse(plugin.isAlertFiring(AlertType.AGGRO));
+        assertTrue(plugin.getNextAggroAlertMillis() > System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(9L));
+    }
+
+    @Test
+    public void customMinutesShouldKeepItsIntervalWhateverTheArea() throws Exception
+    {
+        when(config.timerMode()).thenReturn(TimerMode.CUSTOM_MINUTES);
+        when(config.timerMinutes()).thenReturn(7);
+
+        invokePrivate("evaluateAggroTimer");
+        long nextAlert = plugin.getNextAggroAlertMillis();
+        assertTrue(nextAlert > System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(6L));
+
+        // A teleport moves the area; the interval doesn't care.
+        when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, 3200, 0));
+        invokePrivate("updateAggroArea");
+        when(player.getWorldLocation()).thenReturn(new WorldPoint(3300, 3300, 0));
+        invokePrivate("updateAggroArea");
+
+        assertTrue(aggroArea().hasArea());
+        assertEquals(nextAlert, plugin.getNextAggroAlertMillis());
+
+        plugin.resetAggroTimer();
+        assertEquals("a reset leaves the area alone", new WorldPoint(3300, 3300, 0), aggroArea().getSafeCenters()[1]);
+        assertTrue(plugin.getNextAggroAlertMillis() >= nextAlert);
+    }
+
+    @Test
+    public void areaLinesShouldShowOnlyWhileOsrsAggroIsOn()
+    {
+        when(config.showAggroAreaLines()).thenReturn(true);
+        when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
+        assertTrue(plugin.shouldShowAggroAreaLines());
+
+        when(config.preset()).thenReturn(Preset.MINING);
+        assertFalse("Mining has no Aggro", plugin.shouldShowAggroAreaLines());
+
+        when(config.preset()).thenReturn(Preset.CRABBING);
+        assertTrue(plugin.shouldShowAggroAreaLines());
+
+        when(config.timerMode()).thenReturn(TimerMode.CUSTOM_MINUTES);
+        assertFalse("a custom interval has no area", plugin.shouldShowAggroAreaLines());
+
+        when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
+        when(config.showAggroAreaLines()).thenReturn(false);
+        assertFalse(plugin.shouldShowAggroAreaLines());
+    }
+
+    @Test
+    public void aggroAreaShouldSurviveARelog() throws Exception
+    {
+        Map<String, Object> saved = new HashMap<>();
+        backProfileConfigWith(saved);
+        when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
+        WorldPoint older = new WorldPoint(3200, 3200, 0);
+        WorldPoint newer = new WorldPoint(3215, 3200, 0);
+        when(player.getWorldLocation()).thenReturn(older);
+        plugin.resetAggroTimer();
+        when(player.getWorldLocation()).thenReturn(newer);
+        plugin.resetAggroTimer();
+        long endMillis = plugin.getNextAggroAlertMillis();
+
+        plugin.onGameStateChanged(gameState(GameState.HOPPING));
+        assertTrue("HOPPING alone leaves the area alone", aggroArea().isCalibrated());
+
+        plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
+        assertFalse(aggroArea().hasArea());
+        assertEquals(4, saved.size());
+
+        plugin.onGameStateChanged(gameState(GameState.LOGGING_IN));
+        plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
+
+        assertArrayEquals(new WorldPoint[]{older, newer}, aggroArea().getSafeCenters());
+        long restoredEnd = plugin.getNextAggroAlertMillis();
+        assertTrue("the time left carries over", restoredEnd >= endMillis && restoredEnd <= endMillis + 5000L);
+    }
+
+    @Test
+    public void savingTheAggroAreaShouldNotCountAsASettingsChange() throws Exception
+    {
+        when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
+        invokePrivate("onAggroTimerDue");
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsAfkConfig.GROUP);
+        changed.setProfile("rsprofile.test");
+        changed.setKey(AggroArea.CENTER1_KEY);
+
+        plugin.onConfigChanged(changed);
+
+        assertTrue("a settings change would have reset the alert", plugin.isAlertFiring(AlertType.AGGRO));
     }
 
     // Interaction and logout
@@ -796,19 +915,23 @@ public class ConstsAfkPluginTest
     // Lifecycle
 
     @Test
-    public void startUpShouldSeedPlayerLocationAndAggroAnchor() throws Exception
+    public void startUpShouldSeedPlayerLocationAndWaitToFindTheAggroArea() throws Exception
     {
         setField("sessionActive", false);
         setField("overlayManager", mock(OverlayManager.class));
         setField("mouseManager", mock(MouseManager.class));
         setField("flashOverlay", mock(ConstsAfkFlashOverlay.class));
         setField("statusOverlay", mock(ConstsAfkStatusOverlay.class));
+        setField("aggroAreaOverlay", mock(ConstsAfkAggroAreaOverlay.class));
+        when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
 
         plugin.startUp();
 
         assertTrue((boolean) getField("sessionActive"));
         assertEquals(player.getWorldLocation(), getField("lastPlayerWorldPoint"));
-        assertEquals(player.getWorldLocation(), getField("aggroAnchor"));
+        // Like NPC Aggression Timer: no area, and so no timer, until a teleport or a reset shows where it is.
+        assertFalse(aggroArea().hasArea());
+        assertEquals(0L, plugin.getNextAggroAlertMillis());
     }
 
     // Suggested worlds
@@ -834,6 +957,28 @@ public class ConstsAfkPluginTest
         when(config.preset()).thenReturn(Preset.CUSTOM);
         plugin.onConfigChanged(changed);
         assertTrue(plugin.getSuggestedWorlds().isEmpty());
+    }
+
+    private AggroArea aggroArea()
+    {
+        return plugin.getAggroArea();
+    }
+
+    /** Keeps RuneScape profile config in the given map, so what logging out saves, logging in can read. */
+    private void backProfileConfigWith(Map<String, Object> saved)
+    {
+        doAnswer(invocation ->
+        {
+            saved.put(invocation.getArgument(1), invocation.getArgument(2));
+            return null;
+        }).when(configManager).setRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString(), any());
+        doAnswer(invocation ->
+        {
+            saved.remove(invocation.<String>getArgument(1));
+            return null;
+        }).when(configManager).unsetRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString());
+        when(configManager.<Object>getRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString(), any(Type.class)))
+            .thenAnswer(invocation -> saved.get(invocation.<String>getArgument(1)));
     }
 
     private Set<AlertType> enabledAlerts()

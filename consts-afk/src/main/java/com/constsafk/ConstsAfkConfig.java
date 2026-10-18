@@ -3,6 +3,7 @@ package com.constsafk;
 import java.awt.Color;
 import net.runelite.api.SoundEffectID;
 import net.runelite.api.SoundEffectVolume;
+import net.runelite.client.config.Alpha;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -354,7 +355,7 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = "enableTimerAlert",
         name = "Aggro Alert",
-        description = "Alert when the aggro timer runs out (Custom preset only)",
+        description = "Alert when the aggro timer runs out (Custom preset only). OSRS mode tracks the game's unaggressive area and timer, based on RuneLite's NPC Aggression Timer by Woox",
         section = combatSection,
         position = 8
     )
@@ -390,7 +391,7 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = "timerMode",
         name = "Aggro: Mode",
-        description = "OSRS 10-minute aggro timing, or a repeating custom interval",
+        description = "OSRS: the game's 10-minute timer, restarted when you leave the unaggressive area. Custom Minutes: a repeating interval",
         section = combatSection,
         position = 11
     )
@@ -412,17 +413,44 @@ public interface ConstsAfkConfig extends Config
         return 10;
     }
 
-    @Range(min = 5, max = 250)
+    // The area lines and their default colors come from RuneLite's NPC Aggression Timer (BSD 2-Clause,
+    // Copyright (c) 2018, Woox); see AggroArea.java.
     @ConfigItem(
-        keyName = "aggroResetDistanceTiles",
-        name = "Aggro: Reset Distance",
-        description = "In OSRS mode, moving this many tiles from where the timer started restarts it",
+        keyName = "showAggroAreaLines",
+        name = "Aggro: Show Area Lines",
+        description = "In OSRS mode, outline the unaggressive area on the ground. Walk out of it to restart the 10-minute timer",
         section = combatSection,
         position = 13
     )
-    default int aggroResetDistanceTiles()
+    default boolean showAggroAreaLines()
     {
-        return 20;
+        return true;
+    }
+
+    @Alpha
+    @ConfigItem(
+        keyName = "aggroAreaColor",
+        name = "Aggro: Aggressive Color",
+        description = "Area line color while NPCs are still aggressive",
+        section = combatSection,
+        position = 14
+    )
+    default Color aggroAreaColor()
+    {
+        return new Color(0x64FFFF00, true);
+    }
+
+    @Alpha
+    @ConfigItem(
+        keyName = "unaggroAreaColor",
+        name = "Aggro: Unaggressive Color",
+        description = "Area line color once NPCs have stopped being aggressive",
+        section = combatSection,
+        position = 15
+    )
+    default Color unaggroAreaColor()
+    {
+        return new Color(0xFFFF00);
     }
 
     @ConfigItem(
@@ -430,7 +458,7 @@ public interface ConstsAfkConfig extends Config
         name = "Potion Expiry Alert",
         description = "Alert when chat says a potion or effect is about to expire (Custom preset only)",
         section = combatSection,
-        position = 14
+        position = 16
     )
     default boolean enablePotionExpiryAlert()
     {
@@ -442,7 +470,7 @@ public interface ConstsAfkConfig extends Config
         name = "Potion: Dismiss on Click",
         description = "A click or key press silences this alert. Off, it keeps going through clicks",
         section = combatSection,
-        position = 15
+        position = 17
     )
     default boolean potionDismissOnClick()
     {
@@ -454,7 +482,7 @@ public interface ConstsAfkConfig extends Config
         name = "Potion: Color",
         description = "Screen flash and panel color for Potion",
         section = combatSection,
-        position = 16
+        position = 18
     )
     default Color potionExpiryFlashColor()
     {
@@ -466,7 +494,7 @@ public interface ConstsAfkConfig extends Config
         name = "Cannon Alert",
         description = "Alert when chat says 'Your cannon is out of ammo!' (Custom preset only)",
         section = combatSection,
-        position = 17
+        position = 19
     )
     default boolean enableCannonAlert()
     {
@@ -478,7 +506,7 @@ public interface ConstsAfkConfig extends Config
         name = "Cannon: Dismiss on Click",
         description = "A click or key press silences this alert. Off, it keeps going through clicks",
         section = combatSection,
-        position = 18
+        position = 20
     )
     default boolean cannonDismissOnClick()
     {
@@ -490,7 +518,7 @@ public interface ConstsAfkConfig extends Config
         name = "Cannon: Color",
         description = "Screen flash and panel color for Cannon",
         section = combatSection,
-        position = 19
+        position = 21
     )
     default Color cannonFlashColor()
     {

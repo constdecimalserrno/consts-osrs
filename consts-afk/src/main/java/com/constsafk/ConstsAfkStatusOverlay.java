@@ -34,6 +34,11 @@ class ConstsAfkStatusOverlay extends OverlayPanel
     private static final Color OFF_COLOR = new Color(210, 95, 95);
     private static final Color INFO_COLOR = new Color(255, 210, 80);
     private static final Color BAR_BACKGROUND = new Color(30, 33, 40, 230);
+    private static final String AGGRO_AREA_UNKNOWN_TOOLTIP = "Aggro ?: the unaggressive area isn't known yet. Teleport or"
+        + " enter a dungeon, then walk until the area settles and the ? goes away.</br>Or right-click the panel and Reset"
+        + " Aggro Timer to start it where you stand.";
+    private static final String AGGRO_AREA_SETTLING_TOOLTIP = "Aggro ?: only part of the unaggressive area is known."
+        + " Walk out of the lines until the area settles and the ? goes away.";
 
     private final Client client;
     private final ConstsAfkPlugin plugin;
@@ -91,7 +96,7 @@ class ConstsAfkStatusOverlay extends OverlayPanel
         {
             if (plugin.isAlertEnabled(type))
             {
-                add(hoverTargets, alertBar(type), type.getDescription());
+                add(hoverTargets, alertBar(type), tooltip(type));
             }
         }
 
@@ -135,7 +140,8 @@ class ConstsAfkStatusOverlay extends OverlayPanel
             case AGGRO:
             {
                 long remainingMs = Math.max(0L, plugin.getNextAggroAlertMillis() - System.currentTimeMillis());
-                return bar(type, formatClock(remainingMs), remainingMs, plugin.getAggroIntervalMillis());
+                String valueText = aggroValueText(remainingMs, !isAggroAreaUncalibrated(), plugin.getAggroArea().hasArea());
+                return bar(type, valueText, remainingMs, plugin.getAggroIntervalMillis());
             }
             case LOGOUT:
             {
@@ -156,6 +162,20 @@ class ConstsAfkStatusOverlay extends OverlayPanel
                 return bar(type, firing ? "1/1" : "0/1", firing ? 1L : 0L, 1L);
             }
         }
+    }
+
+    private String tooltip(AlertType type)
+    {
+        if (type == AlertType.AGGRO && isAggroAreaUncalibrated())
+        {
+            return plugin.getAggroArea().hasArea() ? AGGRO_AREA_SETTLING_TOOLTIP : AGGRO_AREA_UNKNOWN_TOOLTIP;
+        }
+        return type.getDescription();
+    }
+
+    private boolean isAggroAreaUncalibrated()
+    {
+        return plugin.usesAggroArea() && !plugin.getAggroArea().isCalibrated();
     }
 
     private ProgressBarComponent skillBar(AlertType type, Skill skill)
@@ -266,6 +286,20 @@ class ConstsAfkStatusOverlay extends OverlayPanel
         Rectangle translated = new Rectangle(componentBounds);
         translated.translate(panelBounds.x, panelBounds.y);
         return translated.contains(mouseX, mouseY);
+    }
+
+    /**
+     * The Aggro bar's value. Until both area centers are known the countdown may be off, so it wears a "?"; with no
+     * area at all there is no countdown, only the "?".
+     */
+    static String aggroValueText(long remainingMs, boolean calibrated, boolean hasArea)
+    {
+        String clock = formatClock(remainingMs);
+        if (calibrated)
+        {
+            return clock;
+        }
+        return hasArea ? "? " + clock : "?";
     }
 
     static String formatClock(long millis)
