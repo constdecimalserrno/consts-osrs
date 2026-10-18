@@ -31,20 +31,24 @@ Cannon and Random aren't in any preset; turn them on under **Custom**.
 
 Every preset holds Idle while your character is animating, so a long chop or a slow catch doesn't ding you mid-action; the status panel then shows your current animation. Under **Custom**, **Suppress While Animating** (Idle, on by default) decides.
 
-Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click always come from your settings. A preset overrides each alert's on/off; switch back to **Custom** to use them again (your toggles are left untouched).
+Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click always come from your settings. A preset overrides each alert's Enabled; switch back to **Custom** and your own set comes back, as you last left it.
 
 ## Settings
 
-Six sections, and every alert has the same block in the same order: its on/off (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
+**General** first, then one collapsible section per alert, named for its group and kept in group order:
 
-| Section | What's in it |
+| Group | Sections |
 |---|---|
 | General | Click Pause, Quiet After Dismiss, Give Up After, Startup Delay, sounds, screen flash, Show Animation ID |
-| Combat | Health, Prayer, Aggro, Potion, Cannon |
-| AFK | Idle, Logout, Inventory Full |
+| Combat | Combat: Health, Combat: Prayer, Combat: Aggro, Combat: Potion, Combat: Cannon |
+| AFK | AFK: Idle, AFK: Logout, AFK: Inventory Full |
 | Random Event | Random Event |
-| Forestry | Forestry, and a checkbox per event |
-| Sailing | Salvage, Cargo Hold |
+| Forestry | Forestry, with a checkbox per event |
+| Sailing | Sailing: Salvage, Sailing: Cargo Hold |
+
+Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options. The alert sections start collapsed.
+
+**Custom remembers.** Switching from Custom to a preset saves every alert's Enabled; switching back puts them back exactly, even if you flipped some while a preset was on.
 
 **Dismiss on Click** (on by default): a click or key press silences the alert. A one-off alert is cleared; an ongoing one (Health, Prayer, Idle, Aggro) holds off for the Click Pause. Turn it off for alerts you never want a stray click to hush. Logout has none: any click restarts its countdown.
 
@@ -72,7 +76,7 @@ Six sections, and every alert has the same block in the same order: its on/off (
 In **OSRS** mode (the default), Aggro follows the game's own rule, the way RuneLite's NPC Aggression Timer does:
 
 - The game remembers two tiles, each with a 21×21 area around it. While you stay within 10 tiles of either one, the 10-minute timer keeps running. Step outside both and the older tile moves to where you stand: NPCs are aggressive again for another 10 minutes.
-- **Area lines** outline the area on the ground: translucent yellow while NPCs are still aggressive, solid yellow once they've stopped. Walk past them to reset the timer. **Aggro: Show Area Lines** (on), **Aggro: Aggressive Color** and **Aggro: Unaggressive Color** are at the end of Aggro's block in Combat. The lines only show while the preset, or Custom, has Aggro on.
+- **Area lines** outline the area on the ground: translucent yellow while NPCs are still aggressive, solid yellow once they've stopped. Walk past them to reset the timer. **Show Area Lines** (on), **Aggressive Color** and **Unaggressive Color** are at the end of the **Combat: Aggro** section. The lines only show while the preset, or Custom, has Aggro on.
 - **Finding the area.** Until consts-AFK knows where both tiles are (right after you turn it on, or after logging in somewhere new), the bar reads `Aggro ?`. Teleport or take a dungeon entrance: that leaves both areas, so the timer starts and one area is known (`Aggro ? 9:59`). Walk out of it once and the second is known too, and the `?` goes away. Going back near where you teleported from before then makes it unknown again. Or right-click the panel → **Reset Aggro Timer** to start a fresh area where you stand.
 - **Logging out** saves the area and the time left for that account. Log back in on the same tile and Aggro carries on; anywhere else it starts over, unknown.
 

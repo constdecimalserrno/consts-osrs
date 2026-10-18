@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -69,6 +70,11 @@ public class ConstsAfkPlugin extends Plugin
     // A Forestry event whose markers all vanished this recently is the same event coming back (a sapling withering,
     // a loading screen), not a new one.
     static final long FORESTRY_REARM_MS = 30_000L;
+    // Each alert's own on/off: together, the Custom preset.
+    static final List<String> CUSTOM_TOGGLE_KEYS = List.of(
+        "enableHealthAlert", "enablePrayerAlert", "enableTimerAlert", "enablePotionExpiryAlert", "enableCannonAlert",
+        "enableIdleAlert", "enableLogoutWarning", "enableInventoryFullAlert", "enableRandomEventAlert",
+        "enableForestryAlert", "enableSailingAlert", "enableCargoHoldAlert");
     private static final Set<String> SOUND_KEYS = Set.of(
         ConstsAfkConfig.ALERT_SOUND_KEY, ConstsAfkConfig.CUSTOM_SOUND_KEY, ConstsAfkConfig.SOUND_VOLUME_KEY);
 
@@ -245,6 +251,7 @@ public class ConstsAfkPlugin extends Plugin
 
         if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()))
         {
+            keepCustom(event.getOldValue(), event.getNewValue());
             updateSuggestedWorlds();
         }
         else if (SOUND_KEYS.contains(event.getKey()))
@@ -384,6 +391,60 @@ public class ConstsAfkPlugin extends Plugin
     {
         Preset preset = config.preset();
         return preset != null ? preset : Preset.CUSTOM;
+    }
+
+    /**
+     * Custom is whatever you last left it at. Leaving Custom for a preset saves every alert's on/off; coming back puts
+     * them back, so a toggle flipped while a preset was on doesn't leak into Custom.
+     */
+    private void keepCustom(String oldPreset, String newPreset)
+    {
+        boolean leaving = isCustom(oldPreset) && !isCustom(newPreset);
+        boolean returning = !isCustom(oldPreset) && isCustom(newPreset);
+        if (leaving)
+        {
+            String saved = CUSTOM_TOGGLE_KEYS.stream()
+                .map(key ->
+                {
+                    String value = configManager.getConfiguration(ConstsAfkConfig.GROUP, key);
+                    return key + "=" + (value == null ? "" : value);
+                })
+                .collect(Collectors.joining(";"));
+            configManager.setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY, saved);
+        }
+        else if (returning)
+        {
+            String saved = configManager.getConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY);
+            if (saved == null)
+            {
+                return;
+            }
+            for (String pair : saved.split(";"))
+            {
+                int split = pair.indexOf('=');
+                String key = split > 0 ? pair.substring(0, split) : "";
+                if (!CUSTOM_TOGGLE_KEYS.contains(key))
+                {
+                    continue;
+                }
+                String value = pair.substring(split + 1);
+                if (value.isEmpty())
+                {
+                    // Never set before: back to its default.
+                    configManager.unsetConfiguration(ConstsAfkConfig.GROUP, key);
+                }
+                else
+                {
+                    configManager.setConfiguration(ConstsAfkConfig.GROUP, key, value);
+                }
+            }
+        }
+    }
+
+    // An unset preset is Custom, its default.
+    private static boolean isCustom(String preset)
+    {
+        return preset == null || preset.isEmpty() || Preset.CUSTOM.name().equals(preset);
     }
 
     /** Worlds worth hopping to for the preset that's on; empty until RuneLite's world list has loaded. */

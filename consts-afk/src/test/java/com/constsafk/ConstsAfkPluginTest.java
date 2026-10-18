@@ -8,8 +8,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -45,6 +45,7 @@ import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.WorldService;
@@ -56,6 +57,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 public class ConstsAfkPluginTest
 {
@@ -229,6 +231,60 @@ public class ConstsAfkPluginTest
         when(player.getAnimation()).thenReturn(867);
         invokePrivate("evaluateAlerts");
         assertTrue("Custom with the option off alerts mid-animation", plugin.isAlertFiring(AlertType.IDLE));
+    }
+
+    @Test
+    public void leavingCustomShouldSaveItsToggles()
+    {
+        when(configManager.getConfiguration(ConstsAfkConfig.GROUP, "enableHealthAlert")).thenReturn("false");
+        when(configManager.getConfiguration(ConstsAfkConfig.GROUP, "enableCannonAlert")).thenReturn("true");
+
+        plugin.onConfigChanged(presetChange("CUSTOM", "WOODCUTTING"));
+
+        ArgumentCaptor<String> saved = ArgumentCaptor.forClass(String.class);
+        verify(configManager).setConfiguration(eq(ConstsAfkConfig.GROUP), eq(ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY),
+            saved.capture());
+        assertTrue(saved.getValue().contains("enableHealthAlert=false"));
+        assertTrue(saved.getValue().contains("enableCannonAlert=true"));
+        assertTrue("never set is saved as default", saved.getValue().contains("enableIdleAlert=;"));
+    }
+
+    @Test
+    public void returningToCustomShouldRestoreItsToggles()
+    {
+        when(configManager.getConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY))
+            .thenReturn("enableHealthAlert=false;enableCannonAlert=;notAToggle=true");
+
+        plugin.onConfigChanged(presetChange("WOODCUTTING", "CUSTOM"));
+
+        verify(configManager).setConfiguration(ConstsAfkConfig.GROUP, "enableHealthAlert", "false");
+        verify(configManager).unsetConfiguration(ConstsAfkConfig.GROUP, "enableCannonAlert");
+        verify(configManager, never()).setConfiguration(ConstsAfkConfig.GROUP, "notAToggle", "true");
+    }
+
+    @Test
+    public void presetToPresetShouldLeaveCustomAlone()
+    {
+        plugin.onConfigChanged(presetChange("WOODCUTTING", "MINING"));
+
+        verify(configManager, never()).setConfiguration(eq(ConstsAfkConfig.GROUP),
+            eq(ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY), any(String.class));
+        verify(configManager, never()).getConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY);
+    }
+
+    @Test
+    public void everyAlertsOnOffShouldBePartOfCustom()
+    {
+        for (java.lang.reflect.Method method : ConstsAfkConfig.class.getDeclaredMethods())
+        {
+            ConfigItem item = method.getAnnotation(ConfigItem.class);
+            if (item != null && item.keyName().startsWith("enable") && !item.keyName().equals("enableAllSoundAlerts")
+                && !item.keyName().equals("enableScreenFlash"))
+            {
+                assertTrue(item.keyName(), ConstsAfkPlugin.CUSTOM_TOGGLE_KEYS.contains(item.keyName()));
+            }
+        }
+        assertEquals(AlertType.values().length, ConstsAfkPlugin.CUSTOM_TOGGLE_KEYS.size());
     }
 
     @Test
@@ -1046,6 +1102,16 @@ public class ConstsAfkPluginTest
         GameObject object = mock(GameObject.class);
         when(object.getId()).thenReturn(id);
         return object;
+    }
+
+    private static ConfigChanged presetChange(String from, String to)
+    {
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsAfkConfig.GROUP);
+        changed.setKey(ConstsAfkConfig.PRESET_KEY);
+        changed.setOldValue(from);
+        changed.setNewValue(to);
+        return changed;
     }
 
     private static ChatMessage chat(ChatMessageType type, String message)
