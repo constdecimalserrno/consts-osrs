@@ -35,18 +35,18 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 ## Settings
 
-**General** first, then one collapsible section per alert, named for its group and kept in group order:
+Three General sections first, then one section per alert, each named for its group and kept in group order. Every section is open to start; click a header to fold it.
 
 | Group | Sections |
 |---|---|
-| General | Click Pause, Quiet After Dismiss, Give Up After, Startup Delay, sounds, screen flash, Show Animation ID |
+| General | General: Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), General: Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), General: Screen Flash (Enabled, Interval, Opacity) |
 | Combat | Combat: Health, Combat: Prayer, Combat: Aggro, Combat: Potion, Combat: Cannon |
 | AFK | AFK: Idle, AFK: Logout, AFK: Inventory Full |
 | Random Event | Random Event |
 | Forestry | Forestry, with a checkbox per event |
 | Sailing | Sailing: Salvage, Sailing: Cargo Hold |
 
-Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options. The alert sections start collapsed.
+Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
 
 **Custom remembers.** Switching from Custom to a preset saves every alert's Enabled; switching back puts them back exactly, even if you flipped some while a preset was on.
 
@@ -69,7 +69,7 @@ Every alert's section has the same items in the same order: **Enabled** (read on
 | Cargo Hold | Chat: `…cargo hold is full` (e.g. `Your crewmate on the salvaging hook cannot salvage as the cargo hold is full.`) | A click, or Give Up After | Violet |
 | Forestry | A Forestry event you picked starts nearby | A click, or Give Up After | Lime |
 
-"A click" means with **Dismiss on Click** on. **Give Up After** (General, `2 min`) ends a one-off alert nobody clicks away.
+"A click" means with **Dismiss on Click** on. **Give Up After** (General: Timing, `2 min`) ends a one-off alert nobody clicks away.
 
 ### Aggro area
 
@@ -134,7 +134,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 
 - **Where:** Working a salvaging hook at a shipwreck yourself.
 - **What the alerts mean:** Inv Full says it is time to sort. Salvage fires when you have nothing left to sort, or the wreck is picked clean: back to the hook, or on to the next one.
-- **Tune:** Click the Inv Full alert away and start sorting: Quiet After Dismiss (General, 60 s) keeps it from starting again while the message repeats. Raise it if sorting takes longer.
+- **Tune:** Click the Inv Full alert away and start sorting: Quiet After Dismiss (General: Timing, 60 s) keeps it from starting again while the message repeats. Raise it if sorting takes longer.
 
 ### Salvaging AFK
 
@@ -155,8 +155,8 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 - **Give Up After** (`2 min`): a one-off alert nobody clicks away stops on its own.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out stops running alerts and starts the timers over, except Aggro in OSRS mode: its area and time left are saved per account and carry on if you log back in where you logged out.
-- **Sound**: the system beep by default. **Alert Sound** swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Game Sound Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
-- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (General).
+- **Sound**: the system beep by default. **Sound** (General: Sounds) swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
+- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (AFK: Idle).
 
 ## Running it
 

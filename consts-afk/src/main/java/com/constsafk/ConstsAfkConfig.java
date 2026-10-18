@@ -12,7 +12,8 @@ import net.runelite.client.config.Range;
 import net.runelite.client.config.Units;
 
 /**
- * General, then one collapsible section per alert, named for its group (Combat, AFK, Sailing) and kept in group order.
+ * General (Timing, Sounds, Screen Flash), then one section per alert, each named for its group (Combat, AFK, Sailing)
+ * and kept in group order.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. The key names predate this layout and stay, so saved settings carry
  * over.
@@ -41,105 +42,107 @@ public interface ConstsAfkConfig extends Config
     }
 
     @ConfigSection(
-        name = "General",
-        description = "Clicks, sounds, screen flash and the status panel",
+        name = "General: Timing",
+        description = "Click pause, quiet after dismiss, give up after and startup delay",
         position = 1
     )
-    String generalSection = "general";
+    String timingSection = "general";
+
+    @ConfigSection(
+        name = "General: Sounds",
+        description = "What alerts sound like, and how often",
+        position = 2
+    )
+    String soundsSection = "sounds";
+
+    @ConfigSection(
+        name = "General: Screen Flash",
+        description = "The flash over the game screen while an alert fires",
+        position = 3
+    )
+    String flashSection = "flash";
 
     @ConfigSection(
         name = "Combat: Health",
         description = "Alert while Hitpoints are below a threshold",
-        position = 2,
-        closedByDefault = true
+        position = 4
     )
     String healthSection = "health";
 
     @ConfigSection(
         name = "Combat: Prayer",
         description = "Alert while Prayer is below a threshold",
-        position = 3,
-        closedByDefault = true
+        position = 5
     )
     String prayerSection = "prayer";
 
     @ConfigSection(
         name = "Combat: Aggro",
         description = "The aggro timer, the unaggressive area and its lines",
-        position = 4,
-        closedByDefault = true
+        position = 6
     )
     String aggroSection = "aggro";
 
     @ConfigSection(
         name = "Combat: Potion",
         description = "Alert when a potion or effect is about to expire",
-        position = 5,
-        closedByDefault = true
+        position = 7
     )
     String potionSection = "potion";
 
     @ConfigSection(
         name = "Combat: Cannon",
         description = "Alert when your cannon is out of ammo",
-        position = 6,
-        closedByDefault = true
+        position = 8
     )
     String cannonSection = "cannon";
 
     @ConfigSection(
         name = "AFK: Idle",
         description = "Alert when nothing has happened for a while",
-        position = 7,
-        closedByDefault = true
+        position = 9
     )
     String idleSection = "idle";
 
     @ConfigSection(
         name = "AFK: Logout",
         description = "Warn before the inactivity logout",
-        position = 8,
-        closedByDefault = true
+        position = 10
     )
     String logoutSection = "logout";
 
     @ConfigSection(
         name = "AFK: Inventory Full",
         description = "Alert when your inventory is too full to hold more",
-        position = 9,
-        closedByDefault = true
+        position = 11
     )
     String inventoryFullSection = "inventoryFull";
 
     @ConfigSection(
         name = "Random Event",
         description = "Your own random events",
-        position = 10,
-        closedByDefault = true
+        position = 12
     )
     String randomSection = "random";
 
     @ConfigSection(
         name = "Forestry",
         description = "Forestry events, the ones you pick",
-        position = 11,
-        closedByDefault = true
+        position = 13
     )
     String forestrySection = "forestry";
 
     @ConfigSection(
         name = "Sailing: Salvage",
         description = "Alert when a shipwreck is depleted or there is nothing left to sort",
-        position = 12,
-        closedByDefault = true
+        position = 14
     )
     String salvageSection = "salvage";
 
     @ConfigSection(
         name = "Sailing: Cargo Hold",
         description = "Alert when the cargo hold is full",
-        position = 13,
-        closedByDefault = true
+        position = 15
     )
     String cargoSection = "cargo";
 
@@ -151,7 +154,7 @@ public interface ConstsAfkConfig extends Config
         keyName = "interactionPauseMs",
         name = "Click Pause",
         description = "Silence alerts for this long after each click or key press, except alerts with Dismiss on Click off",
-        section = generalSection,
+        section = timingSection,
         position = 0
     )
     default int interactionPauseMs()
@@ -165,7 +168,7 @@ public interface ConstsAfkConfig extends Config
         keyName = "quietAfterDismissSeconds",
         name = "Quiet After Dismiss",
         description = "A one-off alert you click away stays quiet this long even if its message comes again, so you can sort or bank in peace",
-        section = generalSection,
+        section = timingSection,
         position = 1
     )
     default int quietAfterDismissSeconds()
@@ -179,7 +182,7 @@ public interface ConstsAfkConfig extends Config
         keyName = "giveUpAfterSeconds",
         name = "Give Up After",
         description = "A one-off alert nobody clicks away stops after this long",
-        section = generalSection,
+        section = timingSection,
         position = 2
     )
     default int giveUpAfterSeconds()
@@ -193,7 +196,7 @@ public interface ConstsAfkConfig extends Config
         keyName = "startupDelayMs",
         name = "Startup Delay",
         description = "Wait this long after the plugin starts before any alert can fire",
-        section = generalSection,
+        section = timingSection,
         position = 3
     )
     default int startupDelayMs()
@@ -203,10 +206,10 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "enableAllSoundAlerts",
-        name = "Sounds",
+        name = "Enabled",
         description = "Play a sound while an alert is firing",
-        section = generalSection,
-        position = 4
+        section = soundsSection,
+        position = 0
     )
     default boolean enableAllSoundAlerts()
     {
@@ -215,10 +218,10 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = ALERT_SOUND_KEY,
-        name = "Alert Sound",
+        name = "Sound",
         description = "What alerts sound like: the system beep, or one of the game's own sounds. Picking one plays it once.",
-        section = generalSection,
-        position = 5
+        section = soundsSection,
+        position = 1
     )
     default AlertSound alertSound()
     {
@@ -229,9 +232,9 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = CUSTOM_SOUND_KEY,
         name = "Custom Sound ID",
-        description = "The game sound effect to play when Alert Sound is Custom sound ID (the OSRS Wiki lists them)",
-        section = generalSection,
-        position = 6
+        description = "The game sound effect to play when Sound is Custom sound ID (the OSRS Wiki lists them)",
+        section = soundsSection,
+        position = 2
     )
     default int customSoundId()
     {
@@ -241,10 +244,10 @@ public interface ConstsAfkConfig extends Config
     @Range(min = 1, max = SoundEffectVolume.HIGH)
     @ConfigItem(
         keyName = SOUND_VOLUME_KEY,
-        name = "Game Sound Volume",
+        name = "Volume",
         description = "How loud a game sound plays (1-127), even with the game's own sound effects turned off",
-        section = generalSection,
-        position = 7
+        section = soundsSection,
+        position = 3
     )
     default int soundVolume()
     {
@@ -257,8 +260,8 @@ public interface ConstsAfkConfig extends Config
         keyName = "repeatIntervalMs",
         name = "Repeat Interval",
         description = "Time between sounds while an alert is firing",
-        section = generalSection,
-        position = 8
+        section = soundsSection,
+        position = 4
     )
     default int repeatIntervalMs()
     {
@@ -267,10 +270,10 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "enableScreenFlash",
-        name = "Screen Flash",
+        name = "Enabled",
         description = "Flash the game screen while an alert is firing",
-        section = generalSection,
-        position = 9
+        section = flashSection,
+        position = 0
     )
     default boolean enableScreenFlash()
     {
@@ -281,10 +284,10 @@ public interface ConstsAfkConfig extends Config
     @Units(Units.MILLISECONDS)
     @ConfigItem(
         keyName = "flashIntervalMs",
-        name = "Flash Interval",
+        name = "Interval",
         description = "How fast the screen flash toggles",
-        section = generalSection,
-        position = 10
+        section = flashSection,
+        position = 1
     )
     default int flashIntervalMs()
     {
@@ -294,10 +297,10 @@ public interface ConstsAfkConfig extends Config
     @Range(min = 10, max = 180)
     @ConfigItem(
         keyName = "flashOpacity",
-        name = "Flash Opacity",
+        name = "Opacity",
         description = "Screen flash opacity (kept translucent)",
-        section = generalSection,
-        position = 11
+        section = flashSection,
+        position = 2
     )
     default int flashOpacity()
     {
@@ -307,9 +310,9 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = "showAnimationId",
         name = "Show Animation ID",
-        description = "Always show your current animation in the status panel; it shows anyway while Idle waits for it to stop",
-        section = generalSection,
-        position = 12
+        description = "Always show your current animation in the status panel, for tuning Idle; it shows anyway while Idle waits for it to stop",
+        section = idleSection,
+        position = 5
     )
     default boolean showAnimationId()
     {
