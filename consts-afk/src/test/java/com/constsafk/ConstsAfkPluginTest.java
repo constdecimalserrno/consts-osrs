@@ -80,6 +80,19 @@ public class ConstsAfkPluginTest
 
         when(config.preset()).thenReturn(Preset.CUSTOM);
         when(config.enableTimerAlert()).thenReturn(true);
+        when(config.giveUpAfterSeconds()).thenReturn(120);
+        // Every alert's Dismiss on Click defaults on; a mock's false would flip them all.
+        when(config.healthDismissOnClick()).thenReturn(true);
+        when(config.prayerDismissOnClick()).thenReturn(true);
+        when(config.idleDismissOnClick()).thenReturn(true);
+        when(config.aggroDismissOnClick()).thenReturn(true);
+        when(config.potionDismissOnClick()).thenReturn(true);
+        when(config.randomDismissOnClick()).thenReturn(true);
+        when(config.cannonDismissOnClick()).thenReturn(true);
+        when(config.inventoryFullDismissOnClick()).thenReturn(true);
+        when(config.salvageDismissOnClick()).thenReturn(true);
+        when(config.cargoDismissOnClick()).thenReturn(true);
+        when(config.forestryDismissOnClick()).thenReturn(true);
         when(config.enableCargoHoldAlert()).thenReturn(true);
         when(config.enablePotionExpiryAlert()).thenReturn(true);
         when(config.aggroResetDistanceTiles()).thenReturn(20);
@@ -126,21 +139,20 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void chinningPresetShouldCoverCombatAlertsWithoutTheCannon()
+    public void chinningPresetShouldBeHealthPrayerPotionAggroAndLogout()
     {
         when(config.preset()).thenReturn(Preset.CHINNING);
 
-        assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT,
-            AlertType.POTION), enabledAlerts());
+        assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.PRAYER, AlertType.POTION, AlertType.AGGRO,
+            AlertType.LOGOUT), enabledAlerts());
     }
 
     @Test
-    public void salvagingActivePresetShouldCoverTheHookTheInventoryAndTheHold()
+    public void salvagingActivePresetShouldBeInventoryFullAndSalvage()
     {
         when(config.preset()).thenReturn(Preset.SALVAGING_ACTIVE);
 
-        assertEquals(EnumSet.of(AlertType.LOGOUT, AlertType.INVENTORY_FULL, AlertType.SALVAGE,
-            AlertType.CARGO), enabledAlerts());
+        assertEquals(EnumSet.of(AlertType.INVENTORY_FULL, AlertType.SALVAGE), enabledAlerts());
     }
 
     @Test
@@ -153,9 +165,9 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void miningAndFishingPresetsShouldCoverTheSkillingAlerts()
+    public void miningAndFishingPresetsShouldBeIdleAndInventoryFull()
     {
-        Set<AlertType> skilling = EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL);
+        Set<AlertType> skilling = EnumSet.of(AlertType.IDLE, AlertType.INVENTORY_FULL);
 
         when(config.preset()).thenReturn(Preset.MINING);
         assertEquals(skilling, enabledAlerts());
@@ -172,12 +184,11 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void woodcuttingPresetShouldAddForestryToTheSkillingAlerts()
+    public void woodcuttingPresetShouldBeIdleInventoryFullAndForestry()
     {
         when(config.preset()).thenReturn(Preset.WOODCUTTING);
 
-        assertEquals(EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL,
-            AlertType.FORESTRY), enabledAlerts());
+        assertEquals(EnumSet.of(AlertType.IDLE, AlertType.INVENTORY_FULL, AlertType.FORESTRY), enabledAlerts());
     }
 
     @Test
@@ -307,16 +318,44 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void emitImmediatelyBurstShouldSurviveClicks() throws Exception
+    public void alertWithDismissOnClickOffShouldSurviveClicks() throws Exception
     {
-        when(config.potionEmitImmediately()).thenReturn(true);
+        when(config.potionDismissOnClick()).thenReturn(false);
 
         plugin.onChatMessage(chat(ChatMessageType.GAMEMESSAGE, "Your stamina potion is about to expire."));
         awaitTrue("potion alert should start firing", () -> plugin.isAlertFiring(AlertType.POTION));
 
         invokePrivate("onUserInteraction");
 
-        assertTrue("Emit Immediately alerts are not cancelled by clicks", plugin.isAlertFiring(AlertType.POTION));
+        assertTrue("with Dismiss on Click off, a click doesn't cancel it", plugin.isAlertFiring(AlertType.POTION));
+    }
+
+    @Test
+    public void dismissedAlertShouldStayQuietWhenItsMessageRepeats() throws Exception
+    {
+        when(config.quietAfterDismissSeconds()).thenReturn(60);
+        when(config.interactionPauseMs()).thenReturn(0);
+
+        plugin.onChatMessage(chat(ChatMessageType.SPAM, CARGO_FULL_MESSAGE));
+        awaitTrue("cargo alert should start firing", () -> plugin.isAlertFiring(AlertType.CARGO));
+        invokePrivate("onUserInteraction");
+
+        plugin.onChatMessage(chat(ChatMessageType.SPAM, CARGO_FULL_MESSAGE));
+        Thread.sleep(150);
+
+        assertFalse("the same message within Quiet After Dismiss is ignored", plugin.isAlertFiring(AlertType.CARGO));
+    }
+
+    @Test
+    public void aClickShouldNotQuietAnAlertThatWasNotSounding() throws Exception
+    {
+        when(config.quietAfterDismissSeconds()).thenReturn(60);
+        when(config.interactionPauseMs()).thenReturn(0);
+
+        invokePrivate("onUserInteraction");
+        plugin.onChatMessage(chat(ChatMessageType.SPAM, CARGO_FULL_MESSAGE));
+
+        awaitTrue("clicking around beforehand doesn't snooze the alert", () -> plugin.isAlertFiring(AlertType.CARGO));
     }
 
     @Test

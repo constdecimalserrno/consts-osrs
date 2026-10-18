@@ -404,7 +404,7 @@ public class ConstsAfkPlugin extends Plugin
 
     List<Color> getCurrentFlashColors()
     {
-        if (!config.enableScreenFlash() || !isTracking() || areAlertsPaused())
+        if (!config.enableScreenFlash() || !isTracking())
         {
             return Collections.emptyList();
         }
@@ -414,7 +414,7 @@ public class ConstsAfkPlugin extends Plugin
         List<Color> colors = new ArrayList<>();
         for (AlertType type : AlertType.values())
         {
-            if (isFlashing(type, now) && type.isFlashPhaseOn(now, interval))
+            if (!isSilencedByClick(type) && isFlashing(type, now) && type.isFlashPhaseOn(now, interval))
             {
                 colors.add(type.getFlashColor(config));
             }
@@ -512,44 +512,10 @@ public class ConstsAfkPlugin extends Plugin
         }
     }
 
-    private boolean emitsDuringPause(AlertType type)
+    /** Inside the Click Pause, alerts that dismiss on click hold their sound and flash; the rest keep going. */
+    private boolean isSilencedByClick(AlertType type)
     {
-        switch (type)
-        {
-            case HEALTH:
-                return config.healthEmitImmediately();
-            case PRAYER:
-                return config.prayerEmitImmediately();
-            case POTION:
-                return config.potionEmitImmediately();
-            case CANNON:
-                return config.cannonEmitImmediately();
-            default:
-                return false;
-        }
-    }
-
-    private int burstIterations(AlertType type)
-    {
-        switch (type)
-        {
-            case POTION:
-                return config.potionExpiryAlertIterations();
-            case RANDOM:
-                return config.randomEventAlertIterations();
-            case CANNON:
-                return config.cannonAlertIterations();
-            case INVENTORY_FULL:
-                return config.inventoryFullAlertIterations();
-            case SALVAGE:
-                return config.sailingAlertIterations();
-            case CARGO:
-                return config.cargoHoldAlertIterations();
-            case FORESTRY:
-                return config.forestryAlertIterations();
-            default:
-                return 1;
-        }
+        return type.dismissesOnClick(config) && areAlertsPaused();
     }
 
     private void beep()
@@ -870,7 +836,7 @@ public class ConstsAfkPlugin extends Plugin
 
     private void onAggroExpiredTick()
     {
-        if (!areAlertsPaused() && !playerMovingThisTick)
+        if (!isSilencedByClick(AlertType.AGGRO) && !playerMovingThisTick)
         {
             beep();
         }
@@ -879,7 +845,7 @@ public class ConstsAfkPlugin extends Plugin
     /** Beeps once, or holds the alert until the player is no longer clicking or moving. */
     private void fireAggroAlert()
     {
-        if (areAlertsPaused() || playerMovingThisTick)
+        if (isSilencedByClick(AlertType.AGGRO) || playerMovingThisTick)
         {
             aggroAlertPending = true;
             return;
@@ -1051,7 +1017,7 @@ public class ConstsAfkPlugin extends Plugin
             {
                 future = scheduleRepeating(() ->
                 {
-                    if (emitsDuringPause(type) || !areAlertsPaused())
+                    if (!isSilencedByClick(type))
                     {
                         beep();
                     }
@@ -1071,12 +1037,16 @@ public class ConstsAfkPlugin extends Plugin
         }
     }
 
-    /** Beeps a set number of times after a one-off trigger such as a chat message, until a click acknowledges it. */
+    /**
+     * Sounds after a one-off trigger such as a chat message until a click dismisses it or Give Up After runs out. A
+     * dismissed alert then ignores its trigger for Quiet After Dismiss, so a repeating message doesn't start it again.
+     */
     private final class BurstAlert
     {
         private final AlertType type;
         private ScheduledFuture<?> future;
-        private int remaining;
+        private long giveUpAtMillis;
+        private long quietUntilMillis;
         private volatile long flashUntilMillis;
         private volatile long panelUntilMillis;
 
@@ -1087,46 +1057,48 @@ public class ConstsAfkPlugin extends Plugin
 
         synchronized void trigger()
         {
-            if (!isAlertEnabled(type))
+            long now = System.currentTimeMillis();
+            if (!isAlertEnabled(type) || now < quietUntilMillis)
             {
                 return;
             }
 
             stop();
-            remaining = Math.max(1, burstIterations(type));
+            giveUpAtMillis = now + TimeUnit.SECONDS.toMillis(Math.max(1, config.giveUpAfterSeconds()));
             future = scheduleRepeating(this::tick);
         }
 
         private synchronized void tick()
         {
-            if (!sessionActive || !isAlertEnabled(type) || remaining <= 0)
+            long now = System.currentTimeMillis();
+            if (!sessionActive || !isAlertEnabled(type) || now >= giveUpAtMillis)
             {
                 stop();
                 return;
             }
 
-            if (!emitsDuringPause(type) && areAlertsPaused())
+            if (isSilencedByClick(type))
             {
                 return;
             }
 
-            long now = System.currentTimeMillis();
             beep();
             flashUntilMillis = now + BURST_FLASH_WINDOW_MS;
             panelUntilMillis = now + BURST_PANEL_WINDOW_MS;
-            if (--remaining <= 0)
-            {
-                stop();
-            }
         }
 
-        /** Clicks and key presses silence the burst unless the alert is set to emit through interaction. */
+        /** A click or key press dismisses the alert if it is set to, and keeps it quiet for a while after. */
         synchronized void acknowledge()
         {
-            if (!emitsDuringPause(type))
+            long now = System.currentTimeMillis();
+            boolean sounding = isActive(future) || now < panelUntilMillis;
+            if (!sounding || !type.dismissesOnClick(config))
             {
-                clear();
+                return;
             }
+
+            clear();
+            quietUntilMillis = now + TimeUnit.SECONDS.toMillis(Math.max(0, config.quietAfterDismissSeconds()));
         }
 
         synchronized void clear()
@@ -1134,6 +1106,7 @@ public class ConstsAfkPlugin extends Plugin
             stop();
             flashUntilMillis = 0L;
             panelUntilMillis = 0L;
+            quietUntilMillis = 0L;
         }
 
         boolean isFlashing(long now)
@@ -1150,7 +1123,6 @@ public class ConstsAfkPlugin extends Plugin
         {
             cancel(future);
             future = null;
-            remaining = 0;
         }
     }
 }

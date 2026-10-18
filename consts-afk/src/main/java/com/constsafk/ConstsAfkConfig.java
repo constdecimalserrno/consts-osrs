@@ -10,6 +10,11 @@ import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 import net.runelite.client.config.Units;
 
+/**
+ * Six sections: General, then one per kind of play. Every alert has the same block, in the same order: its on/off
+ * (which only the Custom preset reads), Dismiss on Click, Color, then whatever is its own. The key names predate
+ * this layout and stay, so saved settings carry over.
+ */
 @ConfigGroup(ConstsAfkConfig.GROUP)
 public interface ConstsAfkConfig extends Config
 {
@@ -23,7 +28,7 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = PRESET_KEY,
         name = "Preset",
-        description = "Which alerts are on. Custom uses each section's Enable toggle; every other preset overrides those toggles.",
+        description = "Which alerts are on. Custom uses each alert's own on/off; every other preset overrides them.",
         position = 0
     )
     default Preset preset()
@@ -33,101 +38,45 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigSection(
         name = "General",
-        description = "Interaction pause, startup delay and panel options",
+        description = "Clicks, sounds, screen flash and the status panel",
         position = 1
     )
     String generalSection = "general";
 
     @ConfigSection(
-        name = "Screen Flash",
-        description = "Screen flash behavior",
+        name = "Combat",
+        description = "Health, Prayer, Aggro, Potion and Cannon",
         position = 2
     )
-    String flashSection = "flash";
+    String combatSection = "combat";
 
     @ConfigSection(
-        name = "Sound",
-        description = "Alert beep options",
+        name = "AFK",
+        description = "Idle, Logout and Inventory Full",
         position = 3
     )
-    String soundSection = "sound";
+    String afkSection = "afk";
 
     @ConfigSection(
-        name = "Health Alert",
-        description = "Alert while Hitpoints are below a threshold",
+        name = "Random Event",
+        description = "Your own random events",
         position = 4
-    )
-    String healthSection = "health";
-
-    @ConfigSection(
-        name = "Prayer Alert",
-        description = "Alert while Prayer is below a threshold",
-        position = 5
-    )
-    String prayerSection = "prayer";
-
-    @ConfigSection(
-        name = "Idle Alert",
-        description = "Alert when no activity is detected",
-        position = 6
-    )
-    String idleSection = "idle";
-
-    @ConfigSection(
-        name = "Aggro Alert",
-        description = "OSRS aggro timer (10 min) or custom interval",
-        position = 7
-    )
-    String aggroSection = "aggro";
-
-    @ConfigSection(
-        name = "Logout Alert",
-        description = "Warn before the inactivity logout",
-        position = 8
-    )
-    String logoutSection = "logout";
-
-    @ConfigSection(
-        name = "Potion Expiry Alert",
-        description = "Alert when a boost or effect is about to expire",
-        position = 9
-    )
-    String potionSection = "potion";
-
-    @ConfigSection(
-        name = "Random Event Alert",
-        description = "Alert when a random event NPC appears",
-        position = 10
     )
     String randomSection = "random";
 
     @ConfigSection(
-        name = "Cannon Alert",
-        description = "Alert when your cannon is out of ammo",
-        position = 11
-    )
-    String cannonSection = "cannon";
-
-    @ConfigSection(
-        name = "Inventory Full Alert",
-        description = "Alert when your inventory is too full to hold more",
-        position = 12
-    )
-    String inventoryFullSection = "inventoryFull";
-
-    @ConfigSection(
-        name = "Sailing Alerts",
-        description = "Shipwreck salvage and cargo hold alerts",
-        position = 13
-    )
-    String sailingSection = "sailing";
-
-    @ConfigSection(
-        name = "Forestry Alert",
-        description = "Alert when a Forestry event starts nearby, for the events you pick",
-        position = 14
+        name = "Forestry",
+        description = "Forestry events, the ones you pick",
+        position = 5
     )
     String forestrySection = "forestry";
+
+    @ConfigSection(
+        name = "Sailing",
+        description = "Shipwreck salvage and the cargo hold",
+        position = 6
+    )
+    String sailingSection = "sailing";
 
     // General
 
@@ -135,14 +84,42 @@ public interface ConstsAfkConfig extends Config
     @Units(Units.MILLISECONDS)
     @ConfigItem(
         keyName = "interactionPauseMs",
-        name = "Interaction Pause",
-        description = "Silence alerts for this long after each click or key press",
+        name = "Click Pause",
+        description = "Silence alerts for this long after each click or key press, except alerts with Dismiss on Click off",
         section = generalSection,
         position = 0
     )
     default int interactionPauseMs()
     {
         return 3000;
+    }
+
+    @Range(min = 0, max = 900)
+    @Units(Units.SECONDS)
+    @ConfigItem(
+        keyName = "quietAfterDismissSeconds",
+        name = "Quiet After Dismiss",
+        description = "A one-off alert you click away stays quiet this long even if its message comes again, so you can sort or bank in peace",
+        section = generalSection,
+        position = 1
+    )
+    default int quietAfterDismissSeconds()
+    {
+        return 60;
+    }
+
+    @Range(min = 5, max = 1800)
+    @Units(Units.SECONDS)
+    @ConfigItem(
+        keyName = "giveUpAfterSeconds",
+        name = "Give Up After",
+        description = "A one-off alert nobody clicks away stops after this long",
+        section = generalSection,
+        position = 2
+    )
+    default int giveUpAfterSeconds()
+    {
+        return 120;
     }
 
     @Range(min = 0, max = 120_000)
@@ -152,7 +129,7 @@ public interface ConstsAfkConfig extends Config
         name = "Startup Delay",
         description = "Wait this long after the plugin starts before any alert can fire",
         section = generalSection,
-        position = 1
+        position = 3
     )
     default int startupDelayMs()
     {
@@ -160,26 +137,75 @@ public interface ConstsAfkConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "showAnimationId",
-        name = "Show Animation ID",
-        description = "Show your current animation id in the status panel (handy for tuning the idle alert)",
+        keyName = "enableAllSoundAlerts",
+        name = "Sounds",
+        description = "Play a sound while an alert is firing",
         section = generalSection,
-        position = 2
+        position = 4
     )
-    default boolean showAnimationId()
+    default boolean enableAllSoundAlerts()
     {
-        return false;
+        return true;
     }
 
+    @ConfigItem(
+        keyName = ALERT_SOUND_KEY,
+        name = "Alert Sound",
+        description = "What alerts sound like: the system beep, or one of the game's own sounds. Picking one plays it once.",
+        section = generalSection,
+        position = 5
+    )
+    default AlertSound alertSound()
+    {
+        return AlertSound.SYSTEM_BEEP;
+    }
 
-    // Screen flash
+    @Range(min = -1, max = 100_000)
+    @ConfigItem(
+        keyName = CUSTOM_SOUND_KEY,
+        name = "Custom Sound ID",
+        description = "The game sound effect to play when Alert Sound is Custom sound ID (the OSRS Wiki lists them)",
+        section = generalSection,
+        position = 6
+    )
+    default int customSoundId()
+    {
+        return SoundEffectID.TOWN_CRIER_BELL_DING;
+    }
+
+    @Range(min = 1, max = SoundEffectVolume.HIGH)
+    @ConfigItem(
+        keyName = SOUND_VOLUME_KEY,
+        name = "Game Sound Volume",
+        description = "How loud a game sound plays (1-127), even with the game's own sound effects turned off",
+        section = generalSection,
+        position = 7
+    )
+    default int soundVolume()
+    {
+        return SoundEffectVolume.MEDIUM_HIGH;
+    }
+
+    @Range(min = 100, max = 60_000)
+    @Units(Units.MILLISECONDS)
+    @ConfigItem(
+        keyName = "repeatIntervalMs",
+        name = "Repeat Interval",
+        description = "Time between sounds while an alert is firing",
+        section = generalSection,
+        position = 8
+    )
+    default int repeatIntervalMs()
+    {
+        return 1200;
+    }
 
     @ConfigItem(
         keyName = "enableScreenFlash",
-        name = "Enable Screen Flash",
+        name = "Screen Flash",
         description = "Flash the game screen while an alert is firing",
-        section = flashSection,
-        position = 0
+        section = generalSection,
+        position = 9
     )
     default boolean enableScreenFlash()
     {
@@ -192,8 +218,8 @@ public interface ConstsAfkConfig extends Config
         keyName = "flashIntervalMs",
         name = "Flash Interval",
         description = "How fast the screen flash toggles",
-        section = flashSection,
-        position = 1
+        section = generalSection,
+        position = 10
     )
     default int flashIntervalMs()
     {
@@ -205,87 +231,33 @@ public interface ConstsAfkConfig extends Config
         keyName = "flashOpacity",
         name = "Flash Opacity",
         description = "Screen flash opacity (kept translucent)",
-        section = flashSection,
-        position = 2
+        section = generalSection,
+        position = 11
     )
     default int flashOpacity()
     {
         return 50;
     }
 
-    // Sound
-
     @ConfigItem(
-        keyName = "enableAllSoundAlerts",
-        name = "Enable Sounds",
-        description = "Beep while an alert is firing",
-        section = soundSection,
-        position = 0
+        keyName = "showAnimationId",
+        name = "Show Animation ID",
+        description = "Always show your current animation in the status panel; it shows anyway while Idle waits for it to stop",
+        section = generalSection,
+        position = 12
     )
-    default boolean enableAllSoundAlerts()
+    default boolean showAnimationId()
     {
-        return true;
+        return false;
     }
 
-    @Range(min = 100, max = 60_000)
-    @Units(Units.MILLISECONDS)
-    @ConfigItem(
-        keyName = "repeatIntervalMs",
-        name = "Repeat Interval",
-        description = "Time between beeps while an alert is firing",
-        section = soundSection,
-        position = 1
-    )
-    default int repeatIntervalMs()
-    {
-        return 1200;
-    }
-
-    @ConfigItem(
-        keyName = ALERT_SOUND_KEY,
-        name = "Alert Sound",
-        description = "What alerts sound like: the system beep, or one of the game's own sounds. Picking one plays it once.",
-        section = soundSection,
-        position = 2
-    )
-    default AlertSound alertSound()
-    {
-        return AlertSound.SYSTEM_BEEP;
-    }
-
-    @Range(min = -1, max = 100_000)
-    @ConfigItem(
-        keyName = CUSTOM_SOUND_KEY,
-        name = "Custom Sound ID",
-        description = "The game sound effect to play when Alert Sound is Custom sound ID (the OSRS Wiki lists them)",
-        section = soundSection,
-        position = 3
-    )
-    default int customSoundId()
-    {
-        return SoundEffectID.TOWN_CRIER_BELL_DING;
-    }
-
-    @Range(min = 1, max = SoundEffectVolume.HIGH)
-    @ConfigItem(
-        keyName = SOUND_VOLUME_KEY,
-        name = "Game Sound Volume",
-        description = "How loud a game sound plays (1-127), even with the game's own sound effects turned off",
-        section = soundSection,
-        position = 4
-    )
-    default int soundVolume()
-    {
-        return SoundEffectVolume.MEDIUM_HIGH;
-    }
-
-    // Health
+    // Combat
 
     @ConfigItem(
         keyName = "enableHealthAlert",
-        name = "Enable Health Alert",
+        name = "Health Alert",
         description = "Alert while Hitpoints are below the threshold (Custom preset only)",
-        section = healthSection,
+        section = combatSection,
         position = 0
     )
     default boolean enableHealthAlert()
@@ -293,24 +265,23 @@ public interface ConstsAfkConfig extends Config
         return true;
     }
 
-    @Range(min = 1, max = 99)
     @ConfigItem(
-        keyName = "healthThreshold",
-        name = "Health Threshold",
-        description = "Alert when Hitpoints are below this value",
-        section = healthSection,
+        keyName = "healthDismissOnClick",
+        name = "Health: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = combatSection,
         position = 1
     )
-    default int healthThreshold()
+    default boolean healthDismissOnClick()
     {
-        return 25;
+        return true;
     }
 
     @ConfigItem(
         keyName = "healthFlashColor",
-        name = "Health Flash Color",
-        description = "Screen flash and panel color for Health alerts",
-        section = healthSection,
+        name = "Health: Color",
+        description = "Screen flash and panel color for Health",
+        section = combatSection,
         position = 2
     )
     default Color healthFlashColor()
@@ -318,39 +289,62 @@ public interface ConstsAfkConfig extends Config
         return new Color(75, 205, 90);
     }
 
+    @Range(min = 1, max = 99)
     @ConfigItem(
-        keyName = "healthEmitImmediately",
-        name = "Emit Immediately",
-        description = "Keep beeping through the post-interaction pause",
-        section = healthSection,
+        keyName = "healthThreshold",
+        name = "Health: Threshold",
+        description = "Alert when Hitpoints are below this",
+        section = combatSection,
         position = 3
     )
-    default boolean healthEmitImmediately()
+    default int healthThreshold()
     {
-        return false;
+        return 25;
     }
-
-    // Prayer
 
     @ConfigItem(
         keyName = "enablePrayerAlert",
-        name = "Enable Prayer Alert",
+        name = "Prayer Alert",
         description = "Alert while Prayer is below the threshold (Custom preset only)",
-        section = prayerSection,
-        position = 0
+        section = combatSection,
+        position = 4
     )
     default boolean enablePrayerAlert()
     {
         return true;
     }
 
+    @ConfigItem(
+        keyName = "prayerDismissOnClick",
+        name = "Prayer: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = combatSection,
+        position = 5
+    )
+    default boolean prayerDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "prayerFlashColor",
+        name = "Prayer: Color",
+        description = "Screen flash and panel color for Prayer",
+        section = combatSection,
+        position = 6
+    )
+    default Color prayerFlashColor()
+    {
+        return new Color(88, 190, 255);
+    }
+
     @Range(min = 1, max = 99)
     @ConfigItem(
         keyName = "prayerThreshold",
-        name = "Prayer Threshold",
-        description = "Alert when Prayer is below this value",
-        section = prayerSection,
-        position = 1
+        name = "Prayer: Threshold",
+        description = "Alert when Prayer is below this",
+        section = combatSection,
+        position = 7
     )
     default int prayerThreshold()
     {
@@ -358,89 +352,11 @@ public interface ConstsAfkConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "prayerFlashColor",
-        name = "Prayer Flash Color",
-        description = "Screen flash and panel color for Prayer alerts",
-        section = prayerSection,
-        position = 2
-    )
-    default Color prayerFlashColor()
-    {
-        return new Color(88, 190, 255);
-    }
-
-    @ConfigItem(
-        keyName = "prayerEmitImmediately",
-        name = "Emit Immediately",
-        description = "Keep beeping through the post-interaction pause",
-        section = prayerSection,
-        position = 3
-    )
-    default boolean prayerEmitImmediately()
-    {
-        return false;
-    }
-
-    // Idle
-
-    @ConfigItem(
-        keyName = "enableIdleAlert",
-        name = "Enable Idle Alert",
-        description = "Alert when no activity is detected for the threshold (Custom preset only)",
-        section = idleSection,
-        position = 0
-    )
-    default boolean enableIdleAlert()
-    {
-        return true;
-    }
-
-    @Range(min = 1000, max = 600_000)
-    @Units(Units.MILLISECONDS)
-    @ConfigItem(
-        keyName = "idleThresholdMs",
-        name = "Idle Threshold",
-        description = "Alert after this much time without movement, new animations, combat or XP",
-        section = idleSection,
-        position = 1
-    )
-    default int idleThresholdMs()
-    {
-        return 6000;
-    }
-
-    @ConfigItem(
-        keyName = "idleRequireNoAnimation",
-        name = "Suppress While Animating",
-        description = "Only alert once your character stops animating, so a repeating animation (chopping, mining, fishing, fighting) holds the alert off. Every preset but Custom always does this.",
-        section = idleSection,
-        position = 2
-    )
-    default boolean idleRequireNoAnimation()
-    {
-        return true;
-    }
-
-    @ConfigItem(
-        keyName = "idleFlashColor",
-        name = "Idle Flash Color",
-        description = "Screen flash and panel color for Idle alerts",
-        section = idleSection,
-        position = 3
-    )
-    default Color idleFlashColor()
-    {
-        return new Color(255, 210, 80);
-    }
-
-    // Aggro
-
-    @ConfigItem(
         keyName = "enableTimerAlert",
-        name = "Enable Aggro Alert",
+        name = "Aggro Alert",
         description = "Alert when the aggro timer runs out (Custom preset only)",
-        section = aggroSection,
-        position = 0
+        section = combatSection,
+        position = 8
     )
     default boolean enableTimerAlert()
     {
@@ -448,11 +364,35 @@ public interface ConstsAfkConfig extends Config
     }
 
     @ConfigItem(
+        keyName = "aggroDismissOnClick",
+        name = "Aggro: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = combatSection,
+        position = 9
+    )
+    default boolean aggroDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "timerFlashColor",
+        name = "Aggro: Color",
+        description = "Screen flash and panel color for Aggro",
+        section = combatSection,
+        position = 10
+    )
+    default Color timerFlashColor()
+    {
+        return new Color(210, 95, 95);
+    }
+
+    @ConfigItem(
         keyName = "timerMode",
-        name = "Aggro Mode",
+        name = "Aggro: Mode",
         description = "OSRS 10-minute aggro timing, or a repeating custom interval",
-        section = aggroSection,
-        position = 1
+        section = combatSection,
+        position = 11
     )
     default TimerMode timerMode()
     {
@@ -462,10 +402,10 @@ public interface ConstsAfkConfig extends Config
     @Range(min = 1, max = 180)
     @ConfigItem(
         keyName = "timerMinutes",
-        name = "Custom Aggro Minutes",
-        description = "Minutes between alerts when Aggro Mode is Custom Minutes",
-        section = aggroSection,
-        position = 2
+        name = "Aggro: Custom Minutes",
+        description = "Minutes between alerts when Mode is Custom Minutes",
+        section = combatSection,
+        position = 12
     )
     default int timerMinutes()
     {
@@ -475,10 +415,10 @@ public interface ConstsAfkConfig extends Config
     @Range(min = 5, max = 250)
     @ConfigItem(
         keyName = "aggroResetDistanceTiles",
-        name = "Auto Reset Distance",
-        description = "In OSRS aggro mode, moving this many tiles from the aggro anchor restarts the 10-minute timer",
-        section = aggroSection,
-        position = 3
+        name = "Aggro: Reset Distance",
+        description = "In OSRS mode, moving this many tiles from where the timer started restarts it",
+        section = combatSection,
+        position = 13
     )
     default int aggroResetDistanceTiles()
     {
@@ -486,90 +426,35 @@ public interface ConstsAfkConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "timerFlashColor",
-        name = "Aggro Flash Color",
-        description = "Screen flash and panel color for Aggro alerts",
-        section = aggroSection,
-        position = 4
-    )
-    default Color timerFlashColor()
-    {
-        return new Color(210, 95, 95);
-    }
-
-    // Logout
-
-    @ConfigItem(
-        keyName = "enableLogoutWarning",
-        name = "Enable Logout Warning",
-        description = "Warn when approaching the inactivity logout (Custom preset only)",
-        section = logoutSection,
-        position = 0
-    )
-    default boolean enableLogoutWarning()
-    {
-        return true;
-    }
-
-    @Range(min = 60_000, max = 1_800_000)
-    @Units(Units.MILLISECONDS)
-    @ConfigItem(
-        keyName = "logoutWarningMs",
-        name = "Logout Warning Time",
-        description = "Warn after this long without a click or key press (24 minutes default)",
-        section = logoutSection,
-        position = 1
-    )
-    default int logoutWarningMs()
-    {
-        return 1_440_000;
-    }
-
-    @ConfigItem(
-        keyName = "logoutWarningFlashColor",
-        name = "Logout Flash Color",
-        description = "Screen flash and panel color for the logout warning",
-        section = logoutSection,
-        position = 2
-    )
-    default Color logoutWarningFlashColor()
-    {
-        return new Color(255, 171, 94);
-    }
-
-    // Potion expiry
-
-    @ConfigItem(
         keyName = "enablePotionExpiryAlert",
-        name = "Enable Potion Expiry Alert",
-        description = "Alert when chat says something 'is about to' expire (Custom preset only)",
-        section = potionSection,
-        position = 0
+        name = "Potion Expiry Alert",
+        description = "Alert when chat says a potion or effect is about to expire (Custom preset only)",
+        section = combatSection,
+        position = 14
     )
     default boolean enablePotionExpiryAlert()
     {
         return true;
     }
 
-    @Range(min = 1, max = 20)
     @ConfigItem(
-        keyName = "potionExpiryAlertIterations",
-        name = "Alert Iterations",
-        description = "How many beeps per expiry warning",
-        section = potionSection,
-        position = 1
+        keyName = "potionDismissOnClick",
+        name = "Potion: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = combatSection,
+        position = 15
     )
-    default int potionExpiryAlertIterations()
+    default boolean potionDismissOnClick()
     {
-        return 9;
+        return true;
     }
 
     @ConfigItem(
         keyName = "potionExpiryFlashColor",
-        name = "Potion Expiry Flash Color",
-        description = "Screen flash and panel color for expiry alerts",
-        section = potionSection,
-        position = 2
+        name = "Potion: Color",
+        description = "Screen flash and panel color for Potion",
+        section = combatSection,
+        position = 16
     )
     default Color potionExpiryFlashColor()
     {
@@ -577,23 +462,185 @@ public interface ConstsAfkConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "potionEmitImmediately",
-        name = "Emit Immediately",
-        description = "Keep beeping through the post-interaction pause, and don't let clicks cancel the alert",
-        section = potionSection,
+        keyName = "enableCannonAlert",
+        name = "Cannon Alert",
+        description = "Alert when chat says 'Your cannon is out of ammo!' (Custom preset only)",
+        section = combatSection,
+        position = 17
+    )
+    default boolean enableCannonAlert()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "cannonDismissOnClick",
+        name = "Cannon: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = combatSection,
+        position = 18
+    )
+    default boolean cannonDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "cannonFlashColor",
+        name = "Cannon: Color",
+        description = "Screen flash and panel color for Cannon",
+        section = combatSection,
+        position = 19
+    )
+    default Color cannonFlashColor()
+    {
+        return new Color(255, 140, 0);
+    }
+
+    // AFK
+
+    @ConfigItem(
+        keyName = "enableIdleAlert",
+        name = "Idle Alert",
+        description = "Alert when nothing has happened for the threshold (Custom preset only)",
+        section = afkSection,
+        position = 0
+    )
+    default boolean enableIdleAlert()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "idleDismissOnClick",
+        name = "Idle: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = afkSection,
+        position = 1
+    )
+    default boolean idleDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "idleFlashColor",
+        name = "Idle: Color",
+        description = "Screen flash and panel color for Idle",
+        section = afkSection,
+        position = 2
+    )
+    default Color idleFlashColor()
+    {
+        return new Color(255, 210, 80);
+    }
+
+    @Range(min = 1000, max = 600_000)
+    @Units(Units.MILLISECONDS)
+    @ConfigItem(
+        keyName = "idleThresholdMs",
+        name = "Idle: Threshold",
+        description = "Alert after this much time without movement, new animations, combat or XP",
+        section = afkSection,
         position = 3
     )
-    default boolean potionEmitImmediately()
+    default int idleThresholdMs()
     {
-        return false;
+        return 6000;
+    }
+
+    @ConfigItem(
+        keyName = "idleRequireNoAnimation",
+        name = "Idle: Suppress While Animating",
+        description = "Only alert once your character stops animating, so a repeating animation (chopping, mining, fishing, fighting) holds it off. Every preset but Custom always does this.",
+        section = afkSection,
+        position = 4
+    )
+    default boolean idleRequireNoAnimation()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "enableLogoutWarning",
+        name = "Logout Alert",
+        description = "Warn before the inactivity logout. Any click or key press restarts it (Custom preset only)",
+        section = afkSection,
+        position = 5
+    )
+    default boolean enableLogoutWarning()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "logoutWarningFlashColor",
+        name = "Logout: Color",
+        description = "Screen flash and panel color for Logout",
+        section = afkSection,
+        position = 6
+    )
+    default Color logoutWarningFlashColor()
+    {
+        return new Color(255, 171, 94);
+    }
+
+    @Range(min = 60_000, max = 1_800_000)
+    @Units(Units.MILLISECONDS)
+    @ConfigItem(
+        keyName = "logoutWarningMs",
+        name = "Logout: Warn After",
+        description = "Warn after this long without a click or key press (24 minutes default)",
+        section = afkSection,
+        position = 7
+    )
+    default int logoutWarningMs()
+    {
+        return 1_440_000;
+    }
+
+    @ConfigItem(
+        keyName = "enableInventoryFullAlert",
+        name = "Inventory Full Alert",
+        description = "Alert when chat says your inventory is too full to hold more (Custom preset only)",
+        section = afkSection,
+        position = 8
+    )
+    default boolean enableInventoryFullAlert()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "inventoryFullDismissOnClick",
+        name = "Inventory Full: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = afkSection,
+        position = 9
+    )
+    default boolean inventoryFullDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "inventoryFullFlashColor",
+        name = "Inventory Full: Color",
+        description = "Screen flash and panel color for Inventory Full",
+        section = afkSection,
+        position = 10
+    )
+    default Color inventoryFullFlashColor()
+    {
+        return new Color(220, 60, 220);
     }
 
     // Random event
 
     @ConfigItem(
         keyName = "enableRandomEventAlert",
-        name = "Enable Random Event Alert",
-        description = "Alert when a random event NPC appears (Custom preset only)",
+        name = "Random Event Alert",
+        description = "Alert when a random event targets you, not someone else (Custom preset only)",
         section = randomSection,
         position = 0
     )
@@ -602,216 +649,49 @@ public interface ConstsAfkConfig extends Config
         return true;
     }
 
-    @Range(min = 1, max = 20)
     @ConfigItem(
-        keyName = "randomEventAlertIterations",
-        name = "Alert Iterations",
-        description = "How many beeps per random event",
+        keyName = "randomDismissOnClick",
+        name = "Random Event: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
         section = randomSection,
         position = 1
     )
-    default int randomEventAlertIterations()
+    default boolean randomDismissOnClick()
     {
-        return 9;
-    }
-
-    @Range(min = 0, max = 120_000)
-    @Units(Units.MILLISECONDS)
-    @ConfigItem(
-        keyName = "randomEventCooldownMs",
-        name = "Trigger Cooldown",
-        description = "Minimum time between random event alerts",
-        section = randomSection,
-        position = 2
-    )
-    default int randomEventCooldownMs()
-    {
-        return 20_000;
+        return true;
     }
 
     @ConfigItem(
         keyName = "randomEventFlashColor",
-        name = "Random Event Flash Color",
-        description = "Screen flash and panel color for random event alerts",
+        name = "Random Event: Color",
+        description = "Screen flash and panel color for Random Event",
         section = randomSection,
-        position = 3
+        position = 2
     )
     default Color randomEventFlashColor()
     {
         return new Color(255, 255, 255);
     }
 
-    // Cannon
-
+    @Range(min = 0, max = 120_000)
+    @Units(Units.MILLISECONDS)
     @ConfigItem(
-        keyName = "enableCannonAlert",
-        name = "Enable Cannon Alert",
-        description = "Alert when chat says 'Your cannon is out of ammo!' (Custom preset only)",
-        section = cannonSection,
-        position = 0
-    )
-    default boolean enableCannonAlert()
-    {
-        return true;
-    }
-
-    @Range(min = 1, max = 500)
-    @ConfigItem(
-        keyName = "cannonAlertIterations",
-        name = "Alert Iterations",
-        description = "How many beeps per out-of-ammo warning",
-        section = cannonSection,
-        position = 1
-    )
-    default int cannonAlertIterations()
-    {
-        return 100;
-    }
-
-    @ConfigItem(
-        keyName = "cannonFlashColor",
-        name = "Cannon Flash Color",
-        description = "Screen flash and panel color for cannon alerts",
-        section = cannonSection,
-        position = 2
-    )
-    default Color cannonFlashColor()
-    {
-        return new Color(255, 140, 0);
-    }
-
-    @ConfigItem(
-        keyName = "cannonEmitImmediately",
-        name = "Emit Immediately",
-        description = "Keep beeping through the post-interaction pause, and don't let clicks cancel the alert",
-        section = cannonSection,
+        keyName = "randomEventCooldownMs",
+        name = "Random Event: Cooldown",
+        description = "Minimum time between random event alerts",
+        section = randomSection,
         position = 3
     )
-    default boolean cannonEmitImmediately()
+    default int randomEventCooldownMs()
     {
-        return false;
-    }
-
-    // Inventory full
-
-    @ConfigItem(
-        keyName = "enableInventoryFullAlert",
-        name = "Enable Inventory Full Alert",
-        description = "Alert when chat says your inventory is too full to hold more (Custom preset only)",
-        section = inventoryFullSection,
-        position = 0
-    )
-    default boolean enableInventoryFullAlert()
-    {
-        return true;
-    }
-
-    @Range(min = 1, max = 500)
-    @ConfigItem(
-        keyName = "inventoryFullAlertIterations",
-        name = "Alert Iterations",
-        description = "How many beeps per inventory full warning",
-        section = inventoryFullSection,
-        position = 1
-    )
-    default int inventoryFullAlertIterations()
-    {
-        return 100;
-    }
-
-    @ConfigItem(
-        keyName = "inventoryFullFlashColor",
-        name = "Inventory Full Flash Color",
-        description = "Screen flash and panel color for inventory full alerts",
-        section = inventoryFullSection,
-        position = 2
-    )
-    default Color inventoryFullFlashColor()
-    {
-        return new Color(220, 60, 220);
-    }
-
-    // Sailing
-
-    @ConfigItem(
-        keyName = "enableSailingAlert",
-        name = "Enable Salvage Alert",
-        description = "Alert when a shipwreck is depleted or you have no more salvage to sort (Custom preset only)",
-        section = sailingSection,
-        position = 0
-    )
-    default boolean enableSailingAlert()
-    {
-        return true;
-    }
-
-    @Range(min = 1, max = 500)
-    @ConfigItem(
-        keyName = "sailingAlertIterations",
-        name = "Salvage Alert Iterations",
-        description = "How many beeps per salvage warning",
-        section = sailingSection,
-        position = 1
-    )
-    default int sailingAlertIterations()
-    {
-        return 100;
-    }
-
-    @ConfigItem(
-        keyName = "sailingFlashColor",
-        name = "Salvage Flash Color",
-        description = "Screen flash and panel color for salvage alerts",
-        section = sailingSection,
-        position = 2
-    )
-    default Color sailingFlashColor()
-    {
-        return new Color(0, 200, 220);
-    }
-
-    @ConfigItem(
-        keyName = "enableCargoHoldAlert",
-        name = "Enable Cargo Hold Full Alert",
-        description = "Alert when chat says the cargo hold is full, e.g. your crew on the salvaging hook can't salvage (Custom preset only)",
-        section = sailingSection,
-        position = 3
-    )
-    default boolean enableCargoHoldAlert()
-    {
-        return true;
-    }
-
-    @Range(min = 1, max = 500)
-    @ConfigItem(
-        keyName = "cargoHoldAlertIterations",
-        name = "Cargo Hold Alert Iterations",
-        description = "How many beeps per cargo hold full warning",
-        section = sailingSection,
-        position = 4
-    )
-    default int cargoHoldAlertIterations()
-    {
-        return 100;
-    }
-
-    @ConfigItem(
-        keyName = "cargoHoldFlashColor",
-        name = "Cargo Hold Flash Color",
-        description = "Screen flash and panel color for cargo hold alerts",
-        section = sailingSection,
-        position = 5
-    )
-    default Color cargoHoldFlashColor()
-    {
-        return new Color(150, 110, 255);
+        return 20_000;
     }
 
     // Forestry
 
     @ConfigItem(
         keyName = "enableForestryAlert",
-        name = "Enable Forestry Alert",
+        name = "Forestry Alert",
         description = "Alert when a Forestry event you picked below starts nearby (Custom preset only)",
         section = forestrySection,
         position = 0
@@ -821,23 +701,22 @@ public interface ConstsAfkConfig extends Config
         return true;
     }
 
-    @Range(min = 1, max = 500)
     @ConfigItem(
-        keyName = "forestryAlertIterations",
-        name = "Alert Iterations",
-        description = "How many beeps per Forestry event",
+        keyName = "forestryDismissOnClick",
+        name = "Forestry: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
         section = forestrySection,
         position = 1
     )
-    default int forestryAlertIterations()
+    default boolean forestryDismissOnClick()
     {
-        return 30;
+        return true;
     }
 
     @ConfigItem(
         keyName = "forestryFlashColor",
-        name = "Forestry Flash Color",
-        description = "Screen flash and panel color for Forestry alerts",
+        name = "Forestry: Color",
+        description = "Screen flash and panel color for Forestry",
         section = forestrySection,
         position = 2
     )
@@ -848,7 +727,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryRisingRoots",
-        name = "Rising Roots",
+        name = "Forestry: Rising Roots",
         description = "Alert when a Rising Roots event starts: anima-infused roots sprout around the tree",
         section = forestrySection,
         position = 3
@@ -860,7 +739,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryStrugglingSapling",
-        name = "Struggling Sapling",
+        name = "Forestry: Struggling Sapling",
         description = "Alert when a Struggling Sapling event starts: a sapling needs the right mulch",
         section = forestrySection,
         position = 4
@@ -872,7 +751,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryFloweringTree",
-        name = "Flowering Tree",
+        name = "Forestry: Flowering Tree",
         description = "Alert when a Flowering Tree event starts: flowering bushes need pollinating",
         section = forestrySection,
         position = 5
@@ -884,7 +763,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryLeprechaun",
-        name = "Woodcutting Leprechaun",
+        name = "Forestry: Woodcutting Leprechaun",
         description = "Alert when a Woodcutting Leprechaun event starts: a leprechaun shows up by the trees",
         section = forestrySection,
         position = 6
@@ -896,7 +775,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryBeehive",
-        name = "Beehive",
+        name = "Forestry: Beehive",
         description = "Alert when a Beehive event starts: a swarm needs a hive built",
         section = forestrySection,
         position = 7
@@ -908,7 +787,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryFriendlyEnt",
-        name = "Friendly Ent",
+        name = "Forestry: Friendly Ent",
         description = "Alert when a Friendly Ent event starts: entlings need pruning",
         section = forestrySection,
         position = 8
@@ -920,7 +799,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryPoachers",
-        name = "Poachers",
+        name = "Forestry: Poachers",
         description = "Alert when a Poachers event starts: a fox is caught in a poacher's trap",
         section = forestrySection,
         position = 9
@@ -932,7 +811,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryPheasantControl",
-        name = "Pheasant Control",
+        name = "Forestry: Pheasant Control",
         description = "Alert when a Pheasant Control event starts: the Freaky Forester wants pheasant eggs",
         section = forestrySection,
         position = 10
@@ -944,7 +823,7 @@ public interface ConstsAfkConfig extends Config
 
     @ConfigItem(
         keyName = "forestryEnchantmentRitual",
-        name = "Enchantment Ritual",
+        name = "Forestry: Enchantment Ritual",
         description = "Alert when an Enchantment Ritual event starts: a dryad's ritual needs the right circle",
         section = forestrySection,
         position = 11
@@ -952,5 +831,79 @@ public interface ConstsAfkConfig extends Config
     default boolean forestryEnchantmentRitual()
     {
         return true;
+    }
+
+    // Sailing
+
+    @ConfigItem(
+        keyName = "enableSailingAlert",
+        name = "Salvage Alert",
+        description = "Alert when a shipwreck is depleted or you have no more salvage to sort (Custom preset only)",
+        section = sailingSection,
+        position = 0
+    )
+    default boolean enableSailingAlert()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "salvageDismissOnClick",
+        name = "Salvage: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = sailingSection,
+        position = 1
+    )
+    default boolean salvageDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "sailingFlashColor",
+        name = "Salvage: Color",
+        description = "Screen flash and panel color for Salvage",
+        section = sailingSection,
+        position = 2
+    )
+    default Color sailingFlashColor()
+    {
+        return new Color(0, 200, 220);
+    }
+
+    @ConfigItem(
+        keyName = "enableCargoHoldAlert",
+        name = "Cargo Hold Alert",
+        description = "Alert when chat says the cargo hold is full, e.g. your crew on the salvaging hook can't salvage (Custom preset only)",
+        section = sailingSection,
+        position = 3
+    )
+    default boolean enableCargoHoldAlert()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "cargoDismissOnClick",
+        name = "Cargo Hold: Dismiss on Click",
+        description = "A click or key press silences this alert. Off, it keeps going through clicks",
+        section = sailingSection,
+        position = 4
+    )
+    default boolean cargoDismissOnClick()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "cargoHoldFlashColor",
+        name = "Cargo Hold: Color",
+        description = "Screen flash and panel color for Cargo Hold",
+        section = sailingSection,
+        position = 5
+    )
+    default Color cargoHoldFlashColor()
+    {
+        return new Color(150, 110, 255);
     }
 }

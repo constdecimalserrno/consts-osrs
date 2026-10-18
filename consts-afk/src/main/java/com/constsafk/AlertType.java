@@ -11,29 +11,41 @@ import java.util.function.Predicate;
 enum AlertType
 {
     HEALTH("Health", "Current/max Hitpoints. Alerts below the threshold.",
-        ConstsAfkConfig::enableHealthAlert, ConstsAfkConfig::healthFlashColor),
+        ConstsAfkConfig::enableHealthAlert, ConstsAfkConfig::healthFlashColor,
+        ConstsAfkConfig::healthDismissOnClick),
     PRAYER("Prayer", "Current/max Prayer. Alerts below the threshold.",
-        ConstsAfkConfig::enablePrayerAlert, ConstsAfkConfig::prayerFlashColor),
+        ConstsAfkConfig::enablePrayerAlert, ConstsAfkConfig::prayerFlashColor,
+        ConstsAfkConfig::prayerDismissOnClick),
     IDLE("Idle", "Time since last activity (movement, animation, combat, XP).",
-        ConstsAfkConfig::enableIdleAlert, ConstsAfkConfig::idleFlashColor),
+        ConstsAfkConfig::enableIdleAlert, ConstsAfkConfig::idleFlashColor,
+        ConstsAfkConfig::idleDismissOnClick),
     AGGRO("Aggro", "Time until NPC aggression wears off. Right-click the panel to reset.",
-        ConstsAfkConfig::enableTimerAlert, ConstsAfkConfig::timerFlashColor),
+        ConstsAfkConfig::enableTimerAlert, ConstsAfkConfig::timerFlashColor,
+        ConstsAfkConfig::aggroDismissOnClick),
     LOGOUT("Logout", "Time until the 25-minute inactivity logout. Clicks and keys reset it.",
-        ConstsAfkConfig::enableLogoutWarning, ConstsAfkConfig::logoutWarningFlashColor),
-    POTION("Boost", "Lights up when a potion or effect is about to expire.",
-        ConstsAfkConfig::enablePotionExpiryAlert, ConstsAfkConfig::potionExpiryFlashColor),
-    RANDOM("Random", "Lights up when a random event NPC appears.",
-        ConstsAfkConfig::enableRandomEventAlert, ConstsAfkConfig::randomEventFlashColor),
+        ConstsAfkConfig::enableLogoutWarning, ConstsAfkConfig::logoutWarningFlashColor,
+        config -> true),
+    POTION("Potion", "Lights up when a potion or effect is about to expire.",
+        ConstsAfkConfig::enablePotionExpiryAlert, ConstsAfkConfig::potionExpiryFlashColor,
+        ConstsAfkConfig::potionDismissOnClick),
+    RANDOM("Random", "Lights up when a random event targets you.",
+        ConstsAfkConfig::enableRandomEventAlert, ConstsAfkConfig::randomEventFlashColor,
+        ConstsAfkConfig::randomDismissOnClick),
     CANNON("Cannon", "Lights up when your cannon is out of ammo.",
-        ConstsAfkConfig::enableCannonAlert, ConstsAfkConfig::cannonFlashColor),
+        ConstsAfkConfig::enableCannonAlert, ConstsAfkConfig::cannonFlashColor,
+        ConstsAfkConfig::cannonDismissOnClick),
     INVENTORY_FULL("Inv Full", "Lights up when your inventory is too full to hold more.",
-        ConstsAfkConfig::enableInventoryFullAlert, ConstsAfkConfig::inventoryFullFlashColor),
+        ConstsAfkConfig::enableInventoryFullAlert, ConstsAfkConfig::inventoryFullFlashColor,
+        ConstsAfkConfig::inventoryFullDismissOnClick),
     SALVAGE("Salvage", "Lights up when a shipwreck is depleted or you run out of salvage to sort.",
-        ConstsAfkConfig::enableSailingAlert, ConstsAfkConfig::sailingFlashColor),
+        ConstsAfkConfig::enableSailingAlert, ConstsAfkConfig::sailingFlashColor,
+        ConstsAfkConfig::salvageDismissOnClick),
     CARGO("Cargo", "Lights up when your crew can't salvage because the cargo hold is full.",
-        ConstsAfkConfig::enableCargoHoldAlert, ConstsAfkConfig::cargoHoldFlashColor),
+        ConstsAfkConfig::enableCargoHoldAlert, ConstsAfkConfig::cargoHoldFlashColor,
+        ConstsAfkConfig::cargoDismissOnClick),
     FORESTRY("Forestry", "Lights up when a Forestry event you picked starts nearby, and names it.",
-        ConstsAfkConfig::enableForestryAlert, ConstsAfkConfig::forestryFlashColor);
+        ConstsAfkConfig::enableForestryAlert, ConstsAfkConfig::forestryFlashColor,
+        ConstsAfkConfig::forestryDismissOnClick);
 
     private static final int PHASE_SLOTS = values().length;
 
@@ -41,13 +53,23 @@ enum AlertType
     private final String description;
     private final Predicate<ConstsAfkConfig> toggle;
     private final Function<ConstsAfkConfig, Color> flashColor;
+    private final Predicate<ConstsAfkConfig> dismissOnClick;
 
-    AlertType(String label, String description, Predicate<ConstsAfkConfig> toggle, Function<ConstsAfkConfig, Color> flashColor)
+    // Logout's "dismiss" is the click itself: any click or key press restarts its countdown.
+    AlertType(String label, String description, Predicate<ConstsAfkConfig> toggle, Function<ConstsAfkConfig, Color> flashColor,
+        Predicate<ConstsAfkConfig> dismissOnClick)
     {
         this.label = label;
         this.description = description;
         this.toggle = toggle;
         this.flashColor = flashColor;
+        this.dismissOnClick = dismissOnClick;
+    }
+
+    /** Whether a click or key press silences this alert, per its Dismiss on Click option. */
+    boolean dismissesOnClick(ConstsAfkConfig config)
+    {
+        return dismissOnClick.test(config);
     }
 
     String getLabel()

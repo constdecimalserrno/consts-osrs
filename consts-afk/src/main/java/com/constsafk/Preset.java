@@ -12,20 +12,19 @@ public enum Preset
 {
     CUSTOM("Custom"),
     CHINNING("Chinning",
-        AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO,
-        AlertType.LOGOUT, AlertType.POTION),
+        AlertType.HEALTH, AlertType.PRAYER, AlertType.POTION, AlertType.AGGRO, AlertType.LOGOUT),
     // Crabs stop attacking after ten minutes, so Aggro is the one that matters. No Prayer: crabbing doesn't use it.
     CRABBING("Crabbing",
         AlertType.HEALTH, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT, AlertType.POTION),
     MINING("Mining",
-        AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL),
+        AlertType.IDLE, AlertType.INVENTORY_FULL),
     WOODCUTTING("Woodcutting",
-        AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
+        AlertType.IDLE, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
     FISHING("Fishing",
-        AlertType.IDLE, AlertType.LOGOUT, AlertType.INVENTORY_FULL),
-    // On a hook yourself: the wreck running dry, a full inventory and a full hold all need you.
+        AlertType.IDLE, AlertType.INVENTORY_FULL),
+    // On a hook yourself: a full inventory sends you sorting, and Salvage says the sorting or the wreck is done.
     SALVAGING_ACTIVE("Salvaging Active",
-        AlertType.LOGOUT, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO),
+        AlertType.INVENTORY_FULL, AlertType.SALVAGE),
     // Crewmates on the hooks: the only thing that needs you is a full cargo hold.
     SALVAGING_AFK("Salvaging AFK",
         AlertType.CARGO);
