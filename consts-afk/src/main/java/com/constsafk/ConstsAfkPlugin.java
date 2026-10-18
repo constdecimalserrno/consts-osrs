@@ -27,6 +27,7 @@ import net.runelite.api.Player;
 import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectVolume;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameObjectDespawned;
@@ -36,6 +37,8 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.PlayerDespawned;
+import net.runelite.api.events.PlayerSpawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -124,6 +127,14 @@ public class ConstsAfkPlugin extends Plugin
     @Inject
     private ConstsAfkAggroAreaOverlay aggroAreaOverlay;
 
+    @Inject
+    private ConstsAfkTreeTimerOverlay treeTimerOverlay;
+
+    // Every tree's time left, from Tree Despawn Timer. Followed whatever the settings, so it is right whenever the
+    // Tree Timer turns on.
+    @Inject
+    private TreeTimer treeTimer;
+
     private final Map<AlertType, LoopAlert> loops = new EnumMap<>(AlertType.class);
     private final Map<AlertType, BurstAlert> bursts = new EnumMap<>(AlertType.class);
     private final Map<Skill, Integer> skillXpCache = new EnumMap<>(Skill.class);
@@ -181,6 +192,8 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
+        overlayManager.add(treeTimerOverlay);
+        treeTimer.start();
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
@@ -201,8 +214,10 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
         overlayManager.remove(aggroAreaOverlay);
+        overlayManager.remove(treeTimerOverlay);
         shutdownScheduler();
         aggroArea.clear();
+        treeTimer.clear();
     }
 
     @Subscribe
@@ -210,6 +225,7 @@ public class ConstsAfkPlugin extends Plugin
     {
         GameState state = event.getGameState();
         followAggroAreaAcrossLogins(state);
+        treeTimer.onGameStateChanged(state);
         if (state == GameState.LOGGED_IN)
         {
             if (!sessionActive)
@@ -260,6 +276,7 @@ public class ConstsAfkPlugin extends Plugin
     {
         updateActivityFromHybridSignals();
         updateAggroArea();
+        treeTimer.onGameTick(System.currentTimeMillis());
         evaluateAlerts();
     }
 
@@ -267,6 +284,25 @@ public class ConstsAfkPlugin extends Plugin
     public void onStatChanged(StatChanged event)
     {
         updateActivityFromXp(event.getSkill(), event.getXp());
+        treeTimer.onStatChanged(event.getSkill());
+    }
+
+    @Subscribe
+    public void onAnimationChanged(AnimationChanged event)
+    {
+        treeTimer.onAnimationChanged(event.getActor());
+    }
+
+    @Subscribe
+    public void onPlayerSpawned(PlayerSpawned event)
+    {
+        treeTimer.onPlayerSpawned(event.getPlayer());
+    }
+
+    @Subscribe
+    public void onPlayerDespawned(PlayerDespawned event)
+    {
+        treeTimer.onPlayerDespawned(event.getPlayer());
     }
 
     @Subscribe
@@ -316,12 +352,14 @@ public class ConstsAfkPlugin extends Plugin
     public void onGameObjectSpawned(GameObjectSpawned event)
     {
         forestryMarkerAppeared(ForestryEvent.forObject(event.getGameObject().getId()));
+        treeTimer.onGameObjectSpawned(event.getGameObject());
     }
 
     @Subscribe
     public void onGameObjectDespawned(GameObjectDespawned event)
     {
         forestryMarkerGone(ForestryEvent.forObject(event.getGameObject().getId()));
+        treeTimer.onGameObjectDespawned(event.getGameObject());
     }
 
     @Subscribe
