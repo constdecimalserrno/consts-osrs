@@ -9,7 +9,6 @@ import java.awt.Stroke;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
-import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Perspective;
 import net.runelite.api.Tile;
@@ -25,13 +24,16 @@ class ConstsDestinationOverlay extends Overlay
     private final Client client;
     private final ConstsDestinationPlugin plugin;
     private final ConstsDestinationConfig config;
+    private final InteractTracker tracker;
 
     @Inject
-    private ConstsDestinationOverlay(Client client, ConstsDestinationPlugin plugin, ConstsDestinationConfig config)
+    private ConstsDestinationOverlay(Client client, ConstsDestinationPlugin plugin, ConstsDestinationConfig config,
+        InteractTracker tracker)
     {
         this.client = client;
         this.plugin = plugin;
         this.config = config;
+        this.tracker = tracker;
 
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
@@ -41,10 +43,13 @@ class ConstsDestinationOverlay extends Overlay
     public Dimension render(Graphics2D graphics)
     {
         // Clicked tile (orange, persists until next click)
-        renderClickedTile(graphics);
+        if (config.showClickedTile())
+        {
+            renderClickedTile(graphics);
+        }
 
-        // Hover tile (blue, follows cursor)
-        if (!isHoveringInteractable())
+        // Hover tile (blue, follows cursor), unless what's under the cursor is outlined instead
+        if (config.showHoverTile() && !isHoveringOutlinedEntity())
         {
             renderHoverTile(graphics);
         }
@@ -117,30 +122,10 @@ class ConstsDestinationOverlay extends Overlay
         }
     }
 
-    private boolean isHoveringInteractable()
+    private boolean isHoveringOutlinedEntity()
     {
-        MenuEntry[] entries = client.getMenuEntries();
-        if (entries == null || entries.length == 0)
-        {
-            return false;
-        }
-
-        MenuAction action = entries[entries.length - 1].getType();
-        switch (action)
-        {
-            case NPC_FIRST_OPTION:
-            case NPC_SECOND_OPTION:
-            case NPC_THIRD_OPTION:
-            case NPC_FOURTH_OPTION:
-            case NPC_FIFTH_OPTION:
-            case GAME_OBJECT_FIRST_OPTION:
-            case GAME_OBJECT_SECOND_OPTION:
-            case GAME_OBJECT_THIRD_OPTION:
-            case GAME_OBJECT_FOURTH_OPTION:
-            case GAME_OBJECT_FIFTH_OPTION:
-                return true;
-            default:
-                return false;
-        }
+        MenuEntry entry = tracker.hoveredEntry();
+        InteractTracker.Kind kind = entry != null ? InteractTracker.kindOf(entry.getType()) : null;
+        return kind != null && config.outlineOnHover() && ConstsDestinationPlugin.outlines(config, kind);
     }
 }

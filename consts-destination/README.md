@@ -2,22 +2,31 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ): it highlights the tile under your cursor, and when you click to walk somewhere, that tile stays lit in a second color until your next click. You always know where you're about to go and where you're headed.
+RuneLite plugin for Old School RuneScape ( OSRS ): where you're about to act, and where you acted. Anything under your cursor that you can do something with lights up in blue - the tile, or the NPC, player, object or ground item on it. Click, and what you clicked turns orange and stays that way until you're done: the tile you're walking to, or what you're interacting with.
 
 ## What it does
 
-- **Hover**: the tile under your cursor is outlined in blue, and the outline follows the mouse. It stays out of the way while you hover an NPC or an object.
-- **Clicked**: click a tile to walk there and it turns orange, and stays orange while you walk.
-- **Cleared**: any other click (an NPC, an object, an item, the interface) clears the orange tile, and so does logging out.
+- **Hover**: the tile under your cursor is outlined blue and follows the mouse. Over an NPC, a player, an object or a ground item, that thing is outlined blue instead - red if your click would attack it.
+- **Clicked**: click a tile to walk there and it turns orange while you walk. Click an NPC, a player, an object or an item and its outline flashes white, then stays orange - red in a fight - while you're interacting with it.
+- **Cleared**: walking somewhere else, using an item, getting there, or logging out clears it.
 
 ## Settings
 
-| Setting | What it does | Default |
-|---|---|---|
-| Highlight Color | Color for the tile under your cursor | Blue `#3EAAFF` |
-| Border Width | Outline thickness in pixels | `2` |
-| Fill Opacity | How solid the fill is: 0 is outline only, 255 is solid | `30` |
-| Clicked Color | Color for the tile you clicked to walk to | Orange `#FFA500` |
+| Section | Setting | What it does | Default |
+|---|---|---|---|
+| Colors | Hover Color | The tile under your cursor, and anything you hover | Blue `#3EAAFF` |
+| Colors | Clicked Color | The tile you're walking to, and what you're interacting with | Orange `#FFA500` |
+| Colors | Attack Color | An NPC you're about to attack, or attacking | Red `#FF4632` |
+| Tiles | Hover Tile / Clicked Tile | Turn either tile off | On |
+| Tiles | Border Width | Tile outline thickness in pixels | `2` |
+| Tiles | Fill Opacity | Tile fill: 0 is outline only, 255 is solid | `30` |
+| Outlines | On Hover / On Interact | Turn either kind of outline off | On |
+| Outlines | NPCs / Players / Objects / Ground Items | Which things get outlined | All on |
+| Outlines | Width / Feather | Outline thickness, and how much of it fades out (0 to 4) | `4` / `4` |
+
+## Credits
+
+The outlines are RuneLite's [Interact Highlight](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/interacthighlight) by Adam (BSD 2-Clause, Copyright (c) 2021, Adam), folded into consts-Destination: you can turn that plugin off and run this one alone. The ported files, `InteractTracker.java` and `ConstsDestinationOutlineOverlay.java`, keep its license header and license, reproduced in [NOTICE](NOTICE); the rest of consts-Destination is [MIT](LICENSE).
 
 ## Running it
 

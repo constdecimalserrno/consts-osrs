@@ -37,6 +37,9 @@ public class ConstsDestinationPluginTest
         Field field = ConstsDestinationPlugin.class.getDeclaredField("client");
         field.setAccessible(true);
         field.set(plugin, client);
+        Field tracker = ConstsDestinationPlugin.class.getDeclaredField("tracker");
+        tracker.setAccessible(true);
+        tracker.set(plugin, new InteractTracker(client));
     }
 
     @Test

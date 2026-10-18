@@ -7,7 +7,14 @@ import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.events.InteractingChanged;
+import net.runelite.api.events.ItemDespawned;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.PlayerDespawned;
+import net.runelite.api.events.PlayerSpawned;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -15,12 +22,14 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
 /**
- * Highlights the tile under your cursor, and keeps the tile you walked to lit in another color until your next click.
+ * Where you're about to act and where you acted: the tile under your cursor and anything there you can act on in the
+ * hover color, the tile you're walking to and whatever you're interacting with in the clicked color. The entity
+ * outlines are RuneLite's Interact Highlight by Adam, folded in (InteractTracker, ConstsDestinationOutlineOverlay).
  */
 @PluginDescriptor(
     name = "consts-Destination",
-    description = "Highlights the tile under your cursor, and keeps the tile you clicked to walk to lit until your next click",
-    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click"}
+    description = "Highlights the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done",
+    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object"}
 )
 public class ConstsDestinationPlugin extends Plugin
 {
@@ -32,6 +41,12 @@ public class ConstsDestinationPlugin extends Plugin
 
     @Inject
     private ConstsDestinationOverlay overlay;
+
+    @Inject
+    private ConstsDestinationOutlineOverlay outlineOverlay;
+
+    @Inject
+    private InteractTracker tracker;
 
     private WorldPoint clickedTile;
 
@@ -45,14 +60,18 @@ public class ConstsDestinationPlugin extends Plugin
     protected void startUp()
     {
         overlayManager.add(overlay);
+        overlayManager.add(outlineOverlay);
         clickedTile = null;
+        tracker.clear();
     }
 
     @Override
     protected void shutDown()
     {
         overlayManager.remove(overlay);
+        overlayManager.remove(outlineOverlay);
         clickedTile = null;
+        tracker.clear();
     }
 
     @Subscribe
@@ -62,6 +81,8 @@ public class ConstsDestinationPlugin extends Plugin
         {
             return;
         }
+
+        tracker.onMenuOptionClicked(event);
 
         MenuAction action = event.getMenuAction();
 
@@ -83,9 +104,74 @@ public class ConstsDestinationPlugin extends Plugin
     @Subscribe
     public void onGameStateChanged(GameStateChanged event)
     {
-        if (event.getGameState() != GameState.LOGGED_IN)
+        if (event.getGameState() == GameState.LOADING)
+        {
+            tracker.onLoading();
+        }
+        else if (event.getGameState() != GameState.LOGGED_IN)
         {
             clickedTile = null;
+            tracker.clear();
+        }
+    }
+
+    @Subscribe
+    public void onGameTick(GameTick event)
+    {
+        tracker.onGameTick();
+    }
+
+    @Subscribe
+    public void onInteractingChanged(InteractingChanged event)
+    {
+        tracker.onInteractingChanged(event.getSource(), event.getTarget());
+    }
+
+    @Subscribe
+    public void onNpcSpawned(NpcSpawned event)
+    {
+        tracker.onNpcSpawned(event.getNpc());
+    }
+
+    @Subscribe
+    public void onNpcDespawned(NpcDespawned event)
+    {
+        tracker.onActorDespawned(event.getNpc());
+    }
+
+    @Subscribe
+    public void onPlayerSpawned(PlayerSpawned event)
+    {
+        tracker.onPlayerSpawned(event.getPlayer());
+    }
+
+    @Subscribe
+    public void onPlayerDespawned(PlayerDespawned event)
+    {
+        tracker.onActorDespawned(event.getPlayer());
+    }
+
+    @Subscribe
+    public void onItemDespawned(ItemDespawned event)
+    {
+        tracker.onItemDespawned(event.getItem());
+    }
+
+    /** Whether outlines are on for this kind of thing. */
+    static boolean outlines(ConstsDestinationConfig config, InteractTracker.Kind kind)
+    {
+        switch (kind)
+        {
+            case NPC:
+                return config.outlineNpcs();
+            case PLAYER:
+                return config.outlinePlayers();
+            case OBJECT:
+                return config.outlineObjects();
+            case ITEM:
+                return config.outlineGroundItems();
+            default:
+                return false;
         }
     }
 
