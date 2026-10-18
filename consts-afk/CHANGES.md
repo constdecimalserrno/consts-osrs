@@ -9,6 +9,8 @@ Planned work, not history. Git log has the history.
 - [ ] Verify the Forestry alert in game, event by event.
   - Each of the nine should alert once, name itself on the panel, and not re-fire while it runs.
   - Pheasant Control should not also set off the Random alert.
+- [ ] Fishing: find the game message for a full inventory while fishing and add it to the Inventory Full triggers
+  if it isn't `Your inventory is too full to hold any more …`. Until then the Idle alert catches it.
 - [ ] Verify the Cargo Hold alert in game.
   - Confirm the crew message still reads `…cargo hold is full`.
   - If it repeats while you unload the hold, add a re-trigger cooldown (like Random Event's).

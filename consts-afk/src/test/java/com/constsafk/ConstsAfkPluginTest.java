@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
@@ -116,24 +117,31 @@ public class ConstsAfkPluginTest
     }
 
     @Test
-    public void combatPresetShouldCoverCombatAlertsOnly()
+    public void chinningPresetShouldCoverCombatAlertsWithoutTheCannon()
     {
-        when(config.preset()).thenReturn(Preset.COMBAT);
+        when(config.preset()).thenReturn(Preset.CHINNING);
 
-        Set<AlertType> enabled = enabledAlerts();
-        assertTrue(enabled.containsAll(EnumSet.of(AlertType.HEALTH, AlertType.PRAYER, AlertType.AGGRO, AlertType.CANNON)));
-        assertFalse(enabled.contains(AlertType.CARGO));
-        assertFalse(enabled.contains(AlertType.SALVAGE));
+        assertEquals(EnumSet.of(AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO, AlertType.LOGOUT,
+            AlertType.POTION, AlertType.RANDOM), enabledAlerts());
     }
 
     @Test
-    public void sailingPresetShouldIncludeSalvageAndCargo()
+    public void miningAndFishingPresetsShouldCoverTheSkillingAlerts()
     {
-        when(config.preset()).thenReturn(Preset.SAILING);
+        Set<AlertType> skilling = EnumSet.of(AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL);
 
-        Set<AlertType> enabled = enabledAlerts();
-        assertTrue(enabled.containsAll(EnumSet.of(AlertType.SALVAGE, AlertType.CARGO, AlertType.INVENTORY_FULL)));
-        assertFalse(enabled.contains(AlertType.PRAYER));
+        when(config.preset()).thenReturn(Preset.MINING);
+        assertEquals(skilling, enabledAlerts());
+
+        when(config.preset()).thenReturn(Preset.FISHING);
+        assertEquals(skilling, enabledAlerts());
+    }
+
+    @Test
+    public void presetsShouldBeTheSixInDropdownOrder()
+    {
+        assertEquals("[Custom, Chinning, Mining, Woodcutting, Fishing, Sailing AFK]",
+            Arrays.toString(Preset.values()));
     }
 
     @Test

@@ -1,6 +1,6 @@
 # consts-AFK
 
-RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): combat, skilling, woodcutting and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, mining, woodcutting, fishing and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full bar lights up](screenshots/inventory-full.jpg)
 
@@ -17,11 +17,13 @@ The **Preset** dropdown sits at the very top of the plugin config. You can also 
 | Preset | Alerts on |
 |---|---|
 | Custom (default) | Whatever each section's **Enable** toggle says |
-| Combat | Health, Prayer, Idle, Aggro, Logout, Boost, Random, Cannon |
-| Skilling | Idle, Logout, Random, Inventory Full |
+| Chinning | Health, Prayer, Idle, Aggro, Logout, Boost, Random |
+| Mining | Idle, Logout, Random, Inventory Full |
 | Woodcutting | Idle, Logout, Random, Inventory Full, Forestry |
-| Sailing | Logout, Random, Inventory Full, Salvage, Cargo Hold |
+| Fishing | Idle, Logout, Random, Inventory Full |
 | Sailing AFK | Cargo Hold only |
+
+Cannon and Salvage aren't in any preset; turn them on under **Custom**.
 
 Presets only choose which alerts are on. Thresholds, colors and iteration counts always come from your settings. A preset overrides the Enable toggles; switch back to **Custom** to use them again (your toggles are left untouched).
 

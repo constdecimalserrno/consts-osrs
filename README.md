@@ -4,7 +4,7 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 
 | Plugin | What it does |
 |---|---|
-| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for combat, skilling, woodcutting and Sailing, Forestry events included: beeps, screen flashes and a status panel. |
+| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, mining, woodcutting, fishing and Sailing AFK, Forestry events included: beeps, screen flashes and a status panel. |
 
 ![consts-AFK flashing the screen magenta when the inventory fills while woodcutting](consts-afk/screenshots/inventory-full.jpg)
 

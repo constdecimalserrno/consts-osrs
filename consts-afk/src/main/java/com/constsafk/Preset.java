@@ -11,15 +11,15 @@ import java.util.Set;
 public enum Preset
 {
     CUSTOM("Custom"),
-    COMBAT("Combat",
+    CHINNING("Chinning",
         AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.AGGRO,
-        AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM, AlertType.CANNON),
-    SKILLING("Skilling",
+        AlertType.LOGOUT, AlertType.POTION, AlertType.RANDOM),
+    MINING("Mining",
         AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
     WOODCUTTING("Woodcutting",
         AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.FORESTRY),
-    SAILING("Sailing",
-        AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL, AlertType.SALVAGE, AlertType.CARGO),
+    FISHING("Fishing",
+        AlertType.IDLE, AlertType.LOGOUT, AlertType.RANDOM, AlertType.INVENTORY_FULL),
     SAILING_AFK("Sailing AFK",
         AlertType.CARGO);
 
