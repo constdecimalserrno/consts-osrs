@@ -1,6 +1,6 @@
 # consts-AFK
 
-RuneLite plugin for AFK play: combat, skilling and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): combat, skilling and Sailing. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full bar lights up](screenshots/inventory-full.jpg)
 

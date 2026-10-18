@@ -1,10 +1,10 @@
 # consts-osrs
 
-RuneLite plugins for Old School RuneScape, by const. One Gradle build, one plugin per folder.
+RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, one plugin per folder.
 
 | Plugin | What it does |
 |---|---|
-| [consts-AFK](consts-afk/) | AFK alerts with presets for combat, skilling and Sailing: beeps, screen flashes and a status panel. |
+| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for combat, skilling and Sailing: beeps, screen flashes and a status panel. |
 
 ![consts-AFK flashing the screen magenta when the inventory fills while woodcutting](consts-afk/screenshots/inventory-full.jpg)
 
