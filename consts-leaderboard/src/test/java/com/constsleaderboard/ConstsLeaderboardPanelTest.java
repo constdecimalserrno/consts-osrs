@@ -123,6 +123,15 @@ public class ConstsLeaderboardPanelTest
     }
 
     @Test
+    public void hoveringTheButtonForYouGivesYourNameAndWhoIsShowing()
+    {
+        assertEquals("<html>You: <b>Zezima</b><br>Showing: <b>Lynx Titan</b></html>",
+            ConstsLeaderboardPanel.meTooltip("Zezima", "Lynx Titan"));
+        assertEquals("<html>You: log in to show yourself<br>Showing: <b>Nobody yet</b></html>",
+            ConstsLeaderboardPanel.meTooltip(null, "Nobody yet"));
+    }
+
+    @Test
     public void hoveringASkillGivesRankExperienceAndRemainingXp()
     {
         String html = ConstsLeaderboardPanel.detailsHtml(HiscoreSkill.WOODCUTTING, new Skill(12_345, 2, 100));

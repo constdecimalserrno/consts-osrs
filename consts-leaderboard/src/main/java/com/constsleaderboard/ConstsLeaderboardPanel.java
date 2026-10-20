@@ -3,8 +3,8 @@
  * Copyright (c) 2018, Psikoi <https://github.com/psikoi>
  * Copyright (c) 2019, Bram91 <https://github.com/bram91>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's HiScore plugin into
- *   consts-Leaderboard; skills and the total level only, levels stop at 99 and a 99 shows in yellow, a Look up
- *   myself button in place of the hiscore tabs)
+ *   consts-Leaderboard; skills and the total level only, levels stop at 99, a 99 shows in yellow and the lowest
+ *   skill in red, a bar naming whose skills are showing and a button for your own, in place of the hiscore tabs)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@ package com.constsleaderboard;
 
 import static net.runelite.client.hiscore.HiscoreSkill.*;
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -49,8 +50,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
-import net.runelite.api.Client;
-import net.runelite.api.Player;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreClient;
 import net.runelite.client.hiscore.HiscoreEndpoint;
@@ -67,7 +66,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The sidebar: a name to look up, a Look up myself button, then the skills and the total level the way the HiScore
+ * The sidebar: a name to look up, a bar naming whose skills are showing with a button beside it for yours, then the skills and the total level the way the HiScore
  * plugin shows them, except that levels stop at 99, a 99 is yellow and the lowest skill is red. Hovering one gives
  * its rank, its experience and what's left to the next level.
  */
@@ -84,6 +83,9 @@ class ConstsLeaderboardPanel extends PluginPanel
     /** The game's own red, for the lowest skill: the one furthest from 99. */
     static final Color LOWEST_COLOR = Color.RED;
 
+    /* What the name bar says before the first lookup */
+    private static final String NOBODY = "Nobody yet";
+
     /** The skills, in the order the game's skills tab shows them. */
     static final List<HiscoreSkill> SKILLS = List.of(
         ATTACK, HITPOINTS, MINING,
@@ -99,12 +101,20 @@ class ConstsLeaderboardPanel extends PluginPanel
     /** The highest total level there is: every skill at 99. */
     static final int MAX_TOTAL = SKILLS.size() * Levels.MAX;
 
-    private final Client client;
     private final ConstsLeaderboardPlugin plugin;
     private final HiscoreClient hiscoreClient;
     private final SpriteManager spriteManager;
 
     private final IconTextField searchBar;
+
+    /* Whose skills the panel is showing */
+    private final JLabel shownName;
+
+    /* Shows the account you're logged in to */
+    private final JButton meButton;
+
+    /* The account you're logged in to, or null when logged out */
+    private String myName;
 
     /* The skills' labels, then the total level's */
     private final Map<HiscoreSkill, JLabel> skillLabels = new LinkedHashMap<>();
@@ -115,14 +125,12 @@ class ConstsLeaderboardPanel extends PluginPanel
     /* The hiscores the next lookup reads */
     private HiscoreEndpoint endpoint = HiscoreEndpoint.NORMAL;
 
-    /* Used to ignore Look up myself while a lookup is loading */
+    /* Used to ignore the button for your own skills while a lookup is loading */
     private boolean loading = false;
 
     @Inject
-    ConstsLeaderboardPanel(Client client, ConstsLeaderboardPlugin plugin, HiscoreClient hiscoreClient,
-        SpriteManager spriteManager)
+    ConstsLeaderboardPanel(ConstsLeaderboardPlugin plugin, HiscoreClient hiscoreClient, SpriteManager spriteManager)
     {
-        this.client = client;
         this.plugin = plugin;
         this.hiscoreClient = hiscoreClient;
         this.spriteManager = spriteManager;
@@ -161,13 +169,28 @@ class ConstsLeaderboardPanel extends PluginPanel
         add(searchBar, c);
         c.gridy++;
 
-        JButton lookUpMyself = new JButton("Look up myself");
-        lookUpMyself.setToolTipText("The account you're logged in to");
-        lookUpMyself.setFocusPainted(false);
-        lookUpMyself.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 20, 30));
-        lookUpMyself.addActionListener(e -> lookUpMyself());
+        // Whose skills these are, in the bold font, and beside it a button that shows yours
+        shownName = new JLabel();
+        shownName.setFont(FontManager.getRunescapeBoldFont());
+        shownName.setOpaque(true);
+        shownName.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        shownName.setBorder(new EmptyBorder(0, 8, 0, 8));
 
-        add(lookUpMyself, c);
+        meButton = new JButton(new ImageIcon(ImageUtil.loadImageResource(getClass(), "me_icon.png")));
+        meButton.setFocusPainted(false);
+        meButton.setPreferredSize(new Dimension(30, 30));
+        meButton.addActionListener(e -> showMe());
+
+        JPanel header = new JPanel(new BorderLayout(4, 0));
+        header.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        header.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 20, 30));
+        header.add(shownName, BorderLayout.CENTER);
+        header.add(meButton, BorderLayout.EAST);
+
+        showName(NOBODY, ColorScheme.LIGHT_GRAY_COLOR);
+        setMyName(null);
+
+        add(header, c);
         c.gridy++;
 
         // Panel that holds skill icons
@@ -236,22 +259,36 @@ class ConstsLeaderboardPanel extends PluginPanel
         lookup();
     }
 
-    private void lookUpMyself()
+    /** The account you're logged in to, for the button that shows it; null when logged out greys the button out. */
+    void setMyName(String name)
     {
-        if (loading)
+        myName = name == null ? null : sanitize(name);
+        meButton.setEnabled(myName != null);
+        meButton.setToolTipText(meTooltip(myName, shownName.getText()));
+    }
+
+    private void showName(String text, Color color)
+    {
+        shownName.setText(text);
+        shownName.setForeground(color);
+        meButton.setToolTipText(meTooltip(myName, text));
+    }
+
+    /** The button's tooltip: your name, and whose skills are showing. */
+    static String meTooltip(String myName, String shown)
+    {
+        String you = myName == null ? "log in to show yourself" : "<b>" + myName + "</b>";
+        return "<html>You: " + you + "<br>Showing: <b>" + shown + "</b></html>";
+    }
+
+    private void showMe()
+    {
+        if (loading || myName == null)
         {
             return;
         }
 
-        Player localPlayer = client.getLocalPlayer();
-        if (localPlayer == null || localPlayer.getName() == null)
-        {
-            // Logged out: there's no one to look up
-            searchBar.setIcon(IconTextField.Icon.ERROR);
-            return;
-        }
-
-        lookup(localPlayer.getName(), plugin.getLocalHiscoreEndpoint());
+        lookup(myName, plugin.getLocalHiscoreEndpoint());
     }
 
     private void lookup()
@@ -276,6 +313,7 @@ class ConstsLeaderboardPanel extends PluginPanel
         searchBar.setEditable(false);
         searchBar.setIcon(IconTextField.Icon.LOADING_DARKER);
         loading = true;
+        showName(lookup, ColorScheme.LIGHT_GRAY_COLOR);
 
         for (Map.Entry<HiscoreSkill, JLabel> entry : skillLabels.entrySet())
         {
@@ -304,6 +342,7 @@ class ConstsLeaderboardPanel extends PluginPanel
                     searchBar.setIcon(IconTextField.Icon.ERROR);
                     searchBar.setEditable(true);
                     loading = false;
+                    showName(lookup + " not found", ColorScheme.LIGHT_GRAY_COLOR);
                     return;
                 }
 
@@ -311,6 +350,7 @@ class ConstsLeaderboardPanel extends PluginPanel
                 searchBar.setIcon(IconTextField.Icon.SEARCH);
                 searchBar.setEditable(true);
                 loading = false;
+                showName(result.getPlayer(), Color.WHITE);
 
                 applyHiscoreResult(result);
             }));

@@ -29,14 +29,18 @@ package com.constsleaderboard;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
 import net.runelite.api.IconID;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.Player;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
@@ -57,7 +61,7 @@ import net.runelite.client.util.Text;
 /**
  * consts-Leaderboard: any player's skills from the hiscores, in a sidebar panel, with levels that stop at 99.
  * Right-click a player, or a name in chat, friends, clan or group lists, and pick Lookup; or type a name; or press
- * Look up myself. RuneLite's HiScore plugin by Adam, cut down to the skills.
+ * the button with a person on it for your own skills. RuneLite's HiScore plugin by Adam, cut down to the skills.
  */
 @PluginDescriptor(
     name = "consts-Leaderboard",
@@ -86,6 +90,9 @@ public class ConstsLeaderboardPlugin extends Plugin
 
     private HiscoreEndpoint localHiscoreEndpoint = HiscoreEndpoint.NORMAL;
 
+    // The account you're logged in to, as the panel last heard it; null when logged out
+    private String localName;
+
     @Override
     protected void startUp() throws Exception
     {
@@ -110,8 +117,36 @@ public class ConstsLeaderboardPlugin extends Plugin
     {
         clientToolbar.removeNavigation(navButton);
         playerIndexName.clear();
+        localName = null;
 
         menuManager.get().removePlayerMenuItem(LOOKUP);
+    }
+
+    @Subscribe
+    public void onGameTick(GameTick event)
+    {
+        Player local = client.getLocalPlayer();
+        updateLocalName(local == null ? null : local.getName());
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() == GameState.LOGIN_SCREEN)
+        {
+            updateLocalName(null);
+        }
+    }
+
+    private void updateLocalName(String name)
+    {
+        if (Objects.equals(name, localName))
+        {
+            return;
+        }
+
+        localName = name;
+        SwingUtilities.invokeLater(() -> panel.setMyName(name));
     }
 
     @Subscribe

@@ -8,7 +8,7 @@ RuneLite plugin for Old School RuneScape ( OSRS ): any player's skills from the 
 
 - **Lookup**: right-click a player, or a name in chat, private messages, your friends or ignore list, a clan or a group ironman list, and pick **Lookup**. The sidebar opens on their skills.
 - **Search**: type a name in the sidebar and press Enter.
-- **Look up myself**: the button under the search bar looks up the account you're logged in to, on its own hiscores (ironman, hardcore or ultimate when it is one).
+- **Who's showing**: the bar under the search box names the player whose skills are showing. The button beside it, a head and shoulders, shows yours: the account you're logged in to, on its own hiscores (ironman, hardcore or ultimate when it is one). Hover it for your name and who's showing. Logged out, it's greyed out.
 - **Skills**: every skill with its icon and level, in the skills tab's order, then the total level. A level never goes past 99, however much experience is behind it. A 99 is yellow, and so is the total level once every skill is 99. The lowest skill is red, every one of them if several tie; once every skill is 99, nothing is red. A skill that isn't ranked shows `--` and doesn't count as the lowest.
 - **Hover** a skill for its rank, its experience and the experience left to the next level (0 at 99), with a bar for how far through the level it is. Hover the total level for the overall rank and experience.
 
