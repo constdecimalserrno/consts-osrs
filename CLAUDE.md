@@ -1,6 +1,6 @@
 # consts-osrs
 
-RuneLite plugins for Old School RuneScape, published under the pseudonym `constdecimalserrno`: consts-AFK in `consts-afk/` and consts-Destination in `consts-destination/`.
+RuneLite plugins for Old School RuneScape, published under the pseudonym `constdecimalserrno`: consts-AFK in `consts-afk/`, consts-Destination in `consts-destination/` and consts-Leaderboard in `consts-leaderboard/`.
 
 ## Rules
 

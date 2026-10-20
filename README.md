@@ -6,10 +6,11 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 |---|---|
 | [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
 | [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done. Folds in RuneLite's Interact Highlight. |
+| [consts-Leaderboard](consts-leaderboard/) | Any player's skills from the hiscores in a sidebar panel: right-click and Lookup, or Look up myself. Levels stop at 99, and a 99 is yellow. Cut down from RuneLite's HiScore. |
 
 ![The consts-AFK status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-afk/screenshots/status-panel.gif)
 
-More on both: [constdecimalserrno.dev/consts-osrs](https://constdecimalserrno.dev/consts-osrs/).
+More at [constdecimalserrno.dev/consts-osrs](https://constdecimalserrno.dev/consts-osrs/).
 
 ## Run it
 
@@ -66,10 +67,14 @@ consts-osrs/
 │   ├── runelite-plugin.properties  # Plugin Hub metadata
 │   ├── icon.png                    # Plugin Hub icon, 48×72
 │   └── src/main/java/com/constsafk/...
-└── consts-destination/
+├── consts-destination/
+│   ├── runelite-plugin.properties
+│   ├── icon.png
+│   └── src/main/java/com/constsdestination/...
+└── consts-leaderboard/
     ├── runelite-plugin.properties
     ├── icon.png
-    └── src/main/java/com/constsdestination/...
+    └── src/main/java/com/constsleaderboard/...
 ```
 
 Each plugin is a Gradle subproject with its own version. Shared settings live in the root `build.gradle`; a plugin's own `build.gradle` holds its `version` and any overrides.
@@ -89,6 +94,6 @@ The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets
 
 ## License
 
-[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-AFK ([NOTICE](consts-afk/NOTICE)) and Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)).
+[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-AFK ([NOTICE](consts-afk/NOTICE)), Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)) and HiScore by Adam, Psikoi and Bram91 in consts-Leaderboard ([NOTICE](consts-leaderboard/NOTICE)).
 
 Not affiliated with Jagex or RuneLite. Old School RuneScape is a trademark of Jagex Ltd.

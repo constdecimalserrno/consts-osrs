@@ -52,6 +52,7 @@ java {
 dependencies {
     implementation project(':consts-afk')
     implementation project(':consts-destination')
+    implementation project(':consts-leaderboard')
 
     testImplementation "net.runelite:client:${runeLiteVersion}"
     testImplementation "net.runelite:jshell:${runeLiteVersion}"
