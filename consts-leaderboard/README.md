@@ -4,6 +4,8 @@
 
 RuneLite plugin for Old School RuneScape ( OSRS ): any player's skills from the hiscores, in a sidebar panel. Levels stop at 99, the way the game counts them: a 99 shows in yellow, and the lowest skill in red. Nothing else: no bosses, no clues, no minigames.
 
+![The consts-Leaderboard panel on const athena, as of 20 October 2026: eleven 99s in yellow, Runecraft at 50 in red as the lowest, and a total level of 1995](screenshots/panel.png)
+
 ## What it does
 
 - **Lookup**: right-click a player, or a name in chat, private messages, your friends or ignore list, a clan or a group ironman list, and pick **Lookup**. The sidebar opens on their skills.
