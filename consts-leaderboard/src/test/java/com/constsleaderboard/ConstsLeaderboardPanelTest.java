@@ -5,9 +5,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import net.runelite.api.Experience;
+import net.runelite.client.hiscore.HiscoreResult;
 import net.runelite.client.hiscore.HiscoreSkill;
 import net.runelite.client.hiscore.HiscoreSkillType;
 import net.runelite.client.hiscore.Skill;
@@ -59,6 +63,63 @@ public class ConstsLeaderboardPanelTest
         assertTrue(ConstsLeaderboardPanel.isMax(HiscoreSkill.OVERALL, 2_376));
         assertFalse(ConstsLeaderboardPanel.isMax(HiscoreSkill.OVERALL, 2_375));
         assertFalse(ConstsLeaderboardPanel.isMax(HiscoreSkill.OVERALL, 99));
+    }
+
+    @Test
+    public void theLowestSkillIsRedAndTiesAreAllRed()
+    {
+        HiscoreResult result = result(99, Map.of(HiscoreSkill.AGILITY, 70, HiscoreSkill.SAILING, 52,
+            HiscoreSkill.HUNTER, 52, HiscoreSkill.SLAYER, 80));
+        int lowest = ConstsLeaderboardPanel.lowestLevel(result);
+        assertEquals(52, lowest);
+        assertTrue(ConstsLeaderboardPanel.isLowest(HiscoreSkill.SAILING, 52, lowest));
+        assertTrue(ConstsLeaderboardPanel.isLowest(HiscoreSkill.HUNTER, 52, lowest));
+        assertFalse(ConstsLeaderboardPanel.isLowest(HiscoreSkill.AGILITY, 70, lowest));
+        assertFalse(ConstsLeaderboardPanel.isLowest(HiscoreSkill.ATTACK, 99, lowest));
+    }
+
+    @Test
+    public void whenEverySkillIs99NothingIsRed()
+    {
+        int lowest = ConstsLeaderboardPanel.lowestLevel(result(99, Map.of()));
+        assertEquals(-1, lowest);
+        for (HiscoreSkill skill : ConstsLeaderboardPanel.SKILLS)
+        {
+            assertFalse(ConstsLeaderboardPanel.isLowest(skill, 99, lowest));
+        }
+    }
+
+    @Test
+    public void anUnrankedSkillIsNotTheLowest()
+    {
+        Map<HiscoreSkill, Skill> skills = new EnumMap<>(HiscoreSkill.class);
+        for (HiscoreSkill skill : ConstsLeaderboardPanel.SKILLS)
+        {
+            skills.put(skill, new Skill(1, 99, 13_034_431));
+        }
+        skills.put(HiscoreSkill.SAILING, new Skill(-1, 1, -1));
+        skills.put(HiscoreSkill.HUNTER, new Skill(5, 90, 5_346_332));
+        int lowest = ConstsLeaderboardPanel.lowestLevel(new HiscoreResult("Player", skills));
+        assertEquals(90, lowest);
+        assertFalse(ConstsLeaderboardPanel.isLowest(HiscoreSkill.SAILING, -1, lowest));
+    }
+
+    @Test
+    public void theTotalLevelIsNeverTheLowest()
+    {
+        assertFalse(ConstsLeaderboardPanel.isLowest(HiscoreSkill.OVERALL, 52, 52));
+    }
+
+    /** Every skill at the given level, except the ones listed. */
+    private static HiscoreResult result(int level, Map<HiscoreSkill, Integer> except)
+    {
+        Map<HiscoreSkill, Skill> skills = new EnumMap<>(HiscoreSkill.class);
+        for (HiscoreSkill skill : ConstsLeaderboardPanel.SKILLS)
+        {
+            int l = except.getOrDefault(skill, level);
+            skills.put(skill, new Skill(1, l, Experience.getXpForLevel(l)));
+        }
+        return new HiscoreResult("Player", skills);
     }
 
     @Test

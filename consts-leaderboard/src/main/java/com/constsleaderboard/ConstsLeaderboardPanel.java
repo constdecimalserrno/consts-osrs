@@ -68,8 +68,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The sidebar: a name to look up, a Look up myself button, then the skills and the total level the way the HiScore
- * plugin shows them, except that levels stop at 99 and a 99 is yellow. Hovering one gives its rank, its experience
- * and what's left to the next level.
+ * plugin shows them, except that levels stop at 99, a 99 is yellow and the lowest skill is red. Hovering one gives
+ * its rank, its experience and what's left to the next level.
  */
 class ConstsLeaderboardPanel extends PluginPanel
 {
@@ -80,6 +80,9 @@ class ConstsLeaderboardPanel extends PluginPanel
 
     /** The game's own yellow, for a level that can't go any higher. */
     static final Color MAX_COLOR = Color.YELLOW;
+
+    /** The game's own red, for the lowest skill: the one furthest from 99. */
+    static final Color LOWEST_COLOR = Color.RED;
 
     /** The skills, in the order the game's skills tab shows them. */
     static final List<HiscoreSkill> SKILLS = List.of(
@@ -318,6 +321,8 @@ class ConstsLeaderboardPanel extends PluginPanel
         assert SwingUtilities.isEventDispatchThread();
         repaint();
 
+        int lowest = lowestLevel(result);
+
         for (Map.Entry<HiscoreSkill, JLabel> entry : skillLabels.entrySet())
         {
             HiscoreSkill skill = entry.getKey();
@@ -329,9 +334,35 @@ class ConstsLeaderboardPanel extends PluginPanel
             {
                 label.setText(pad(Integer.toString(level)));
             }
-            label.setForeground(isMax(skill, level) ? MAX_COLOR : levelColor);
+            label.setForeground(isMax(skill, level) ? MAX_COLOR
+                : isLowest(skill, level, lowest) ? LOWEST_COLOR
+                : levelColor);
             label.setToolTipText(detailsHtml(skill, s));
         }
+    }
+
+    /**
+     * The lowest level among the ranked skills, or -1 when that's 99: once every skill is 99, none is the lowest.
+     * A skill that isn't ranked has no level, so it doesn't count.
+     */
+    static int lowestLevel(HiscoreResult result)
+    {
+        int lowest = Levels.MAX;
+        for (HiscoreSkill skill : SKILLS)
+        {
+            int level = shownLevel(skill, result.getSkill(skill));
+            if (level > 0)
+            {
+                lowest = Math.min(lowest, level);
+            }
+        }
+        return lowest < Levels.MAX ? lowest : -1;
+    }
+
+    /** A skill at the lowest level; skills tied for it are all the lowest. */
+    static boolean isLowest(HiscoreSkill skill, int level, int lowest)
+    {
+        return skill != OVERALL && level > 0 && level == lowest;
     }
 
     /** The level to show for a skill, never past 99, or the total level; -1 when there's none. */
