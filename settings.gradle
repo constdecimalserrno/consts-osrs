@@ -2,3 +2,4 @@ rootProject.name = 'consts-osrs'
 
 include 'consts-afk'
 include 'consts-destination'
+include 'consts-leaderboard'
