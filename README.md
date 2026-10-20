@@ -4,7 +4,7 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 
 | Plugin | What it does |
 |---|---|
-| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. Plus a timer on each tree, from Tree Despawn Timer. |
+| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
 | [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done. Folds in RuneLite's Interact Highlight. |
 
 ![The consts-AFK status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-afk/screenshots/status-panel.gif)
@@ -89,6 +89,6 @@ The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets
 
 ## License
 
-[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from other plugins keeps its BSD 2-Clause license: RuneLite's NPC Aggression Timer by Woox and Tree Despawn Timer by Jason O'Neill in consts-AFK ([NOTICE](consts-afk/NOTICE)) and Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)).
+[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-AFK ([NOTICE](consts-afk/NOTICE)) and Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)).
 
 Not affiliated with Jagex or RuneLite. Old School RuneScape is a trademark of Jagex Ltd.

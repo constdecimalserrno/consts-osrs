@@ -13,7 +13,7 @@ import net.runelite.client.config.Units;
 
 /**
  * General (Timing, Sounds, Screen Flash), then one section per alert, each named for its group (Combat, AFK, Sailing)
- * and kept in group order. Woodcutting: Tree Timer sits among them but isn't an alert: no preset touches it.
+ * and kept in group order.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. The key names predate this layout and stay, so saved settings carry
  * over.
@@ -119,37 +119,30 @@ public interface ConstsAfkConfig extends Config
     String inventoryFullSection = "inventoryFull";
 
     @ConfigSection(
-        name = "Woodcutting: Tree Timer",
-        description = "A timer on each tree: how long it has left before it falls. From Tree Despawn Timer by Jason O'Neill",
-        position = 12
-    )
-    String treeTimerSection = "treeTimer";
-
-    @ConfigSection(
         name = "Random Event",
         description = "Your own random events",
-        position = 13
+        position = 12
     )
     String randomSection = "random";
 
     @ConfigSection(
         name = "Forestry",
         description = "Forestry events, the ones you pick",
-        position = 14
+        position = 13
     )
     String forestrySection = "forestry";
 
     @ConfigSection(
         name = "Sailing: Salvage",
         description = "Alert when a shipwreck is depleted or there is nothing left to sort",
-        position = 15
+        position = 14
     )
     String salvageSection = "salvage";
 
     @ConfigSection(
         name = "Sailing: Cargo Hold",
         description = "Alert when the cargo hold is full",
-        position = 16
+        position = 15
     )
     String cargoSection = "cargo";
 
@@ -735,45 +728,6 @@ public interface ConstsAfkConfig extends Config
     default Color inventoryFullFlashColor()
     {
         return new Color(220, 60, 220);
-    }
-
-    // Woodcutting. The Tree Timer and its options come from Tree Despawn Timer (BSD 2-Clause, Copyright (c) 2023,
-    // Jason O'Neill); see TreeTimer.java.
-
-    @ConfigItem(
-        keyName = "showTreeTimer",
-        name = "Enabled",
-        description = "Show on each tree how long it has left before it falls, whatever the preset. A tree that was already being chopped when you got there shows nothing, since its time can't be known",
-        section = treeTimerSection,
-        position = 0
-    )
-    default boolean showTreeTimer()
-    {
-        return true;
-    }
-
-    @ConfigItem(
-        keyName = "treeTimerDisplay",
-        name = "Display",
-        description = "How the time left shows on each tree: a pie, the game ticks left, or minutes and seconds",
-        section = treeTimerSection,
-        position = 1
-    )
-    default TreeTimerDisplay treeTimerDisplay()
-    {
-        return TreeTimerDisplay.PIE;
-    }
-
-    @ConfigItem(
-        keyName = "treeTimerPopularIndicator",
-        name = "Popular Tree Indicator",
-        description = "Draw the timer bigger when 10 or more players besides you chop the tree, the most Forestry's woodcutting boost counts",
-        section = treeTimerSection,
-        position = 2
-    )
-    default boolean treeTimerPopularIndicator()
-    {
-        return true;
     }
 
     // Random event

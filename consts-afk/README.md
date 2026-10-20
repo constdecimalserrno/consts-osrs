@@ -1,6 +1,6 @@
 # consts-AFK
 
-RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on. Woodcutters also get a timer on each tree: how long it has left before it falls.
+RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: Idle fills and flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
 
@@ -35,19 +35,18 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 ## Settings
 
-Three General sections first, then one section per alert, each named for its group and kept in group order. Woodcutting: Tree Timer sits among them but isn't an alert: see [Tree timer](#tree-timer). Every section is open to start; click a header to fold it.
+Three General sections first, then one section per alert, each named for its group and kept in group order. Every section is open to start; click a header to fold it.
 
 | Group | Sections |
 |---|---|
 | General | General: Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), General: Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), General: Screen Flash (Enabled, Interval, Opacity) |
 | Combat | Combat: Health, Combat: Prayer, Combat: Aggro, Combat: Potion, Combat: Cannon |
 | AFK | AFK: Idle, AFK: Logout, AFK: Inventory Full |
-| Woodcutting | Woodcutting: Tree Timer (Enabled, Display, Popular Tree Indicator) |
 | Random Event | Random Event |
 | Forestry | Forestry, with a checkbox per event |
 | Sailing | Sailing: Salvage, Sailing: Cargo Hold |
 
-Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options. Woodcutting: Tree Timer has no Dismiss on Click or Color, and its **Enabled** holds under every preset.
+Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
 
 **Custom remembers.** Switching from Custom to a preset saves every alert's Enabled; switching back puts them back exactly, even if you flipped some while a preset was on.
 
@@ -97,17 +96,6 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 
 The crew message arrives as a filtered (spam) game message; consts-AFK listens on that channel.
 
-## Tree timer
-
-A timer on each tree shows how long it has left before it falls, ported from Tree Despawn Timer by Jason O'Neill. It isn't an alert and never beeps. It shows whenever **Enabled** (Woodcutting: Tree Timer, on by default) is on, whatever the preset.
-
-- **How it counts.** Under Forestry a tree has hidden health. It only starts going down once someone takes a first log. Then it drops by one every game tick (0.6 s) while anyone chops the tree, and climbs back by one every tick while nobody does. Chopping alone, the timer waits for your first log; anyone else chopping is taken to have had theirs. A full tree lasts as long as the OSRS Wiki says: an oak 27 s, a yew 1:54, a magic tree 3:54, a redwood 4:24.
-- **When it shows nothing.** If the tree was already being chopped when you got there, how long it has left can't be known, so it gets no timer at all. Trees in Miscellania and Etceteria never get one, as in Tree Despawn Timer: the kingdom's trees there can't be cut down.
-- **Display**: a **Pie** that empties (the default), the game **Ticks** left, or minutes and **Seconds**. It turns from green to yellow, orange and red as the tree runs low.
-- **Popular Tree Indicator** (on): the timer is drawn bigger when 10 or more players besides you chop the tree. That's the most Forestry's woodcutting boost counts. Not in the Woodcutting Guild, which has no such boost.
-- **Trees**: oak, willow, teak, maple, hollow, mahogany, arctic pine, yew, camphor, magic, ironwood, redwood and rosewood.
-- It's an estimate. A tree can fall with a few ticks left, or stand a little past zero until someone takes another log; either way it shouldn't be off by more than a few seconds. Hopping worlds or logging in starts every tree over.
-
 ## Training guide
 
 Where each preset shines, what its alerts are telling you, and what to tune.
@@ -133,7 +121,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 ### Woodcutting
 
 - **Where:** Chop where other people chop: Forestry events turn up more often with company, and pay out anima-infused bark for Forestry rewards. Long-lived trees like teaks, mahogany or redwoods keep you going.
-- **What the alerts mean:** Forestry flashes lime and names the event, so you can tell a Leprechaun from an Ent at a glance. Idle fires when your tree falls; Inv Full when it is time to bank. The pie on each tree is the [tree timer](#tree-timer): when yours runs low, pick the next tree.
+- **What the alerts mean:** Forestry flashes lime and names the event, so you can tell a Leprechaun from an Ent at a glance. Idle fires when your tree falls; Inv Full when it is time to bank.
 - **Tune:** Untick the Forestry events you would rather chop through. One alert per event, however many entlings show up.
 
 ### Fishing
@@ -176,8 +164,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE).
-
-The tree timer is [Tree Despawn Timer](https://github.com/CreativeTechGuy/tree-despawn-timer) by Jason O'Neill (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill), folded into consts-AFK from commit `9f9eb2b`: you can turn that plugin off and run this one alone. The ported files, `TreeTimer.java`, `TreeTimerState.java`, `TreeTimerTree.java`, `TreeTimerDisplay.java`, `TreeTimerText.java` and `ConstsAfkTreeTimerOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE).
-
-The rest of consts-AFK is [MIT](LICENSE).
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE); the rest of consts-AFK is [MIT](LICENSE).

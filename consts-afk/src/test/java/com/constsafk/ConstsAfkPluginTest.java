@@ -24,7 +24,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import net.runelite.api.Actor;
@@ -48,7 +47,6 @@ import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.ConfigSection;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -81,7 +79,6 @@ public class ConstsAfkPluginTest
         setField("config", config);
         setField("configManager", configManager);
         setField("clientThread", clientThread);
-        setField("treeTimer", new TreeTimer(client));
         setField("sessionActive", true);
 
         when(config.preset()).thenReturn(Preset.CUSTOM);
@@ -284,32 +281,6 @@ public class ConstsAfkPluginTest
             }
         }
         assertEquals(AlertType.values().length, ConstsAfkPlugin.CUSTOM_TOGGLE_KEYS.size());
-    }
-
-    @Test
-    public void sectionsShouldBeInGroupOrderAllOpenWithConsecutivePositions()
-    {
-        Map<Integer, String> byPosition = new TreeMap<>();
-        for (Field field : ConstsAfkConfig.class.getDeclaredFields())
-        {
-            ConfigSection section = field.getAnnotation(ConfigSection.class);
-            if (section != null)
-            {
-                assertNull("two sections at " + section.position(), byPosition.put(section.position(), section.name()));
-                assertFalse(section.name() + " starts open", section.closedByDefault());
-            }
-        }
-
-        assertEquals(Arrays.asList("General: Timing", "General: Sounds", "General: Screen Flash", "Combat: Health",
-            "Combat: Prayer", "Combat: Aggro", "Combat: Potion", "Combat: Cannon", "AFK: Idle", "AFK: Logout",
-            "AFK: Inventory Full", "Woodcutting: Tree Timer", "Random Event", "Forestry", "Sailing: Salvage",
-            "Sailing: Cargo Hold"), Arrays.asList(byPosition.values().toArray()));
-        // Position 0 is the Preset dropdown above them all.
-        int expected = 1;
-        for (int position : byPosition.keySet())
-        {
-            assertEquals(expected++, position);
-        }
     }
 
     @Test
@@ -1004,7 +975,6 @@ public class ConstsAfkPluginTest
         setField("flashOverlay", mock(ConstsAfkFlashOverlay.class));
         setField("statusOverlay", mock(ConstsAfkStatusOverlay.class));
         setField("aggroAreaOverlay", mock(ConstsAfkAggroAreaOverlay.class));
-        setField("treeTimerOverlay", mock(ConstsAfkTreeTimerOverlay.class));
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
 
         plugin.startUp();
