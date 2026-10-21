@@ -6,11 +6,13 @@ import java.awt.image.BufferedImage;
 interface ViewerActions
 {
     /**
-     * Saves the mesh in the chosen folder, off the Swing thread, and says where in chat. A 3MF prints in the colors
-     * given, as the viewer shows them; null merges the model's colors down to the settings' count. With solid, STL
-     * and 3MF are rebuilt as one closed solid first.
+     * Saves the model as the Game view shows it, in the chosen folder, off the Swing thread, and says where in chat.
+     * A 3MF prints in the colors given; null merges the model's colors down to the settings' count.
      */
-    void save(Mesh mesh, ExportFormat format, PrintColors colors, boolean solid);
+    void save(Mesh mesh, ExportFormat format, PrintColors colors);
+
+    /** Saves the print as the Print view shows it: the closed solid, in millimetres, on the filaments given. */
+    void savePrint(Printable printable, ExportFormat format, PrintColors colors);
 
     /** Saves a picture of the viewer as a PNG in the chosen folder. */
     void saveImage(Mesh mesh, BufferedImage image);
@@ -21,6 +23,12 @@ interface ViewerActions
     /** The format the save button starts on, from the settings. */
     ExportFormat defaultFormat();
 
-    /** The print settings, for the size the viewer shows. */
+    /** The print settings: the print's size and whether it stands on a base. */
     PrintSettings printSettings();
+
+    /** The background viewers draw on: a color, or {@link ViewerCanvas#DEFAULT_BACKGROUND} for their dark fall. */
+    int background();
+
+    /** Remembers the background for every viewer from now on. */
+    void setBackground(int rgb);
 }

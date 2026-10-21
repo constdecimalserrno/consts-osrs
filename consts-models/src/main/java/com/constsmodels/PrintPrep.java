@@ -53,12 +53,51 @@ final class PrintPrep
          * -1 for the base.
          */
         final int[] source;
+        /**
+         * How the model was placed: millimetres per game unit, and the model point that went to the middle of the
+         * plate, its x and y, and its lowest z, which went to the base's top, lift above the plate.
+         */
+        final double scale;
+        final double centerX;
+        final double centerY;
+        final double bottomZ;
+        final double lift;
 
         Print(Mesh mesh, int modelFaces, int[] source)
+        {
+            this(mesh, modelFaces, source, 1, 0, 0, 0, 0);
+        }
+
+        Print(Mesh mesh, int modelFaces, int[] source, double scale, double centerX, double centerY, double bottomZ,
+            double lift)
         {
             this.mesh = mesh;
             this.modelFaces = modelFaces;
             this.source = source;
+            this.scale = scale;
+            this.centerX = centerX;
+            this.centerY = centerY;
+            this.bottomZ = bottomZ;
+            this.lift = lift;
+        }
+
+        /**
+         * The print put back where the model was, in the game's units, base and all, in these colors (one per
+         * triangle): so a view can switch between the two without the camera jumping.
+         */
+        Mesh inModelUnits(int[] colors)
+        {
+            int n = mesh.vertexCount();
+            float[] x = new float[n];
+            float[] y = new float[n];
+            float[] z = new float[n];
+            for (int v = 0; v < n; v++)
+            {
+                x[v] = (float) (mesh.x[v] / scale + centerX);
+                y[v] = (float) (mesh.y[v] / scale + centerY);
+                z[v] = (float) ((mesh.z[v] - lift) / scale + bottomZ);
+            }
+            return new Mesh(mesh.name, x, y, z, mesh.a, mesh.b, mesh.c, colors);
         }
     }
 
@@ -520,7 +559,7 @@ final class PrintPrep
             }
         }
         Mesh placed = compact(mesh.name, x, y, z, a, b, c, color, kept);
-        return new Print(placed, modelFaces, Arrays.copyOf(source, kept));
+        return new Print(placed, modelFaces, Arrays.copyOf(source, kept), scale, cx, cy, box[2], lift);
     }
 
     /** Which of the colors looks darkest: the filament a base prints in. */

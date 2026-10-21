@@ -37,12 +37,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The print's colors, along the left of the viewer's bar: whether the view shows the game's colors or the print's,
- * how many filaments the print uses (1 to {@link PrintColors#MAX}), and a swatch for each. Click a swatch to choose
- * the filament you'll load for it, from common filament colors or any color at all.
+ * The print's colors, along the left of the viewer's bar: whether the view shows the game's model or the print, how
+ * many filaments the print uses (1 to {@link PrintColors#MAX}), and a swatch for each. Click a swatch to choose the
+ * filament you'll load for it, from common filament colors or any color at all.
  *
  * <p>The model's colors are merged down to the filaments off the Swing thread when the model is big. Choosing a
- * color, or how many, shows the print's colors.
+ * color, or how many, shows the print.
  */
 final class FilamentControls extends JPanel
 {
@@ -90,7 +90,9 @@ final class FilamentControls extends JPanel
         this.changed = changed;
         setOpaque(false);
 
-        show.setToolTipText("Show the model in the game's colors, or in your filaments' colors as it will print");
+        show.setToolTipText("<html>Game: the model as the game has it.<br>"
+            + "Print: made into one closed solid that prints as is, in your filaments' colors.<br>"
+            + "Save saves the one you see.</html>");
         show.onChange(changed);
 
         // No more filaments than the model has colors
@@ -143,7 +145,13 @@ final class FilamentControls extends JPanel
         return colors;
     }
 
-    /** Each triangle's color as the view should show it: the print's, or null for the game's own. */
+    /** Whether the view is on the print rather than the game's model. */
+    boolean showsPrint()
+    {
+        return show.isRight();
+    }
+
+    /** Each triangle's color in the filaments' colors while the print is on, or null for the game's own. */
     int[] shownColors()
     {
         return show.isRight() && colors != null ? colors.applyTo(mesh).color : null;
@@ -309,7 +317,7 @@ final class FilamentControls extends JPanel
         return panel;
     }
 
-    private static JButton smallButton(String text)
+    static JButton smallButton(String text)
     {
         JButton button = new JButton(text);
         button.setFont(FontManager.getRunescapeSmallFont());
@@ -333,7 +341,7 @@ final class FilamentControls extends JPanel
     }
 
     /** An outline that shows on a swatch of any color: light on dark colors and dark on light ones. */
-    private static Color outline(int rgb)
+    static Color outline(int rgb)
     {
         int r = rgb >> 16 & 0xFF;
         int g = rgb >> 8 & 0xFF;
@@ -342,7 +350,7 @@ final class FilamentControls extends JPanel
     }
 
     /** A square of color to click. */
-    private static final class Swatch extends JComponent
+    static final class Swatch extends JComponent
     {
         private final int rgb;
         private boolean hover;
@@ -417,7 +425,7 @@ final class FilamentControls extends JPanel
     }
 
     /** A small square of color beside a button's text. */
-    private static final class SwatchIcon implements Icon
+    static final class SwatchIcon implements Icon
     {
         private final int rgb;
 

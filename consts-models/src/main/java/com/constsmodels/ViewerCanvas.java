@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The viewer's picture of the mesh, and the mouse on it: drag to turn it, scroll to zoom towards the cursor,
+ * The viewer's picture of a mesh, and the mouse on it: drag to turn it, scroll to zoom towards the cursor,
  * right-drag or Shift-drag to move it, double-click or R to see all of it again.
  *
  * <p>Pictures are drawn on a thread of the view's own, never on the Swing thread, and only the newest one asked for
@@ -47,6 +47,9 @@ final class ViewerCanvas extends JComponent
     /** The line of help along the bottom of the view. */
     static final String HINT =
         "Drag to turn  \u00b7  Scroll to zoom  \u00b7  Right-drag to move  \u00b7  Double-click to reset";
+
+    /** The background that isn't one color: a dark fall from the top of the picture to the bottom. */
+    static final int DEFAULT_BACKGROUND = -1;
 
     // How big a picture is drawn while the model is moving, as a share of the view's size in screen points
     private static final double[] MOVING_SCALES = {2, 1.5, 1, 0.75, 0.5, 0.35, 0.25};
@@ -62,6 +65,9 @@ final class ViewerCanvas extends JComponent
         ColorScheme.LIGHT_GRAY_COLOR.getRed(), ColorScheme.LIGHT_GRAY_COLOR.getGreen(),
         ColorScheme.LIGHT_GRAY_COLOR.getBlue(), 150);
     private static final Color INFO_COLOR = ColorScheme.LIGHT_GRAY_COLOR;
+    // The same two lines on a light background
+    private static final Color HINT_COLOR_ON_LIGHT = new Color(0, 0, 0, 140);
+    private static final Color INFO_COLOR_ON_LIGHT = new Color(0x3A3A3A);
 
     private final Mesh mesh;
     private final OrbitCamera camera = new OrbitCamera();
@@ -83,8 +89,11 @@ final class ViewerCanvas extends JComponent
     private volatile int movingScale;
     private volatile double screenScaleSeen = 1;
 
-    // What is shown, on the Swing thread: the colors drawn in (null for the mesh's own) and a line about the model
+    // What is shown, on the Swing thread: the mesh (the model, or its print), the colors it's drawn in (null for
+    // its own), the background, and a line about it
+    private Mesh shown;
     private int[] colors;
+    private int background = DEFAULT_BACKGROUND;
     private String info = "";
 
     // The mouse, on the Swing thread
@@ -97,6 +106,7 @@ final class ViewerCanvas extends JComponent
     ViewerCanvas(Mesh mesh)
     {
         this.mesh = mesh;
+        this.shown = mesh;
         movingScale = mesh.faceCount() > 100_000 ? 4 : mesh.faceCount() > 20_000 ? 2 : 0;
 
         setOpaque(true);
@@ -212,7 +222,7 @@ final class ViewerCanvas extends JComponent
                 // Until the model has been moved, keep all of it in view as the window settles on its size
                 if (!touched)
                 {
-                    camera.fit(mesh, getWidth(), getHeight());
+                    camera.fit(shown, getWidth(), getHeight());
                 }
                 if (!fitted)
                 {
@@ -255,17 +265,51 @@ final class ViewerCanvas extends JComponent
     {
         if (getWidth() > 0 && getHeight() > 0)
         {
-            camera.fit(mesh, getWidth(), getHeight());
+            camera.fit(shown, getWidth(), getHeight());
             touched = false;
             draw(true);
         }
     }
 
-    /** Draws the triangles in these colors, one for each, as the print colors preview does; null for the mesh's own. */
-    void showColors(int[] colors)
+    /**
+     * Shows this mesh, where the view is looking now, its triangles in these colors (one for each), or null for its
+     * own. The Print view's mesh sits where the model does, so the view stays put between the two.
+     */
+    void show(Mesh mesh, int[] colors)
     {
+        this.shown = mesh;
         this.colors = colors;
         draw(true);
+    }
+
+    /** Draws the model on one color, or on {@link #DEFAULT_BACKGROUND}. */
+    void setBackgroundColor(int rgb)
+    {
+        if (rgb == background)
+        {
+            return;
+        }
+        background = rgb;
+        repaint();
+        draw(true);
+    }
+
+    int backgroundColor()
+    {
+        return background;
+    }
+
+    /** Whether text on this background should be dark. */
+    static boolean light(int background)
+    {
+        if (background == DEFAULT_BACKGROUND)
+        {
+            return false;
+        }
+        int r = background >> 16 & 0xFF;
+        int g = background >> 8 & 0xFF;
+        int b = background & 0xFF;
+        return r * 299 + g * 587 + b * 114 > 150_000;
     }
 
     /** Sets the line of small print in the top left corner, about the model. */
@@ -283,7 +327,7 @@ final class ViewerCanvas extends JComponent
         int height = Math.max(1, (int) Math.round(Math.max(1, getHeight()) * scale));
         synchronized (lock)
         {
-            pictures.add(new Request(camera.copy(), colors, width, height, true, then));
+            pictures.add(new Request(shown, camera.copy(), colors, background, width, height, true, then));
             lock.notifyAll();
         }
     }
@@ -308,7 +352,7 @@ final class ViewerCanvas extends JComponent
             screenScaleSeen = screen;
         }
         double scale = full ? screen : MOVING_SCALES[movingScale];
-        Request request = new Request(camera.copy(), colors,
+        Request request = new Request(shown, camera.copy(), colors, background,
             Math.max(1, (int) Math.round(width * scale)), Math.max(1, (int) Math.round(height * scale)), full, null);
         synchronized (lock)
         {
@@ -335,7 +379,9 @@ final class ViewerCanvas extends JComponent
 
     private void drawLoop()
     {
-        MeshRenderer renderer = new MeshRenderer(mesh);
+        // One renderer per mesh shown, made again when the view switches between the model and its print
+        MeshRenderer renderer = null;
+        Mesh rendered = null;
         while (true)
         {
             Request request;
@@ -370,7 +416,20 @@ final class ViewerCanvas extends JComponent
 
             try
             {
+                if (renderer == null || rendered != request.mesh)
+                {
+                    renderer = new MeshRenderer(request.mesh);
+                    rendered = request.mesh;
+                }
                 renderer.useColors(request.colors);
+                if (request.background == DEFAULT_BACKGROUND)
+                {
+                    renderer.setBackground(MeshRenderer.BACKGROUND_TOP, MeshRenderer.BACKGROUND_BOTTOM);
+                }
+                else
+                {
+                    renderer.setBackground(request.background, request.background);
+                }
                 if (request.then != null)
                 {
                     BufferedImage image = renderer.render(request.camera, request.width, request.height);
@@ -463,8 +522,15 @@ final class ViewerCanvas extends JComponent
         {
             if (front == null)
             {
-                g2.setPaint(new GradientPaint(0, 0, new Color(MeshRenderer.BACKGROUND_TOP),
-                    0, height, new Color(MeshRenderer.BACKGROUND_BOTTOM)));
+                if (background == DEFAULT_BACKGROUND)
+                {
+                    g2.setPaint(new GradientPaint(0, 0, new Color(MeshRenderer.BACKGROUND_TOP),
+                        0, height, new Color(MeshRenderer.BACKGROUND_BOTTOM)));
+                }
+                else
+                {
+                    g2.setColor(new Color(background));
+                }
                 g2.fillRect(0, 0, width, height);
             }
             else
@@ -486,32 +552,38 @@ final class ViewerCanvas extends JComponent
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
         g.setFont(FontManager.getRunescapeSmallFont());
         FontMetrics metrics = g.getFontMetrics();
-        g.setColor(INFO_COLOR);
+        boolean light = light(background);
+        g.setColor(light ? INFO_COLOR_ON_LIGHT : INFO_COLOR);
         g.drawString(info, 12, 10 + metrics.getAscent());
         if (metrics.stringWidth(HINT) <= width - 20)
         {
-            g.setColor(HINT_COLOR);
+            g.setColor(light ? HINT_COLOR_ON_LIGHT : HINT_COLOR);
             g.drawString(HINT, (width - metrics.stringWidth(HINT)) / 2, height - 10 - metrics.getDescent());
         }
     }
 
     /**
-     * A picture asked for: the view, the colors, its size in pixels, and whether it is a full one or a picture to
-     * hand over.
+     * A picture asked for: the mesh, the view, the colors, the background, its size in pixels, and whether it is a
+     * full one or a picture to hand over.
      */
     private static final class Request
     {
+        final Mesh mesh;
         final OrbitCamera camera;
         final int[] colors;
+        final int background;
         final int width;
         final int height;
         final boolean full;
         final Consumer<BufferedImage> then;
 
-        Request(OrbitCamera camera, int[] colors, int width, int height, boolean full, Consumer<BufferedImage> then)
+        Request(Mesh mesh, OrbitCamera camera, int[] colors, int background, int width, int height, boolean full,
+            Consumer<BufferedImage> then)
         {
+            this.mesh = mesh;
             this.camera = camera;
             this.colors = colors;
+            this.background = background;
             this.width = width;
             this.height = height;
             this.full = full;

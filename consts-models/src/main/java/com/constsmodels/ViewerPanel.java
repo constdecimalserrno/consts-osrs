@@ -10,22 +10,31 @@ import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * What a viewer window holds: the picture of the model, with a line about it in the corner (its triangles and how
- * big it prints), and a bar along the bottom. On the left of the bar, the print's colors; on the right, what to do
- * with the model: open the folder, save a picture, and Save, in the format picked beside it.
+ * What a viewer window holds: the picture of the model, with a line about it in the corner, and a bar along the
+ * bottom. On the left of the bar, Game or Print and the print's colors; on the right, what to do with it: open the
+ * folder, pick the background, save a picture, and Save, in the format picked beside it.
+ *
+ * <p>Game shows the model as the game has it, and Save saves that. Print shows it made printable, one closed solid
+ * on its base in the filaments' colors ({@link Printable}), and Save saves exactly that. The print is made off the
+ * Swing thread the first time it's shown, which takes a few seconds, and again only when the print size or base
+ * changes; until it's ready the view shows the model in the filaments' colors and Save waits.
  */
 final class ViewerPanel extends JPanel
 {
+    private static final Logger log = LoggerFactory.getLogger(ViewerPanel.class);
+
     private static final int BAR_HEIGHT = 44;
 
     private final Mesh mesh;
@@ -33,7 +42,16 @@ final class ViewerPanel extends JPanel
     private final ViewerCanvas canvas;
     private FilamentControls filaments;
     private final JComboBox<ExportFormat> format = new JComboBox<>(ExportFormat.values());
-    private final JCheckBox solid = new JCheckBox("Make solid");
+    private final JButton save = new JButton("Save");
+    private BackgroundButton background;
+
+    // The print once made; the settings it was last tried with; whether it's being made; why it couldn't be
+    private Printable printable;
+    private PrintSettings tried;
+    private boolean making;
+    private String problem;
+    // Which print was asked for last, so an older one finishing late is let go
+    private int asked;
 
     ViewerPanel(Mesh mesh, ViewerActions actions)
     {
@@ -41,8 +59,9 @@ final class ViewerPanel extends JPanel
         this.mesh = mesh;
         this.actions = actions;
         canvas = new ViewerCanvas(mesh);
+        canvas.setBackgroundColor(actions.background());
         PrintSettings settings = actions.printSettings();
-        filaments = new FilamentControls(mesh, settings == null ? 4 : settings.maxColors, this::colorsChanged);
+        filaments = new FilamentControls(mesh, settings == null ? 4 : settings.maxColors, this::viewChanged);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         add(canvas, BorderLayout.CENTER);
@@ -66,45 +85,36 @@ final class ViewerPanel extends JPanel
         JButton folder = quietButton("Open folder", "Open the folder files are saved in");
         folder.addActionListener(e -> actions.openFolder());
 
-        JButton image = quietButton("Save image", "Save this view as a PNG picture");
+        JButton image = quietButton("Save image", "Save this view as a PNG picture, on its background");
         image.addActionListener(e -> canvas.picture(picture -> actions.saveImage(mesh, picture)));
+
+        background = new BackgroundButton(canvas.backgroundColor(), rgb ->
+        {
+            canvas.setBackgroundColor(rgb);
+            actions.setBackground(rgb);
+        });
 
         format.setSelectedItem(actions.defaultFormat());
         format.setFont(FontManager.getRunescapeFont());
         format.setFocusable(false);
         format.setPreferredSize(new Dimension(76, 28));
         format.setToolTipText(describe((ExportFormat) format.getSelectedItem()));
-        format.addActionListener(e ->
-        {
-            format.setToolTipText(describe((ExportFormat) format.getSelectedItem()));
-            solid.setEnabled(printable((ExportFormat) format.getSelectedItem()));
-        });
+        format.addActionListener(e -> format.setToolTipText(describe((ExportFormat) format.getSelectedItem())));
 
-        solid.setSelected(actions.printSettings().solid);
-        solid.setEnabled(printable((ExportFormat) format.getSelectedItem()));
-        solid.setFont(FontManager.getRunescapeFont());
-        solid.setForeground(ColorScheme.TEXT_COLOR);
-        solid.setOpaque(false);
-        solid.setFocusable(false);
-        solid.setToolTipText("<html>Save STL and 3MF as one closed solid that prints as is:<br>"
-            + "thin parts get a 1 mm wall and small gaps close.<br>Takes a few seconds; detail under about 2 mm rounds off.</html>");
-
-        JButton save = new JButton("Save");
         save.setFont(FontManager.getRunescapeBoldFont());
         save.setBackground(ColorScheme.BRAND_ORANGE);
         save.setForeground(ColorScheme.DARKER_GRAY_COLOR);
         save.setFocusPainted(false);
         save.setPreferredSize(new Dimension(84, 28));
         save.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        save.setToolTipText("Save the model in the format picked beside it, a 3MF in the print's colors");
         save.addActionListener(e -> save());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         buttons.setOpaque(false);
         buttons.add(folder);
+        buttons.add(background);
         buttons.add(image);
         buttons.add(gap());
-        buttons.add(solid);
         buttons.add(format);
         buttons.add(save);
 
@@ -130,12 +140,6 @@ final class ViewerPanel extends JPanel
         return button;
     }
 
-    /** Whether a format is one Make solid applies to: the ones made to print. */
-    static boolean printable(ExportFormat format)
-    {
-        return format == ExportFormat.STL || format == ExportFormat.THREE_MF;
-    }
-
     private static JComponent gap()
     {
         JPanel gap = new JPanel();
@@ -144,19 +148,107 @@ final class ViewerPanel extends JPanel
         return gap;
     }
 
+    /** Saves what the view shows: the game's model, or the print once it's made. */
     private void save()
     {
         ExportFormat chosen = (ExportFormat) format.getSelectedItem();
-        actions.save(mesh, chosen, filaments.colors(), solid.isSelected() && printable(chosen));
+        if (!filaments.showsPrint())
+        {
+            actions.save(mesh, chosen, filaments.colors());
+        }
+        else if (printable != null && !printable.isEmpty() && filaments.colors() != null)
+        {
+            actions.savePrint(printable, chosen, filaments.colors());
+        }
     }
 
-    private void colorsChanged()
+    /** Game or Print, or the filaments, changed. */
+    private void viewChanged()
     {
         // The first merge of a small model is done before the controls are
-        if (filaments != null)
+        if (filaments == null)
         {
-            canvas.showColors(filaments.shownColors());
+            return;
         }
+        if (filaments.showsPrint())
+        {
+            makePrintIfNeeded(actions.printSettings());
+        }
+        showView();
+    }
+
+    /** Makes the print, unless it was already made, or tried, at this size and base. */
+    private void makePrintIfNeeded(PrintSettings settings)
+    {
+        if (settings == null || settings.sameShape(tried))
+        {
+            return;
+        }
+        int ticket = ++asked;
+        tried = settings;
+        making = true;
+        printable = null;
+        problem = null;
+        Thread thread = new Thread(() ->
+        {
+            Printable made = null;
+            String failed = null;
+            try
+            {
+                made = Printable.of(mesh, settings);
+                if (made.isEmpty())
+                {
+                    failed = "it's too thin to hold a wall";
+                }
+            }
+            catch (RuntimeException | OutOfMemoryError e)
+            {
+                log.warn("Couldn't make {} printable", mesh.name, e);
+                failed = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            }
+            Printable result = made;
+            String why = failed;
+            SwingUtilities.invokeLater(() ->
+            {
+                if (ticket != asked)
+                {
+                    return;
+                }
+                making = false;
+                printable = why == null ? result : null;
+                problem = why;
+                showView();
+            });
+        }, "consts-Models print");
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    /** Puts what the view is on into the picture, the line about it in the corner, and Save in step with it. */
+    private void showView()
+    {
+        boolean print = filaments.showsPrint();
+        PrintColors colors = filaments.colors();
+        if (print && printable != null && colors != null)
+        {
+            canvas.show(printable.shown, printable.colors(colors));
+        }
+        else if (print)
+        {
+            // Until the print is ready: the model in the filaments' colors
+            canvas.show(mesh, filaments.shownColors());
+        }
+        else
+        {
+            canvas.show(mesh, null);
+        }
+        canvas.setInfo(print ? printText(printable, making, problem) : sizeText(mesh, actions.printSettings()));
+
+        boolean ready = !print || printable != null && colors != null;
+        save.setEnabled(ready);
+        save.setToolTipText(!print ? "Save the model as the game has it, in the format picked beside it"
+            : ready ? "Save the print as you see it: one closed solid, ready for a slicer"
+            : making ? "Making it printable…" : "There's no print to save");
     }
 
     ViewerCanvas canvas()
@@ -164,11 +256,46 @@ final class ViewerPanel extends JPanel
         return canvas;
     }
 
-    /** Reads the print size again, which the settings may have changed. */
+    /** Reads the settings again, which may have changed: the print's size and base, and the background. */
     void refresh()
     {
-        PrintSettings settings = actions.printSettings();
-        canvas.setInfo(sizeText(mesh, settings));
+        int rgb = actions.background();
+        canvas.setBackgroundColor(rgb);
+        if (background != null)
+        {
+            background.setBackgroundColor(rgb);
+        }
+        if (filaments.showsPrint())
+        {
+            makePrintIfNeeded(actions.printSettings());
+        }
+        showView();
+    }
+
+    /**
+     * The line about the print: "Making it printable…" while it's being made, then "8,214 triangles  ·  one
+     * closed solid  ·  100 × 62 × 80 mm", base and all, or why it couldn't be made.
+     */
+    static String printText(Printable printable, boolean making, String problem)
+    {
+        if (making)
+        {
+            return "Making it printable\u2026 this takes a few seconds";
+        }
+        if (problem != null)
+        {
+            return "Couldn't make it printable: " + problem;
+        }
+        if (printable == null)
+        {
+            return "";
+        }
+        Mesh mesh = printable.print.mesh;
+        int faces = mesh.faceCount();
+        float[] box = mesh.bounds();
+        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles") + "  \u00b7  one closed solid  \u00b7  "
+            + millimetres(box[3] - box[0]) + " \u00d7 " + millimetres(box[4] - box[1]) + " \u00d7 "
+            + millimetres(box[5] - box[2]) + " mm";
     }
 
     /**

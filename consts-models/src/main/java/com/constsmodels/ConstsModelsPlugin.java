@@ -81,9 +81,15 @@ public class ConstsModelsPlugin extends Plugin
     private final ViewerActions viewerActions = new ViewerActions()
     {
         @Override
-        public void save(Mesh mesh, ExportFormat format, PrintColors colors, boolean solid)
+        public void save(Mesh mesh, ExportFormat format, PrintColors colors)
         {
-            ConstsModelsPlugin.this.save(mesh, format, colors, solid);
+            ConstsModelsPlugin.this.save(mesh, format, colors);
+        }
+
+        @Override
+        public void savePrint(Printable printable, ExportFormat format, PrintColors colors)
+        {
+            ConstsModelsPlugin.this.savePrint(printable, format, colors);
         }
 
         @Override
@@ -108,6 +114,18 @@ public class ConstsModelsPlugin extends Plugin
         public PrintSettings printSettings()
         {
             return ConstsModelsPlugin.this.printSettings();
+        }
+
+        @Override
+        public int background()
+        {
+            return config.background();
+        }
+
+        @Override
+        public void setBackground(int rgb)
+        {
+            config.background(rgb);
         }
     };
 
@@ -219,7 +237,7 @@ public class ConstsModelsPlugin extends Plugin
 
     PrintSettings printSettings()
     {
-        return new PrintSettings(config.printSizeMm(), config.addBase(), config.maxColors(), config.makeSolid());
+        return new PrintSettings(config.printSizeMm(), config.addBase(), config.maxColors());
     }
 
     /** Where files are saved: the folder chosen in the sidebar, or the default one. */
@@ -245,14 +263,10 @@ public class ConstsModelsPlugin extends Plugin
         LinkBrowser.open(folder.getAbsolutePath());
     }
 
-    void save(Mesh mesh, ExportFormat format, PrintColors colors, boolean solid)
+    void save(Mesh mesh, ExportFormat format, PrintColors colors)
     {
         File folder = outputFolder();
-        PrintSettings settings = printSettings().withSolid(solid);
-        if (solid && (format == ExportFormat.STL || format == ExportFormat.THREE_MF))
-        {
-            chat("Making " + mesh.name + " solid to print. This takes a few seconds.");
-        }
+        PrintSettings settings = printSettings();
         executor.execute(() ->
         {
             try
@@ -268,6 +282,29 @@ public class ConstsModelsPlugin extends Plugin
             {
                 log.warn("Couldn't save {} as {}", mesh.name, format, e);
                 chat("Couldn't save " + mesh.name + ": " + e.getMessage());
+            }
+        });
+    }
+
+    void savePrint(Printable printable, ExportFormat format, PrintColors colors)
+    {
+        File folder = outputFolder();
+        String name = printable.model.name;
+        executor.execute(() ->
+        {
+            try
+            {
+                if (!folder.isDirectory() && !folder.mkdirs())
+                {
+                    throw new IOException("couldn't make " + folder);
+                }
+                File file = MeshExporter.export(printable, colors, format, folder);
+                chat("Saved " + file.getName() + " in " + folder + ".");
+            }
+            catch (IOException | RuntimeException e)
+            {
+                log.warn("Couldn't save the print of {} as {}", name, format, e);
+                chat("Couldn't save " + name + ": " + e.getMessage());
             }
         });
     }

@@ -45,22 +45,10 @@ public interface ConstsModelsConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "solid",
-        name = "Make solid",
-        description = "Rebuild STL and 3MF files as one closed solid that prints as is: thin parts get a 1 mm wall and"
-            + " small gaps close. Takes a few seconds and rounds off detail under about 2 mm. The viewer can change it",
-        position = 4
-    )
-    default boolean makeSolid()
-    {
-        return true;
-    }
-
-    @ConfigItem(
         keyName = "colors",
         name = "Print colors",
         description = "How many filament colors a print starts with, 1 to 9; the viewer can change it and pick each color",
-        position = 5
+        position = 4
     )
     @Range(min = 1, max = PrintColors.MAX)
     default int maxColors()
@@ -72,7 +60,7 @@ public interface ConstsModelsConfig extends Config
         keyName = "captureRadius",
         name = "Area radius (tiles)",
         description = "How far Capture area reaches from you, in tiles, each way",
-        position = 6
+        position = 5
     )
     @Range(min = 1, max = 24)
     default int captureRadius()
@@ -84,7 +72,7 @@ public interface ConstsModelsConfig extends Config
         keyName = "shiftOnly",
         name = "Only with Shift",
         description = "Show Export Model on the right-click menu only while Shift is held",
-        position = 7
+        position = 6
     )
     default boolean shiftOnly()
     {
@@ -108,4 +96,22 @@ public interface ConstsModelsConfig extends Config
         description = ""
     )
     void outputFolder(String folder);
+
+    @ConfigItem(
+        keyName = "background",
+        name = "",
+        description = "",
+        hidden = true
+    )
+    default int background()
+    {
+        return ViewerCanvas.DEFAULT_BACKGROUND;
+    }
+
+    @ConfigItem(
+        keyName = "background",
+        name = "",
+        description = ""
+    )
+    void background(int rgb);
 }
