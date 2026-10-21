@@ -1,10 +1,11 @@
 /*
  * Copyright (c) 2017, Adam <Adam@sigterm.info>
  * Copyright (c) 2018, Lotto <https://github.com/devLotto>
+ * Copyright (c) 2018, Tomas Slusny <slusnucky@gmail.com>
  * Copyright (c) 2019, gregg1494 <https://github.com/gregg1494>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's World Hopper plugin into
- *   consts-World; a hot list kept in config in place of favourites; no quick-hop keys, ::hop command, Hop-to option,
- *   pings or settings)
+ *   consts-World; a hot list kept in config in place of favourites; back to the last world when it starts, from
+ *   RuneLite's Default World plugin; no quick-hop keys, ::hop command, Hop-to option, pings or settings)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -62,13 +63,15 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.WorldUtil;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldResult;
+import net.runelite.http.api.worlds.WorldType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * consts-World: a world switcher in the sidebar that opens on your hot list. Star the worlds you hop between once, in
- * All worlds, then hop to one with a click. Either tab can be searched by activity, number or region and sorted.
- * RuneLite's World Hopper plugin by Adam, cut down to its panel, with a hot list in place of its favourites.
+ * All worlds, then hop to one with a click. Either tab can be searched by activity, number or region and sorted. It
+ * also remembers the world you were last on and puts the login screen back on it when RuneLite starts. RuneLite's
+ * World Hopper plugin by Adam, cut down to its panel, with a hot list in place of its favourites.
  */
 @PluginDescriptor(
     name = "consts-World",
@@ -81,6 +84,7 @@ public class ConstsWorldPlugin extends Plugin
 
     static final String CONFIG_GROUP = "constsworld";
     static final String HOT_LIST_KEY = "hotList";
+    static final String LAST_WORLD_KEY = "lastWorld";
 
     private static final int REFRESH_THROTTLE = 60_000; // ms
 
@@ -117,6 +121,9 @@ public class ConstsWorldPlugin extends Plugin
 
     private Instant lastFetch;
 
+    // Whether the login screen has yet to be put back on the last world; once each time the plugin starts
+    private boolean returnPending;
+
     @Override
     protected void startUp() throws Exception
     {
@@ -136,6 +143,18 @@ public class ConstsWorldPlugin extends Plugin
 
         // populate initial world list
         updateList();
+
+        returnPending = true;
+        clientThread.invokeLater(() ->
+        {
+            if (client.getGameState().getState() < GameState.LOGIN_SCREEN.getState())
+            {
+                return false;
+            }
+
+            returnToLastWorld();
+            return true;
+        });
     }
 
     @Override
@@ -206,8 +225,64 @@ public class ConstsWorldPlugin extends Plugin
                 int oldWorld = lastWorld;
                 SwingUtilities.invokeLater(() -> panel.switchCurrentHighlight(newWorld, oldWorld));
                 lastWorld = newWorld;
+
+                // The world to come back to next time
+                configManager.setConfiguration(CONFIG_GROUP, LAST_WORLD_KEY, newWorld);
             }
         }
+    }
+
+    /**
+     * Puts the login screen on the world you were last logged in to, once, when the plugin starts. If the world list
+     * hasn't arrived yet, it tries again when it does.
+     */
+    void returnToLastWorld()
+    {
+        if (!returnPending)
+        {
+            return;
+        }
+
+        if (client.getGameState() != GameState.LOGIN_SCREEN)
+        {
+            // Already logged in, or on the way
+            returnPending = false;
+            return;
+        }
+
+        WorldResult worldResult = worldService.getWorlds();
+        if (worldResult == null)
+        {
+            return;
+        }
+        returnPending = false;
+
+        Integer saved = configManager.getConfiguration(CONFIG_GROUP, LAST_WORLD_KEY, Integer.class);
+        World world = worldToReturnTo(saved == null ? 0 : saved, client.getWorld(), worldResult);
+        if (world != null)
+        {
+            log.debug("Back to the last world, {}", world.getId());
+            client.changeWorld(toRsWorld(world));
+        }
+    }
+
+    /** The world to put the login screen back on, or null when there's nothing to do. */
+    static World worldToReturnTo(int saved, int current, WorldResult worldResult)
+    {
+        // Old School RuneScape worlds start at 301
+        if (saved <= 300 || saved == current)
+        {
+            return null;
+        }
+
+        World world = worldResult.findWorld(saved);
+        if (world == null
+            || world.getTypes().contains(WorldType.BETA_WORLD)
+            || world.getTypes().contains(WorldType.NOSAVE_MODE))
+        {
+            return null;
+        }
+        return world;
     }
 
     @Subscribe
@@ -241,6 +316,7 @@ public class ConstsWorldPlugin extends Plugin
     public void onWorldsFetch(WorldsFetch worldsFetch)
     {
         updateList();
+        clientThread.invokeLater(this::returnToLastWorld);
     }
 
     /**
@@ -281,13 +357,7 @@ public class ConstsWorldPlugin extends Plugin
     {
         assert client.isClientThread();
 
-        final net.runelite.api.World rsWorld = client.createWorld();
-        rsWorld.setActivity(world.getActivity());
-        rsWorld.setAddress(world.getAddress());
-        rsWorld.setId(world.getId());
-        rsWorld.setPlayerCount(world.getPlayers());
-        rsWorld.setLocation(world.getRegion().getId());
-        rsWorld.setTypes(WorldUtil.toWorldTypes(world.getTypes()));
+        final net.runelite.api.World rsWorld = toRsWorld(world);
 
         if (client.getGameState() == GameState.LOGIN_SCREEN)
         {
@@ -313,6 +383,18 @@ public class ConstsWorldPlugin extends Plugin
 
         quickHopTargetWorld = rsWorld;
         displaySwitcherAttempts = 0;
+    }
+
+    private net.runelite.api.World toRsWorld(World world)
+    {
+        final net.runelite.api.World rsWorld = client.createWorld();
+        rsWorld.setActivity(world.getActivity());
+        rsWorld.setAddress(world.getAddress());
+        rsWorld.setId(world.getId());
+        rsWorld.setPlayerCount(world.getPlayers());
+        rsWorld.setLocation(world.getRegion().getId());
+        rsWorld.setTypes(WorldUtil.toWorldTypes(world.getTypes()));
+        return rsWorld;
     }
 
     @Subscribe

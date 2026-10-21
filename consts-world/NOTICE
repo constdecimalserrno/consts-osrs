@@ -1,10 +1,11 @@
 consts-World is MIT licensed (see LICENSE), except for four files ported from
-RuneLite's World Hopper plugin and the images that came with them, which keep
-their original license:
+RuneLite's World Hopper plugin, with a part of its Default World plugin, and
+the images that came with them, which keep their original license:
 
   src/main/java/com/constsworld/ConstsWorldPlugin.java
     (from WorldHopperPlugin.java, Copyright (c) 2017, Adam; Copyright (c)
-    2018, Lotto; Copyright (c) 2019, gregg1494)
+    2018, Lotto; Copyright (c) 2019, gregg1494; and its return to the last
+    world from DefaultWorldPlugin.java, Copyright (c) 2018, Tomas Slusny)
   src/main/java/com/constsworld/ConstsWorldPanel.java
     (from WorldSwitcherPanel.java, Copyright (c) 2018, Psikoi)
   src/main/java/com/constsworld/WorldRow.java
@@ -19,6 +20,7 @@ Their license follows.
 Copyright (c) 2017, Adam <Adam@sigterm.info>
 Copyright (c) 2018, Lotto <https://github.com/devLotto>
 Copyright (c) 2018, Psikoi <https://github.com/Psikoi>
+Copyright (c) 2018, Tomas Slusny <slusnucky@gmail.com>
 Copyright (c) 2019, gregg1494 <https://github.com/gregg1494>
 All rights reserved.
 
