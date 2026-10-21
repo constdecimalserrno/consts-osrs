@@ -23,6 +23,8 @@ import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -141,6 +143,16 @@ public class ConstsModelsPlugin extends Plugin
         exportMenu.shutDown();
         eventBus.unregister(exportMenu);
         clientToolbar.removeNavigation(navButton);
+    }
+
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        // The sidebar shows the area's size and the folder, so it follows the settings while open
+        if (ConstsModelsConfig.GROUP.equals(event.getGroup()))
+        {
+            SwingUtilities.invokeLater(panel::refresh);
+        }
     }
 
     /** A model as a mesh, named for what it is ("NPC Goblin"). Call it on the client thread. */
