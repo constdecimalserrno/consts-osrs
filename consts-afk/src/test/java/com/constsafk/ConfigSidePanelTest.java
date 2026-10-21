@@ -3,6 +3,7 @@ package com.constsafk;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -25,6 +26,7 @@ import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
+import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import net.runelite.client.config.ConfigDescriptor;
 import net.runelite.client.config.ConfigItemDescriptor;
@@ -138,6 +140,45 @@ public class ConfigSidePanelTest
         {
         });
         assertFalse(box.isSelected());
+    }
+
+    @Test
+    public void theMasterSwitchSitsBesideTheTitleInsteadOfInTheList()
+    {
+        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        ConfigSidePanel withSwitch = withMasterSwitch();
+
+        JToggleButton toggle = find(withSwitch, JToggleButton.class, b -> ConstsAfkConfig.MASTER_KEY.equals(b.getName()));
+        assertNotNull(toggle);
+        assertTrue(toggle.isSelected());
+        assertNull(find(withSwitch, JPanel.class, p -> ConstsAfkConfig.MASTER_KEY.equals(p.getName())));
+        assertFalse(labels(withSwitch).contains("Master Switch"));
+        // Without one, it's an ordinary row.
+        assertTrue(labels(panel).contains("Master Switch"));
+    }
+
+    @Test
+    public void theMasterSwitchSavesWhenClickedAndFollowsTheConfig()
+    {
+        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        ConfigSidePanel withSwitch = withMasterSwitch();
+        JToggleButton toggle = find(withSwitch, JToggleButton.class, b -> ConstsAfkConfig.MASTER_KEY.equals(b.getName()));
+
+        toggle.doClick();
+        verify(configManager).setConfiguration(GROUP, ConstsAfkConfig.MASTER_KEY, "false");
+
+        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        withSwitch.reload();
+        assertTrue(toggle.isSelected());
+        verify(configManager, never()).setConfiguration(GROUP, ConstsAfkConfig.MASTER_KEY, "true");
+    }
+
+    private ConfigSidePanel withMasterSwitch()
+    {
+        ConstsAfkConfig config = (ConstsAfkConfig) Proxy.newProxyInstance(ConstsAfkConfig.class.getClassLoader(),
+            new Class<?>[]{ConstsAfkConfig.class}, (proxy, method, args) -> null);
+        return new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsAfkPlugin(),
+            ConstsAfkConfig.MASTER_KEY);
     }
 
     @Test

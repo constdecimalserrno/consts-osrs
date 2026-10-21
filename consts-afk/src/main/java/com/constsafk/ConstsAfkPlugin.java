@@ -199,7 +199,7 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
-        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this);
+        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsAfkConfig.MASTER_KEY);
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
             .tooltip("consts-AFK")
@@ -213,7 +213,7 @@ public class ConstsAfkPlugin extends Plugin
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
         clientThread.invokeLater(() ->
         {
-            if (client.getGameState() == GameState.LOGGED_IN)
+            if (client.getGameState() == GameState.LOGGED_IN && config.masterSwitch())
             {
                 startSession();
             }
@@ -243,7 +243,7 @@ public class ConstsAfkPlugin extends Plugin
         followAggroAreaAcrossLogins(state);
         if (state == GameState.LOGGED_IN)
         {
-            if (!sessionActive)
+            if (!sessionActive && config.masterSwitch())
             {
                 startSession();
             }
@@ -269,7 +269,11 @@ public class ConstsAfkPlugin extends Plugin
             return;
         }
 
-        if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()))
+        if (ConstsAfkConfig.MASTER_KEY.equals(event.getKey()))
+        {
+            clientThread.invokeLater(this::followMasterSwitch);
+        }
+        else if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()))
         {
             keepCustom(event.getOldValue(), event.getNewValue());
         }
@@ -289,6 +293,10 @@ public class ConstsAfkPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick event)
     {
+        if (!config.masterSwitch())
+        {
+            return;
+        }
         updateActivityFromHybridSignals();
         updateAggroArea();
         evaluateAlerts();
@@ -505,6 +513,22 @@ public class ConstsAfkPlugin extends Plugin
         return loop != null ? loop.isRunning() : bursts.get(type).isFlashing(now);
     }
 
+    /**
+     * The Master Switch: off ends the session, silencing every alert, and keeps a new one from starting; on starts
+     * one fresh, as logging in does, so Idle and Logout count from now rather than from before it was off.
+     */
+    private void followMasterSwitch()
+    {
+        if (!config.masterSwitch())
+        {
+            endSession();
+        }
+        else if (!sessionActive && client.getGameState() == GameState.LOGGED_IN)
+        {
+            startSession();
+        }
+    }
+
     private void startSession()
     {
         sessionActive = true;
@@ -539,7 +563,7 @@ public class ConstsAfkPlugin extends Plugin
 
     private boolean isTracking()
     {
-        return sessionActive && client.getGameState() == GameState.LOGGED_IN && !isStartupDelayActive();
+        return sessionActive && config.masterSwitch() && client.getGameState() == GameState.LOGGED_IN && !isStartupDelayActive();
     }
 
     private void evaluateAlerts()
@@ -839,7 +863,7 @@ public class ConstsAfkPlugin extends Plugin
     /** Show Area Lines, in OSRS mode, while the preset (or Custom) has Aggro on. */
     boolean shouldShowAggroAreaLines()
     {
-        return config.showAggroAreaLines() && usesAggroArea() && isAlertEnabled(AlertType.AGGRO)
+        return config.masterSwitch() && config.showAggroAreaLines() && usesAggroArea() && isAlertEnabled(AlertType.AGGRO)
             && client.getGameState() == GameState.LOGGED_IN;
     }
 
