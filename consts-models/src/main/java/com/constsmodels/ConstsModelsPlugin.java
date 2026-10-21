@@ -143,6 +143,7 @@ public class ConstsModelsPlugin extends Plugin
         exportMenu.shutDown();
         eventBus.unregister(exportMenu);
         clientToolbar.removeNavigation(navButton);
+        SwingUtilities.invokeLater(ModelViewer::closeAll);
     }
 
     @Subscribe
