@@ -220,7 +220,8 @@ final class ViewerPanel extends JPanel
         PrintColors colors = filaments.colors();
         if (!filaments.showsPrint())
         {
-            actions.save(model, chosen, colors == null || model == mesh ? colors : colors.forFaces(modelFaces));
+            actions.save(model, chosen, colors == null || model == mesh ? colors : colors.forFaces(modelFaces),
+                printSettings());
         }
         else if (printable != null && printable.model == model && !printable.isEmpty() && colors != null)
         {
@@ -471,7 +472,7 @@ final class ViewerPanel extends JPanel
         boolean ready = !print || printable != null && colors != null;
         save.setEnabled(ready);
         save.setToolTipText(!print ? "Save the model as the game has it, in the format picked beside it"
-            : ready ? "Save the print as you see it: one closed solid, ready for a slicer"
+            : ready ? "Save the print as you see it, ready for a slicer"
             : making ? "Making it printable…" : "There's no print to save");
     }
 
@@ -577,7 +578,9 @@ final class ViewerPanel extends JPanel
         Mesh mesh = printable.print.mesh;
         int faces = mesh.faceCount();
         float[] box = mesh.bounds();
-        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles") + "  \u00b7  one closed solid  \u00b7  "
+        int solids = printable.solids();
+        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles") + "  \u00b7  "
+            + (solids == 1 ? "one closed solid" : solids + " closed solids") + "  \u00b7  "
             + millimetres(box[3] - box[0]) + " \u00d7 " + millimetres(box[4] - box[1]) + " \u00d7 "
             + millimetres(box[5] - box[2]) + " mm";
     }

@@ -89,9 +89,9 @@ public class ConstsModelsPlugin extends Plugin
     private final ViewerActions viewerActions = new ViewerActions()
     {
         @Override
-        public void save(Mesh mesh, ExportFormat format, PrintColors colors)
+        public void save(Mesh mesh, ExportFormat format, PrintColors colors, PrintSettings settings)
         {
-            ConstsModelsPlugin.this.save(mesh, format, colors);
+            ConstsModelsPlugin.this.save(mesh, format, colors, settings);
         }
 
         @Override
@@ -331,10 +331,10 @@ public class ConstsModelsPlugin extends Plugin
         LinkBrowser.open(folder.getAbsolutePath());
     }
 
-    void save(Mesh mesh, ExportFormat format, PrintColors colors)
+    void save(Mesh mesh, ExportFormat format, PrintColors colors, PrintSettings viewer)
     {
         File folder = outputFolder();
-        PrintSettings settings = printSettings();
+        PrintSettings settings = viewer != null ? viewer : printSettings();
         executor.execute(() ->
         {
             try

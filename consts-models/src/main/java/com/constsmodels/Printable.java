@@ -23,6 +23,8 @@ final class Printable
      * colors from {@link #colors}, so the view doesn't jump between the two.
      */
     final Mesh shown;
+    // How many solids it is, counted the first time it's asked
+    private int solids = -1;
 
     private Printable(Mesh model, PrintSettings settings, Mesh solid, int[] solidFrom, PrintPrep.Print print)
     {
@@ -83,6 +85,22 @@ final class Printable
     }
 
     /** Whether there's anything to print: a model too thin to hold a wall can come out empty. */
+    /** How many separate solids the print is, its base aside: one, unless parts of the model don't touch. */
+    int solids()
+    {
+        if (solids < 0)
+        {
+            Pieces pieces = Pieces.ofCorners(print.mesh);
+            java.util.Set<Integer> seen = new java.util.HashSet<>();
+            for (int f = 0; f < print.modelFaces; f++)
+            {
+                seen.add(pieces.piece[f]);
+            }
+            solids = seen.size();
+        }
+        return solids;
+    }
+
     boolean isEmpty()
     {
         return print.modelFaces == 0;

@@ -7,9 +7,10 @@ interface ViewerActions
 {
     /**
      * Saves the model as the Game view shows it, in the chosen folder, off the Swing thread, and says where in chat.
-     * A 3MF prints in the colors given; null merges the model's colors down to the settings' count.
+     * STL and 3MF are made with the settings given (the viewer's Base switch among them); a 3MF prints in the colors
+     * given, and null merges the model's colors down to the settings' count.
      */
-    void save(Mesh mesh, ExportFormat format, PrintColors colors);
+    void save(Mesh mesh, ExportFormat format, PrintColors colors, PrintSettings settings);
 
     /** Saves the print as the Print view shows it: the closed solid, in millimetres, on the filaments given. */
     void savePrint(Printable printable, ExportFormat format, PrintColors colors);

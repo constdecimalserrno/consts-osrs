@@ -234,7 +234,7 @@ public class PrintViewTest
         ViewerActions actions = new ViewerActions()
         {
             @Override
-            public void save(Mesh m, ExportFormat format, PrintColors colors)
+            public void save(Mesh m, ExportFormat format, PrintColors colors, PrintSettings settings)
             {
                 saved.add("game " + format);
             }
@@ -345,7 +345,7 @@ public class PrintViewTest
         return new ViewerActions()
         {
             @Override
-            public void save(Mesh m, ExportFormat format, PrintColors colors)
+            public void save(Mesh m, ExportFormat format, PrintColors colors, PrintSettings settings)
             {
             }
 

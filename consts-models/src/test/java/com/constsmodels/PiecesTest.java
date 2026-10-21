@@ -80,7 +80,7 @@ public class PiecesTest
         ViewerActions actions = new ForwardingActions(PrintViewTest.actions(settings))
         {
             @Override
-            public void save(Mesh m, ExportFormat format, PrintColors colors)
+            public void save(Mesh m, ExportFormat format, PrintColors colors, PrintSettings settings)
             {
                 assertEquals(m.faceCount(), colors.faceCount());
                 saved.add(m.faceCount() + " " + colors.color(colors.filament(m.faceCount() - 1)));
@@ -233,9 +233,9 @@ public class PiecesTest
         }
 
         @Override
-        public void save(Mesh mesh, ExportFormat format, PrintColors colors)
+        public void save(Mesh mesh, ExportFormat format, PrintColors colors, PrintSettings settings)
         {
-            to.save(mesh, format, colors);
+            to.save(mesh, format, colors, settings);
         }
 
         @Override
