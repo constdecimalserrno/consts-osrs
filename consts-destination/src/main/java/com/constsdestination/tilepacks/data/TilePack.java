@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2022, Trevor <https://github.com/TrevorMDev>
- * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination)
+ * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; a pack is its name and
+ *   tiles only, without a link or a place in a list to hide it from)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,15 +27,13 @@
 package com.constsdestination.tilepacks.data;
 
 /**
- * Represents all the data needed to make a TilePack
+ * Represents all the data needed to make a TilePack: an id, a name, and the tiles, as Ground Markers exports them
  */
 public class TilePack
 {
     public Integer id;
     public String packName;
-    public String link;
     public String packTiles;
-    public boolean visible = true;
 
     public TilePack()
     {
@@ -45,19 +44,5 @@ public class TilePack
         this.id = id;
         this.packName = packName;
         this.packTiles = packTiles;
-    }
-
-    public TilePack(Integer id, String packName, String link, String packTiles)
-    {
-        this.id = id;
-        this.packName = packName;
-        this.link = link;
-        this.packTiles = packTiles;
-    }
-
-    public TilePack(Integer id, boolean visible)
-    {
-        this.id = id;
-        this.visible = visible;
     }
 }

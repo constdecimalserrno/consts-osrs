@@ -38,7 +38,7 @@ import net.runelite.client.util.ImageUtil;
  */
 @PluginDescriptor(
     name = "consts-Destination",
-    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, and draws tile packs: marked tiles for content all over the game",
+    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, and draws your tile packs: sets of marked tiles you make or paste in",
     tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object", "pack", "ground", "marker"}
 )
 public class ConstsDestinationPlugin extends Plugin

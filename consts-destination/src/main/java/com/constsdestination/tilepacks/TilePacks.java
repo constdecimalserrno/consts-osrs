@@ -5,7 +5,8 @@
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: TilePacksPlugin, no longer a plugin of its own but a
  *   part of consts-Destination: its panel is a tab in consts-Destination's, its settings and saved data are
  *   consts-Destination's, Tile Packs' are brought over once and left as they were, the points are loaded on the
- *   client thread, and a profile change reads its packs again; lombok written out)
+ *   client thread, and a profile change reads its packs again; lombok written out; only your own packs, without
+ *   the list's filters)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,9 +53,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Tile Packs, by TrevorMDev, folded into consts-Destination: a collection of tile packs, ground markers for content
- * all over the game, to turn on and off, and your own custom packs. consts-Destination starts and stops it, shows its
- * panel as a tab, and passes it the events it needs; its tiles follow consts-Destination's Master Switch.
+ * Tile Packs, by TrevorMDev, folded into consts-Destination: your own tile packs, sets of ground markers you make or
+ * paste in, to turn on and off, edit and delete. consts-Destination starts and stops it, shows its panel as a tab,
+ * and passes it the events it needs; its tiles follow consts-Destination's Master Switch.
  */
 public class TilePacks
 {
@@ -79,7 +80,6 @@ public class TilePacks
     private GroundMarkerOverlay overlay;
     private TilePackManager tilePackManager;
     private PointManager pointManager;
-    private FilterManager filterManager;
     private TilePacksListPanel panel;
 
     public void startUp()
@@ -88,13 +88,12 @@ public class TilePacks
 
         tilePackManager = new TilePackManager(gson, configManager);
         pointManager = new PointManager(tilePackManager, gson, client);
-        filterManager = new FilterManager(configManager);
 
         overlay = new GroundMarkerOverlay(pointManager, client, config);
         minimapOverlay = new GroundMarkerMinimapOverlay(pointManager, client, config);
         overlayManager.add(overlay);
         overlayManager.add(minimapOverlay);
-        panel = new TilePacksListPanel(tilePackManager, this::reloadPoints, filterManager, chatMessageManager, gson);
+        panel = new TilePacksListPanel(tilePackManager, this::reloadPoints, chatMessageManager, gson);
 
         reloadPoints();
 
@@ -108,7 +107,7 @@ public class TilePacks
         log.debug("Tile Packs stopped");
     }
 
-    /** The Tile packs tab: the search and filters, the packs, and the custom pack form, scrolling. */
+    /** The Tile packs tab: your packs and the form to add one, scrolling. */
     public JComponent getPanel()
     {
         return panel.getWrappedPanel();
@@ -146,7 +145,6 @@ public class TilePacks
         // Another profile has its own packs, and may not have brought Tile Packs' over yet.
         migrate();
         tilePackManager.reload();
-        filterManager.reload();
         SwingUtilities.invokeLater(panel::reload);
         reloadPoints();
     }

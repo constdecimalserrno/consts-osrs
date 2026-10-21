@@ -60,7 +60,7 @@ public class ConstsDestinationPanelTest
     public void itOpensOnTheSettings()
     {
         assertTrue(labels(panel).contains("Hover Color"));
-        assertFalse(labels(panel).contains("Abyssal Sire"));
+        assertFalse(labels(panel).contains("Your packs"));
     }
 
     @Test
@@ -68,7 +68,7 @@ public class ConstsDestinationPanelTest
     {
         tabs.select(tabs.getTab(1));
 
-        assertTrue(labels(panel).contains("Abyssal Sire"));
+        assertTrue(labels(panel).contains("Your packs"));
         assertFalse(labels(panel).contains("Hover Color"));
     }
 
@@ -76,7 +76,7 @@ public class ConstsDestinationPanelTest
     public void theSettingsTabHasTheTilePacksSettingsToo()
     {
         List<String> labels = labels(panel);
-        assertFalse(labels.contains("Abyssal Sire"));
+        assertFalse(labels.contains("Your packs"));
         assertTrue(labels.contains("Hover Color"));
         assertTrue(labels.contains("Tile packs"));
         assertTrue(labels.contains("Show Labels"));
