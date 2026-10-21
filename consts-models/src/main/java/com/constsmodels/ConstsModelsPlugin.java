@@ -240,7 +240,7 @@ public class ConstsModelsPlugin extends Plugin
         });
     }
 
-    /** Deletes a capture for good, once the sidebar has asked. Files saved from the viewer stay. */
+    /** Deletes a capture for good, from its trash can in the sidebar. Files saved from the viewer stay. */
     void delete(ModelLibrary.Capture capture)
     {
         executor.execute(() ->

@@ -99,7 +99,7 @@ public class ConstsModelsPanelTest
     }
 
     @Test
-    public void deletingAsksFirstThenTakesItOffBothTabs()
+    public void theTrashCanDeletesAtOnceThenItGoesOffBothTabs()
     {
         ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
         ModelLibrary.Capture goblin = capture("NPC Goblin", 1);
@@ -107,13 +107,9 @@ public class ConstsModelsPanelTest
         panel.added(goblin);
         panel.added(cow);
 
-        panel.setConfirmDelete(c -> false);
-        panel.askToDelete(cow);
-        verify(plugin, never()).delete(cow);
-
-        panel.setConfirmDelete(c -> true);
-        panel.askToDelete(cow);
+        panel.delete(cow);
         verify(plugin).delete(cow);
+        verify(plugin, never()).delete(goblin);
 
         // The plugin deletes the files, then tells the panel
         panel.removed(cow);

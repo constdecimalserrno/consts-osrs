@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -27,7 +26,6 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
@@ -46,7 +44,7 @@ import net.runelite.client.util.Text;
  * The sidebar: its two main buttons, Capture area and Export yourself, with a hint that anything in the game can be
  * exported from its right-click menu; then the folder files are saved to, with a button to open it and one to choose
  * another; then the captures, newest first, on two tabs: this session's, and every one kept (see
- * {@link ModelLibrary}). A click on one opens it in the viewer again; its × deletes it.
+ * {@link ModelLibrary}). A click on one opens it in the viewer again; its trash can deletes it, at once.
  */
 class ConstsModelsPanel extends PluginPanel
 {
@@ -83,9 +81,6 @@ class ConstsModelsPanel extends PluginPanel
     private final List<ModelLibrary.Capture> all = new ArrayList<>();
     private final List<ActionCard> rows = new ArrayList<>();
     private boolean showingAll;
-
-    /* Asks before a capture is deleted for good */
-    private Predicate<ModelLibrary.Capture> confirmDelete = this::confirmDelete;
 
     ConstsModelsPanel(ConstsModelsPlugin plugin, ConstsModelsConfig config)
     {
@@ -140,7 +135,7 @@ class ConstsModelsPanel extends PluginPanel
             + "and pick <font color='white'>Export Model</font>, or use a button above. Each capture shows up here to "
             + "open again.");
         allEmpty = emptyNote("<font color='white'>Nothing kept yet</font><br>Every capture is kept here, session after "
-            + "session, until you delete it with its <font color='white'>\u00d7</font>.");
+            + "session, until you delete it with its <font color='white'>trash can</font>.");
         list.setOpaque(false);
         addRow(list, c, 6);
 
@@ -244,12 +239,6 @@ class ConstsModelsPanel extends PluginPanel
         return allTab;
     }
 
-    /** What asks before a delete; tests answer for the person. */
-    void setConfirmDelete(Predicate<ModelLibrary.Capture> confirm)
-    {
-        confirmDelete = confirm;
-    }
-
     ActionCard areaCard()
     {
         return areaCard;
@@ -304,25 +293,23 @@ class ConstsModelsPanel extends PluginPanel
         row.setDetail(whenText(capture.time, now) + "  \u00b7  " + trianglesText(capture.faces));
         row.setToolTipText("Open " + name + " in the viewer again");
 
-        // A label, not a button: a button this narrow cuts its × down to dots
-        JLabel delete = new JLabel("\u00d7", JLabel.CENTER);
-        delete.setFont(FontManager.getRunescapeBoldFont());
-        delete.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        // A label, not a button, so it stays as small as its icon
+        JLabel delete = new JLabel(new TrashIcon(ColorScheme.LIGHT_GRAY_COLOR), JLabel.CENTER);
         delete.setToolTipText("Delete " + name);
         delete.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        delete.setPreferredSize(new Dimension(delete.getFontMetrics(delete.getFont()).stringWidth("\u00d7") + 6, 16));
+        delete.setPreferredSize(new Dimension(TrashIcon.SIZE + 6, 18));
         delete.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mouseEntered(MouseEvent e)
             {
-                delete.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
+                delete.setIcon(new TrashIcon(ColorScheme.PROGRESS_ERROR_COLOR));
             }
 
             @Override
             public void mouseExited(MouseEvent e)
             {
-                delete.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+                delete.setIcon(new TrashIcon(ColorScheme.LIGHT_GRAY_COLOR));
             }
 
             @Override
@@ -330,7 +317,7 @@ class ConstsModelsPanel extends PluginPanel
             {
                 if (SwingUtilities.isLeftMouseButton(e) && delete.contains(e.getPoint()))
                 {
-                    askToDelete(capture);
+                    delete(capture);
                 }
             }
         });
@@ -338,21 +325,10 @@ class ConstsModelsPanel extends PluginPanel
         return row;
     }
 
-    /** Deletes the capture once the person says so. */
-    void askToDelete(ModelLibrary.Capture capture)
+    /** Deletes the capture for good, without asking: its trash can was clicked. */
+    void delete(ModelLibrary.Capture capture)
     {
-        if (confirmDelete.test(capture))
-        {
-            plugin.delete(capture);
-        }
-    }
-
-    private boolean confirmDelete(ModelLibrary.Capture capture)
-    {
-        return JOptionPane.showConfirmDialog(this,
-            "Delete " + displayName(capture.name) + "? You won't be able to open it again.\n"
-                + "Files you saved from the viewer stay where they are.",
-            "Delete capture", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
+        plugin.delete(capture);
     }
 
     /** A capture's picture at its size in the row, drawn from the bigger one on sharp screens. */
