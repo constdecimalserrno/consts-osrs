@@ -44,6 +44,29 @@ public interface ConstsModelsConfig extends Config
         return false;
     }
 
+    // The same three, written from the sidebar's Settings section
+
+    @ConfigItem(
+        keyName = "format",
+        name = "",
+        description = ""
+    )
+    void format(ExportFormat format);
+
+    @ConfigItem(
+        keyName = "captureRadius",
+        name = "",
+        description = ""
+    )
+    void captureRadius(int radius);
+
+    @ConfigItem(
+        keyName = "shiftOnly",
+        name = "",
+        description = ""
+    )
+    void shiftOnly(boolean shiftOnly);
+
     @ConfigItem(
         keyName = "outputFolder",
         name = "",

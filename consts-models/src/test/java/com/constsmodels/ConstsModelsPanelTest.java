@@ -1,6 +1,7 @@
 package com.constsmodels;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,6 +44,34 @@ public class ConstsModelsPanelTest
         List<String> titles = new ArrayList<>();
         panel.rows().forEach(row -> titles.add(row.getTitle()));
         return titles;
+    }
+
+    @Test
+    public void theSettingsSitClosedAtTheBottomAndSaveAtOnce()
+    {
+        when(config.format()).thenReturn(ExportFormat.OBJ);
+        ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
+        assertFalse(panel.settingsOpen());
+        panel.toggleSettings();
+        assertTrue(panel.settingsOpen());
+        assertEquals(ExportFormat.OBJ, panel.formatBox().getSelectedItem());
+        assertEquals(6, panel.radiusSpinner().getValue());
+        // Named as in the Configuration panel, from the same annotations
+        assertEquals("Area radius (tiles)",
+            ConstsModelsPanel.setting("captureRadius").getAnnotation(net.runelite.client.config.ConfigItem.class).name());
+
+        panel.formatBox().setSelectedItem(ExportFormat.PLY);
+        panel.radiusSpinner().setValue(9);
+        panel.shiftBox().setSelected(true);
+        verify(config).format(ExportFormat.PLY);
+        verify(config).captureRadius(9);
+        verify(config).shiftOnly(true);
+
+        // A change made in the Configuration panel shows here, and isn't saved back
+        when(config.captureRadius()).thenReturn(12);
+        panel.refresh();
+        assertEquals(12, panel.radiusSpinner().getValue());
+        verify(config, never()).captureRadius(12);
     }
 
     @Test

@@ -18,7 +18,7 @@ RuneLite plugin for Old School RuneScape ( OSRS ): export any model in the game,
 
 ## Settings
 
-Under the wrench, in the plugin's page of the Configuration panel.
+At the bottom of the sidebar panel, under **Settings**, closed until you click it, and under the wrench, in the plugin's page of the Configuration panel. A change in either shows in the other.
 
 | Setting | What it does | Default |
 |---|---|---|

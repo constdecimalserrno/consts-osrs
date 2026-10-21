@@ -9,11 +9,13 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.event.ItemEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BaseMultiResolutionImage;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -23,33 +25,56 @@ import java.util.function.ToIntFunction;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.View;
+import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Range;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.QuantityFormatter;
+import net.runelite.client.util.SwingUtil;
 import net.runelite.client.util.Text;
 
 /**
  * The sidebar: its two main buttons, Capture area and Export yourself, with a hint that anything in the game can be
  * exported from its right-click menu; then the folder files are saved to, with a button to open it and one to choose
  * another; then the captures, newest first, on two tabs: this session's, and every one kept (see
- * {@link ModelLibrary}). A click on one opens it in the viewer again; its trash can deletes it, at once.
+ * {@link ModelLibrary}). A click on one opens it in the viewer again; its trash can deletes it, at once. Last, the
+ * settings, in a section closed to start.
  */
 class ConstsModelsPanel extends PluginPanel
 {
     /** How big a capture's picture is in its row. */
     static final int PICTURE = 32;
+
+    /* The Settings section's arrow, closed and open, as the other plugins' sidebars draw theirs */
+    private static final ImageIcon SECTION_EXPAND_ICON;
+    private static final ImageIcon SECTION_RETRACT_ICON;
+
+    static
+    {
+        BufferedImage arrow = ImageUtil.luminanceOffset(
+            ImageUtil.loadImageResource(ConstsModelsPanel.class, "/util/arrow_right.png"), -121);
+        SECTION_EXPAND_ICON = new ImageIcon(arrow);
+        SECTION_RETRACT_ICON = new ImageIcon(ImageUtil.rotateImage(arrow, Math.PI / 2));
+    }
 
     /* The space around everything, and the width left inside it */
     private static final int MARGIN = 10;
@@ -81,6 +106,15 @@ class ConstsModelsPanel extends PluginPanel
     private final List<ModelLibrary.Capture> all = new ArrayList<>();
     private final List<ActionCard> rows = new ArrayList<>();
     private boolean showingAll;
+
+    /* The settings, in their section at the bottom */
+    private final JPanel settings = new JPanel(new DynamicGridLayout(0, 1, 0, 5));
+    private final JButton settingsToggle = new JButton(SECTION_EXPAND_ICON);
+    private final JComboBox<ExportFormat> format = new JComboBox<>(ExportFormat.values());
+    private final JSpinner radius = new JSpinner(radiusModel());
+    private final JCheckBox shiftOnly = new JCheckBox();
+    /** True while refresh shows the settings as saved, so the controls don't save them again. */
+    private boolean loading;
 
     ConstsModelsPanel(ConstsModelsPlugin plugin, ConstsModelsConfig config)
     {
@@ -139,6 +173,9 @@ class ConstsModelsPanel extends PluginPanel
         list.setOpaque(false);
         addRow(list, c, 6);
 
+        // The settings, closed to start: the same as the plugin's page in the Configuration panel
+        addRow(buildSettings(), c, 16);
+
         refresh();
         tabs.select(sessionTab);
         showList();
@@ -169,6 +206,12 @@ class ConstsModelsPanel extends PluginPanel
         folderPath.setText(shortPath(full, System.getProperty("user.home"), width, metrics::stringWidth));
         folderPath.setToolTipText(full);
         areaCard.setDetail(areaText(config.captureRadius()));
+
+        loading = true;
+        format.setSelectedItem(config.format());
+        radius.setValue(config.captureRadius());
+        shiftOnly.setSelected(config.shiftOnly());
+        loading = false;
     }
 
     /** A capture just made and kept: first on both tabs. Call it on the Swing thread. */
@@ -247,6 +290,26 @@ class ConstsModelsPanel extends PluginPanel
     JLabel folderLabel()
     {
         return folderPath;
+    }
+
+    boolean settingsOpen()
+    {
+        return settings.isVisible();
+    }
+
+    JComboBox<ExportFormat> formatBox()
+    {
+        return format;
+    }
+
+    JSpinner radiusSpinner()
+    {
+        return radius;
+    }
+
+    JCheckBox shiftBox()
+    {
+        return shiftOnly;
     }
 
     private boolean showTab(boolean everyOne)
@@ -406,6 +469,121 @@ class ConstsModelsPanel extends PluginPanel
             buttons.add(button);
         }
         return buttons;
+    }
+
+    /**
+     * The Settings section: a header that opens and closes it, then a row per setting, named and described as in the
+     * Configuration panel. A change is saved at once; one made in the Configuration panel shows here on refresh.
+     */
+    private JComponent buildSettings()
+    {
+        JLabel name = new JLabel("Settings");
+        name.setForeground(ColorScheme.BRAND_ORANGE);
+        name.setFont(FontManager.getRunescapeBoldFont());
+
+        settingsToggle.setToolTipText("Expand");
+        settingsToggle.setPreferredSize(new Dimension(18, 0));
+        settingsToggle.setBorder(new EmptyBorder(0, 0, 0, 5));
+        SwingUtil.removeButtonDecorations(settingsToggle);
+        settingsToggle.addActionListener(e -> toggleSettings());
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setOpaque(false);
+        header.setBorder(new CompoundBorder(new MatteBorder(0, 0, 1, 0, ColorScheme.MEDIUM_GRAY_COLOR),
+            new EmptyBorder(0, 0, 3, 1)));
+        header.add(settingsToggle, BorderLayout.WEST);
+        header.add(name, BorderLayout.CENTER);
+        MouseAdapter click = new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                toggleSettings();
+            }
+        };
+        header.addMouseListener(click);
+        name.addMouseListener(click);
+
+        format.setPreferredSize(new Dimension(format.getPreferredSize().width, 22));
+        format.addItemListener(e ->
+        {
+            if (!loading && e.getStateChange() == ItemEvent.SELECTED)
+            {
+                config.format((ExportFormat) e.getItem());
+            }
+        });
+        ((JSpinner.DefaultEditor) radius.getEditor()).getTextField().setColumns(6);
+        radius.addChangeListener(e ->
+        {
+            if (!loading)
+            {
+                config.captureRadius((Integer) radius.getValue());
+            }
+        });
+        shiftOnly.addItemListener(e ->
+        {
+            if (!loading)
+            {
+                config.shiftOnly(shiftOnly.isSelected());
+            }
+        });
+
+        settings.setOpaque(false);
+        settings.setBorder(new EmptyBorder(6, 0, 0, 0));
+        settings.add(settingRow("format", format));
+        settings.add(settingRow("captureRadius", radius));
+        settings.add(settingRow("shiftOnly", shiftOnly));
+        settings.setVisible(false);
+
+        JPanel section = new JPanel(new BorderLayout());
+        section.setOpaque(false);
+        section.add(header, BorderLayout.NORTH);
+        section.add(settings, BorderLayout.CENTER);
+        return section;
+    }
+
+    /** Opens or closes the Settings section, as a click on its header does. */
+    void toggleSettings()
+    {
+        boolean open = !settings.isVisible();
+        settings.setVisible(open);
+        settingsToggle.setIcon(open ? SECTION_RETRACT_ICON : SECTION_EXPAND_ICON);
+        settingsToggle.setToolTipText(open ? "Retract" : "Expand");
+        revalidate();
+    }
+
+    /** A setting's row: its name, its description on hover, and its control. */
+    private static JPanel settingRow(String key, JComponent control)
+    {
+        ConfigItem item = setting(key).getAnnotation(ConfigItem.class);
+        JLabel name = new JLabel(item.name());
+        name.setForeground(Color.WHITE);
+        name.setToolTipText("<html>" + item.name() + ":<br>" + item.description() + "</html>");
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+        row.add(name, BorderLayout.CENTER);
+        row.add(control, BorderLayout.EAST);
+        return row;
+    }
+
+    /** The area radius's numbers, from the setting's own range. */
+    private static SpinnerNumberModel radiusModel()
+    {
+        Range range = setting("captureRadius").getAnnotation(Range.class);
+        return new SpinnerNumberModel(range.min(), range.min(), range.max(), 1);
+    }
+
+    /** A setting's getter, which carries its name, description and range. */
+    static Method setting(String key)
+    {
+        try
+        {
+            return ConstsModelsConfig.class.getMethod(key);
+        }
+        catch (NoSuchMethodException e)
+        {
+            throw new IllegalArgumentException("no setting " + key, e);
+        }
     }
 
     /** What a tab shows while it has no captures. */
