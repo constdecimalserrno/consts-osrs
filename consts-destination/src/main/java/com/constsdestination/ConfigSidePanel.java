@@ -30,6 +30,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.ItemEvent;
@@ -60,6 +62,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
+import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
@@ -105,6 +108,9 @@ import org.slf4j.LoggerFactory;
  * one plugin. It stays open beside the game, so it follows the config: a change made anywhere else, a preset or the
  * Configuration panel, shows up here too.
  *
+ * <p>A plugin can name one of its boolean settings as its master switch: it's drawn beside the title, like RuneLite's
+ * own on/off switch, instead of as a row. Off quiets the plugin without turning it off, so this panel stays put.
+ *
  * <p>Each consts-osrs plugin keeps its own copy, since each one is built alone for the Plugin Hub. The copies differ
  * only in their package line.
  */
@@ -115,6 +121,8 @@ class ConfigSidePanel extends PluginPanel
     private static final int SPINNER_FIELD_WIDTH = 6;
     private static final ImageIcon SECTION_EXPAND_ICON;
     private static final ImageIcon SECTION_RETRACT_ICON;
+    private static final ImageIcon SWITCH_ON;
+    private static final ImageIcon SWITCH_OFF;
 
     static
     {
@@ -123,6 +131,18 @@ class ConfigSidePanel extends PluginPanel
         SECTION_EXPAND_ICON = new ImageIcon(sectionRetractIcon);
         final BufferedImage sectionExpandIcon = ImageUtil.rotateImage(sectionRetractIcon, Math.PI / 2);
         SECTION_RETRACT_ICON = new ImageIcon(sectionExpandIcon);
+
+        // RuneLite's switch, redrawn: its image belongs to the Configuration panel, which a Hub plugin can't use.
+        BufferedImage on = new BufferedImage(25, 15, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = on.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(220, 138, 0, 89));
+        g.fillRoundRect(3, 3, 18, 9, 9, 9);
+        g.setColor(new Color(220, 138, 0));
+        g.fillOval(12, 2, 11, 11);
+        g.dispose();
+        SWITCH_ON = new ImageIcon(on);
+        SWITCH_OFF = new ImageIcon(ImageUtil.flipImage(ImageUtil.luminanceScale(ImageUtil.grayscaleImage(on), 0.61f), true, false));
     }
 
     private final ConfigManager configManager;
@@ -131,6 +151,8 @@ class ConfigSidePanel extends PluginPanel
     private final Plugin plugin;
     private final ConfigDescriptor descriptor;
     private final String group;
+    private final String switchKey;
+    private final JToggleButton masterSwitch;
 
     private final TitleCaseListCellRenderer listCellRenderer = new TitleCaseListCellRenderer();
     private final JPanel mainPanel;
@@ -143,6 +165,13 @@ class ConfigSidePanel extends PluginPanel
 
     ConfigSidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager, Config config, Plugin plugin)
     {
+        this(configManager, colorPickerManager, config, plugin, null);
+    }
+
+    /** switchKey: the boolean setting drawn as the master switch beside the title, or null for none. */
+    ConfigSidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager, Config config, Plugin plugin,
+        String switchKey)
+    {
         super(false);
 
         this.configManager = configManager;
@@ -151,6 +180,7 @@ class ConfigSidePanel extends PluginPanel
         this.plugin = plugin;
         this.descriptor = configManager.getConfigDescriptor(config);
         this.group = descriptor.getGroup().value();
+        this.switchKey = switchKey;
 
         setLayout(new BorderLayout());
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -167,6 +197,33 @@ class ConfigSidePanel extends PluginPanel
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
         topPanel.add(title);
         add(topPanel, BorderLayout.NORTH);
+
+        ConfigItemDescriptor switchItem = switchKey == null ? null : descriptor.getItems().stream()
+            .filter(i -> switchKey.equals(i.getItem().keyName()) && i.getType() == boolean.class)
+            .findFirst()
+            .orElse(null);
+        if (switchItem != null)
+        {
+            masterSwitch = new JToggleButton(SWITCH_OFF);
+            masterSwitch.setSelectedIcon(SWITCH_ON);
+            SwingUtil.removeButtonDecorations(masterSwitch);
+            masterSwitch.setPreferredSize(new Dimension(25, 0));
+            masterSwitch.setName(switchKey);
+            masterSwitch.setToolTipText("<html>" + switchItem.getItem().name() + ":<br>" + switchItem.getItem().description() + "</html>");
+            masterSwitch.setSelected(Boolean.parseBoolean(configManager.getConfiguration(group, switchKey)));
+            masterSwitch.addItemListener(e ->
+            {
+                if (!loading)
+                {
+                    configManager.setConfiguration(group, switchKey, "" + masterSwitch.isSelected());
+                }
+            });
+            topPanel.add(masterSwitch, BorderLayout.EAST);
+        }
+        else
+        {
+            masterSwitch = null;
+        }
 
         mainPanel = new FixedWidthPanel();
         mainPanel.setBorder(new EmptyBorder(8, 10, 10, 10));
@@ -267,7 +324,7 @@ class ConfigSidePanel extends PluginPanel
 
         for (ConfigItemDescriptor cid : descriptor.getItems())
         {
-            if (cid.getItem().hidden())
+            if (cid.getItem().hidden() || cid.getItem().keyName().equals(switchKey))
             {
                 continue;
             }
@@ -360,6 +417,14 @@ class ConfigSidePanel extends PluginPanel
         try
         {
             loaders.forEach(Runnable::run);
+            if (masterSwitch != null)
+            {
+                boolean on = Boolean.parseBoolean(configManager.getConfiguration(group, switchKey));
+                if (masterSwitch.isSelected() != on)
+                {
+                    masterSwitch.setSelected(on);
+                }
+            }
         }
         finally
         {

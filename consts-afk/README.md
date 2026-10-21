@@ -16,7 +16,7 @@ Formerly **AFK Alerts**. Saved settings carry over: the config group is still `a
 
 ## Presets
 
-The **Preset** dropdown sits at the very top of the plugin config, and of the bell's sidebar panel. You can also right-click the status panel and choose `Preset: …`.
+The **Preset** dropdown sits at the top of the plugin config, and of the bell's sidebar panel, under the Master Switch. You can also right-click the status panel and choose `Preset: …`.
 
 | Preset | Alerts on |
 |---|---|
@@ -38,6 +38,8 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 ## Settings
 
 The bell in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset and its alerts tick on in front of you. Right-click a setting's name to reset it.
+
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-AFK, with no alerts, no status panel and no area lines, without turning the plugin off, so the bell stays in the sidebar. Turning it back on starts fresh, as logging in does.
 
 Three General sections first, then one section per alert, each named for its group and kept in group order. Every section is open to start; click a header to fold it.
 

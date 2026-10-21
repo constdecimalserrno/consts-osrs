@@ -87,6 +87,7 @@ public class ConstsAfkPluginTest
         setField("clientThread", clientThread);
         setField("sessionActive", true);
 
+        when(config.masterSwitch()).thenReturn(true);
         when(config.preset()).thenReturn(Preset.CUSTOM);
         when(config.enableTimerAlert()).thenReturn(true);
         when(config.giveUpAfterSeconds()).thenReturn(120);
@@ -970,6 +971,38 @@ public class ConstsAfkPluginTest
         assertEquals(0L, plugin.getLogoutTimerRemainingMillis());
     }
 
+    // Master Switch
+
+    @Test
+    public void masterSwitchOffEndsTheSessionAndLoggingInDoesNotStartOne() throws Exception
+    {
+        runClientThreadNow();
+        when(config.masterSwitch()).thenReturn(false);
+
+        plugin.onConfigChanged(masterSwitchChange("true", "false"));
+        assertFalse((boolean) getField("sessionActive"));
+
+        plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
+        plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
+        assertFalse((boolean) getField("sessionActive"));
+        assertTrue(plugin.getCurrentFlashColors().isEmpty());
+        assertFalse(plugin.shouldShowAggroAreaLines());
+    }
+
+    @Test
+    public void masterSwitchOnStartsAFreshSession() throws Exception
+    {
+        runClientThreadNow();
+        setField("sessionActive", false);
+        setField("lastActivityMillis", 1L);
+
+        plugin.onConfigChanged(masterSwitchChange("false", "true"));
+
+        assertTrue((boolean) getField("sessionActive"));
+        // Idle counts from now, not from before the switch went off.
+        assertTrue((long) getField("lastActivityMillis") > 1L);
+    }
+
     // Lifecycle
 
     @Test
@@ -1084,6 +1117,25 @@ public class ConstsAfkPluginTest
         GameObject object = mock(GameObject.class);
         when(object.getId()).thenReturn(id);
         return object;
+    }
+
+    private void runClientThreadNow() throws Exception
+    {
+        doAnswer(invocation ->
+        {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when((ClientThread) getField("clientThread")).invokeLater(any(Runnable.class));
+    }
+
+    private static ConfigChanged masterSwitchChange(String from, String to)
+    {
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsAfkConfig.GROUP);
+        changed.setKey(ConstsAfkConfig.MASTER_KEY);
+        changed.setOldValue(from);
+        changed.setNewValue(to);
+        return changed;
     }
 
     private static ConfigChanged presetChange(String from, String to)
