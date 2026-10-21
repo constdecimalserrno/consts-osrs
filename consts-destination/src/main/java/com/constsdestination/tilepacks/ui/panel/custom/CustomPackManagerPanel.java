@@ -2,7 +2,8 @@
  * Copyright (c) 2023, Trevor <https://github.com/TrevorMDev>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; the pack check is a
  *   method of its own, which the edit control uses too, and stops at a pack without tiles; the points are reloaded
- *   through consts-Destination; two unused icon fields dropped)
+ *   through consts-Destination; two unused icon fields dropped; no Discord link, but a note on where tiles come from;
+ *   the form empties once a pack is added)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,20 +33,19 @@ import com.constsdestination.tilepacks.data.GroundMarkerPoint;
 import com.constsdestination.tilepacks.ui.panel.TilePacksListPanel;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.FlatTextField;
 
 /**
- * UI that handles the addition of new tile packs
+ * UI that handles the addition of new tile packs: a name, and tiles you marked or a pack someone shared, pasted in
  */
 public class CustomPackManagerPanel extends PluginPanel
 {
@@ -59,9 +59,12 @@ public class CustomPackManagerPanel extends PluginPanel
     private final JLabel tilesLabel;
     private final FlatTextField tilesInput;
     private final JButton addPackButton;
-    private final JPanel discordRow;
-    private final JLabel discordShare;
-    private final JLabel discordShareButton;
+    private final JLabel tilesFrom;
+
+    /** Where tiles come from, under the form. */
+    public static final String TILES_FROM = "Tiles are a Ground Markers export: mark tiles with RuneLite's Ground "
+        + "Markers, then right-click the world map orb and pick Export ground markers. A pack's copy button gives the "
+        + "same, to share it.";
 
     public CustomPackManagerPanel(TilePackManager tilePackManager, Runnable reloadPoints,
         Gson gson, TilePacksListPanel tilePacksList)
@@ -72,7 +75,7 @@ public class CustomPackManagerPanel extends PluginPanel
         this.gson = gson;
         this.tilePacksList = tilePacksList;
 
-        inputLabel = new JLabel("Custom Pack Name");
+        inputLabel = new JLabel("Pack name");
         add(inputLabel);
 
         nameInput = new FlatTextField();
@@ -82,7 +85,7 @@ public class CustomPackManagerPanel extends PluginPanel
         nameInput.setMinimumSize(new Dimension(0, 30));
         add(nameInput);
 
-        tilesLabel = new JLabel("Custom Pack Tiles");
+        tilesLabel = new JLabel("Tiles");
         add(tilesLabel);
 
         tilesInput = new FlatTextField();
@@ -106,21 +109,18 @@ public class CustomPackManagerPanel extends PluginPanel
                 return;
             }
             tilePackManager.addCustomPack(nameInput.getText(), tilesInput.getText());
+            nameInput.setText("");
+            tilesInput.setText("");
             reloadPoints.run();
             tilePacksList.createTilePackPanels();
         });
         add(addPackButton);
 
-        discordRow = new JPanel();
-        discordRow.setLayout(new BorderLayout());
-        discordRow.setBorder(new EmptyBorder(6, 4, 1, 4));
-        add(discordRow, BorderLayout.SOUTH);
-
-        discordShare = new JLabel("Got cool tiles? Share in discord!");
-        discordRow.add(discordShare, BorderLayout.WEST);
-
-        discordShareButton = new DiscordLinkLabel();
-        discordRow.add(discordShareButton, BorderLayout.EAST);
+        tilesFrom = new JLabel(TilePacksListPanel.wrapped(TILES_FROM));
+        tilesFrom.setFont(FontManager.getRunescapeSmallFont());
+        tilesFrom.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        tilesFrom.setBorder(new EmptyBorder(4, 2, 0, 2));
+        add(tilesFrom);
     }
 
     /** What's wrong with a custom pack's name and tiles, to tell the user, or null if nothing is. */

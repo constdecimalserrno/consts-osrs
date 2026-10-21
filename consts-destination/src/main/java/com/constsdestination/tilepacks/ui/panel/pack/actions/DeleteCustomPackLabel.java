@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2024, Trevor <https://github.com/TrevorMDev>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; the points are
- *   reloaded through consts-Destination)
+ *   reloaded through consts-Destination; every pack is yours, so the words say pack, not custom pack)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@ public class DeleteCustomPackLabel extends JLabel
         this.tilePacksList = tilePacksList;
 
         setIcon(DELETE_ICON);
-        setToolTipText("Delete this custom pack, this is permanent");
+        setToolTipText("Delete this pack, for good");
         addMouseListener(new DeleteCustomPackMouseAdapter(this));
     }
 
