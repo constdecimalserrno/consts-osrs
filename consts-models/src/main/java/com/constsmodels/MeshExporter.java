@@ -45,9 +45,19 @@ final class MeshExporter
         File file = new File(folder, name + "." + format.extension());
 
         PrintPrep.Print print = null;
+        // With Make solid, the print's triangles come from the solid, not the model
+        Mesh solid = null;
         if (format == ExportFormat.STL || format == ExportFormat.THREE_MF)
         {
-            print = PrintPrep.prepare(mesh, settings);
+            if (settings.solid)
+            {
+                solid = SolidRemesh.makeSolid(mesh, settings.sizeMm);
+                print = PrintPrep.prepareSolid(solid, settings);
+            }
+            else
+            {
+                print = PrintPrep.prepare(mesh, settings);
+            }
             if (print.modelFaces == 0)
             {
                 throw new IOException("it has no faces solid enough to print");
@@ -73,11 +83,19 @@ final class MeshExporter
                     {
                         throw new IOException("its colors were picked for a different model");
                     }
+                    int[] solidFilaments = solid == null ? null : filaments.filamentsFor(solid);
                     int[] onFilament = new int[print.mesh.faceCount()];
                     for (int f = 0; f < onFilament.length; f++)
                     {
                         int source = print.source[f];
-                        onFilament[f] = source < 0 ? base : filaments.filament(source);
+                        if (source < 0)
+                        {
+                            onFilament[f] = base;
+                        }
+                        else
+                        {
+                            onFilament[f] = solidFilaments != null ? solidFilaments[source] : filaments.filament(source);
+                        }
                     }
                     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(file), 1 << 16))
                     {

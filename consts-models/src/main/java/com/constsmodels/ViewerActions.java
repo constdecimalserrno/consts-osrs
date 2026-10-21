@@ -7,9 +7,10 @@ interface ViewerActions
 {
     /**
      * Saves the mesh in the chosen folder, off the Swing thread, and says where in chat. A 3MF prints in the colors
-     * given, as the viewer shows them; null merges the model's colors down to the settings' count.
+     * given, as the viewer shows them; null merges the model's colors down to the settings' count. With solid, STL
+     * and 3MF are rebuilt as one closed solid first.
      */
-    void save(Mesh mesh, ExportFormat format, PrintColors colors);
+    void save(Mesh mesh, ExportFormat format, PrintColors colors, boolean solid);
 
     /** Saves a picture of the viewer as a PNG in the chosen folder. */
     void saveImage(Mesh mesh, BufferedImage image);

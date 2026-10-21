@@ -81,9 +81,9 @@ public class ConstsModelsPlugin extends Plugin
     private final ViewerActions viewerActions = new ViewerActions()
     {
         @Override
-        public void save(Mesh mesh, ExportFormat format, PrintColors colors)
+        public void save(Mesh mesh, ExportFormat format, PrintColors colors, boolean solid)
         {
-            ConstsModelsPlugin.this.save(mesh, format, colors);
+            ConstsModelsPlugin.this.save(mesh, format, colors, solid);
         }
 
         @Override
@@ -219,7 +219,7 @@ public class ConstsModelsPlugin extends Plugin
 
     PrintSettings printSettings()
     {
-        return new PrintSettings(config.printSizeMm(), config.addBase(), config.maxColors());
+        return new PrintSettings(config.printSizeMm(), config.addBase(), config.maxColors(), config.makeSolid());
     }
 
     /** Where files are saved: the folder chosen in the sidebar, or the default one. */
@@ -245,10 +245,14 @@ public class ConstsModelsPlugin extends Plugin
         LinkBrowser.open(folder.getAbsolutePath());
     }
 
-    void save(Mesh mesh, ExportFormat format, PrintColors colors)
+    void save(Mesh mesh, ExportFormat format, PrintColors colors, boolean solid)
     {
         File folder = outputFolder();
-        PrintSettings settings = printSettings();
+        PrintSettings settings = printSettings().withSolid(solid);
+        if (solid && (format == ExportFormat.STL || format == ExportFormat.THREE_MF))
+        {
+            chat("Making " + mesh.name + " solid to print. This takes a few seconds.");
+        }
         executor.execute(() ->
         {
             try

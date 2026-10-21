@@ -10,6 +10,7 @@ import java.awt.event.KeyEvent;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
@@ -32,6 +33,7 @@ final class ViewerPanel extends JPanel
     private final ViewerCanvas canvas;
     private FilamentControls filaments;
     private final JComboBox<ExportFormat> format = new JComboBox<>(ExportFormat.values());
+    private final JCheckBox solid = new JCheckBox("Make solid");
 
     ViewerPanel(Mesh mesh, ViewerActions actions)
     {
@@ -72,7 +74,20 @@ final class ViewerPanel extends JPanel
         format.setFocusable(false);
         format.setPreferredSize(new Dimension(76, 28));
         format.setToolTipText(describe((ExportFormat) format.getSelectedItem()));
-        format.addActionListener(e -> format.setToolTipText(describe((ExportFormat) format.getSelectedItem())));
+        format.addActionListener(e ->
+        {
+            format.setToolTipText(describe((ExportFormat) format.getSelectedItem()));
+            solid.setEnabled(printable((ExportFormat) format.getSelectedItem()));
+        });
+
+        solid.setSelected(actions.printSettings().solid);
+        solid.setEnabled(printable((ExportFormat) format.getSelectedItem()));
+        solid.setFont(FontManager.getRunescapeFont());
+        solid.setForeground(ColorScheme.TEXT_COLOR);
+        solid.setOpaque(false);
+        solid.setFocusable(false);
+        solid.setToolTipText("<html>Save STL and 3MF as one closed solid that prints as is:<br>"
+            + "thin parts get a 1 mm wall and small gaps close.<br>Takes a few seconds; detail under about 2 mm rounds off.</html>");
 
         JButton save = new JButton("Save");
         save.setFont(FontManager.getRunescapeBoldFont());
@@ -89,6 +104,7 @@ final class ViewerPanel extends JPanel
         buttons.add(folder);
         buttons.add(image);
         buttons.add(gap());
+        buttons.add(solid);
         buttons.add(format);
         buttons.add(save);
 
@@ -114,6 +130,12 @@ final class ViewerPanel extends JPanel
         return button;
     }
 
+    /** Whether a format is one Make solid applies to: the ones made to print. */
+    static boolean printable(ExportFormat format)
+    {
+        return format == ExportFormat.STL || format == ExportFormat.THREE_MF;
+    }
+
     private static JComponent gap()
     {
         JPanel gap = new JPanel();
@@ -124,7 +146,8 @@ final class ViewerPanel extends JPanel
 
     private void save()
     {
-        actions.save(mesh, (ExportFormat) format.getSelectedItem(), filaments.colors());
+        ExportFormat chosen = (ExportFormat) format.getSelectedItem();
+        actions.save(mesh, chosen, filaments.colors(), solid.isSelected() && printable(chosen));
     }
 
     private void colorsChanged()

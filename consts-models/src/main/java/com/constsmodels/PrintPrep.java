@@ -84,6 +84,26 @@ final class PrintPrep
     }
 
     /**
+     * A mesh from {@link SolidRemesh}, made ready to print: scaled, placed and given its base like any other, but
+     * without the welding and turning, which a closed solid doesn't need and which could merge its corners when a
+     * small model prints large. The source of each print triangle is the solid's triangle.
+     */
+    static Print prepareSolid(Mesh solid, PrintSettings settings)
+    {
+        if (settings.sizeMm <= 0)
+        {
+            throw new IllegalArgumentException("the print size must be more than 0 mm");
+        }
+        int[] number = new int[solid.faceCount()];
+        for (int f = 0; f < number.length; f++)
+        {
+            number[f] = f;
+        }
+        Mesh numbered = new Mesh(solid.name, solid.x, solid.y, solid.z, solid.a, solid.b, solid.c, number);
+        return place(numbered, settings, solid.color);
+    }
+
+    /**
      * Welds corners closer than {@link #WELD_DISTANCE} into one and drops the triangles that leave with two corners
      * the same, with a corner that isn't a number, or flatter than {@link #MIN_HEIGHT}. Only the corners left in use
      * are kept.
