@@ -23,13 +23,14 @@ import org.slf4j.LoggerFactory;
 
 /**
  * What a viewer window holds: the picture of the model, with a line about it in the corner, and a bar along the
- * bottom. On the left of the bar, Game or Print and the print's colors; on the right, what to do with it: open the
- * folder, pick the background, save a picture, and Save, in the format picked beside it.
+ * bottom. On the left of the bar, Game or Print, the print's base and its colors; on the right, what to do with it:
+ * open the folder, pick the background, save a picture, and Save, in the format picked beside it.
  *
  * <p>Game shows the model as the game has it, and Save saves that. Print shows it made printable, one closed solid
- * on its base in the filaments' colors ({@link Printable}), and Save saves exactly that. The print is made off the
- * Swing thread the first time it's shown, which takes a few seconds, and again only when the print size or base
- * changes; until it's ready the view shows the model in the filaments' colors and Save waits.
+ * on its base (if the Base switch is on) in the filaments' colors ({@link Printable}), and Save saves exactly that.
+ * The print is made off the Swing thread the first time it's shown, which takes a few seconds, and again only when
+ * the print size changes; until it's ready the view shows the model in the filaments' colors and Save waits. Turning
+ * the base on or off only stands the same solid on the plate again, which is quick.
  */
 final class ViewerPanel extends JPanel
 {
@@ -52,6 +53,9 @@ final class ViewerPanel extends JPanel
     private String problem;
     // Which print was asked for last, so an older one finishing late is let go
     private int asked;
+    // The Add a base setting as last seen, so the Base switch follows it when it changes but is the viewer's own
+    // otherwise
+    private boolean baseSetting;
 
     ViewerPanel(Mesh mesh, ViewerActions actions)
     {
@@ -61,7 +65,9 @@ final class ViewerPanel extends JPanel
         canvas = new ViewerCanvas(mesh);
         canvas.setBackgroundColor(actions.background());
         PrintSettings settings = actions.printSettings();
-        filaments = new FilamentControls(mesh, settings == null ? 4 : settings.maxColors, this::viewChanged);
+        baseSetting = settings != null && settings.base;
+        filaments = new FilamentControls(mesh, settings == null ? 4 : settings.maxColors, baseSetting,
+            this::viewChanged);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         add(canvas, BorderLayout.CENTER);
@@ -172,16 +178,35 @@ final class ViewerPanel extends JPanel
         }
         if (filaments.showsPrint())
         {
-            makePrintIfNeeded(actions.printSettings());
+            makePrintIfNeeded(printSettings());
         }
         showView();
     }
 
-    /** Makes the print, unless it was already made, or tried, at this size and base. */
+    /** The settings the print is made with: the plugin's, with the base as the Base switch has it. */
+    private PrintSettings printSettings()
+    {
+        PrintSettings settings = actions.printSettings();
+        return settings == null ? null : new PrintSettings(settings.sizeMm, filaments.base(), settings.maxColors);
+    }
+
+    /**
+     * Makes the print, unless it was already made, or tried, at this size and base. A print of the same size only
+     * changing its base keeps its solid, so that's done at once, or as soon as the solid being made is ready.
+     */
     private void makePrintIfNeeded(PrintSettings settings)
     {
         if (settings == null || settings.sameShape(tried))
         {
+            return;
+        }
+        if (tried != null && tried.sizeMm == settings.sizeMm && (making || printable != null || problem != null))
+        {
+            tried = settings;
+            if (printable != null)
+            {
+                printable = printable.placed(settings);
+            }
             return;
         }
         int ticket = ++asked;
@@ -215,7 +240,8 @@ final class ViewerPanel extends JPanel
                     return;
                 }
                 making = false;
-                printable = why == null ? result : null;
+                // Stood on the plate again if the base was turned on or off while it was being made
+                printable = why == null ? result.placed(tried) : null;
                 problem = why;
                 showView();
             });
@@ -256,7 +282,10 @@ final class ViewerPanel extends JPanel
         return canvas;
     }
 
-    /** Reads the settings again, which may have changed: the print's size and base, and the background. */
+    /**
+     * Reads the settings again, which may have changed: the print's size, the background, and the base, which the
+     * Base switch takes up only if the setting itself changed.
+     */
     void refresh()
     {
         int rgb = actions.background();
@@ -265,11 +294,28 @@ final class ViewerPanel extends JPanel
         {
             background.setBackgroundColor(rgb);
         }
+        PrintSettings settings = actions.printSettings();
+        if (settings != null && settings.base != baseSetting)
+        {
+            baseSetting = settings.base;
+            filaments.setBase(baseSetting);
+        }
         if (filaments.showsPrint())
         {
-            makePrintIfNeeded(actions.printSettings());
+            makePrintIfNeeded(printSettings());
         }
         showView();
+    }
+
+    /** The print as made so far, or null. */
+    Printable printable()
+    {
+        return printable;
+    }
+
+    FilamentControls filaments()
+    {
+        return filaments;
     }
 
     /**

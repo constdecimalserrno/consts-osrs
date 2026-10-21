@@ -4,7 +4,7 @@ package com.constsmodels;
  * A model as it prints, what the viewer's Print view shows and saves: rebuilt as one closed solid by
  * {@link SolidRemesh}, scaled to the print size, stood on the plate, on a base if asked. Its triangles take the
  * filaments the viewer chose, each the one nearest its color. Making one takes a few seconds, so it's made once and
- * kept for as long as the print size and base stay the same.
+ * kept for as long as the print size stays the same; standing it on a base or taking the base away is quick.
  */
 final class Printable
 {
@@ -35,6 +35,20 @@ final class Printable
     {
         Mesh solid = SolidRemesh.makeSolid(model, settings.sizeMm);
         return new Printable(model, settings, solid, PrintPrep.prepareSolid(solid, settings));
+    }
+
+    /**
+     * The same solid stood on the plate by other settings of the same print size, on a base or not: quick, since the
+     * solid is kept.
+     */
+    Printable placed(PrintSettings settings)
+    {
+        if (settings.sizeMm != this.settings.sizeMm)
+        {
+            throw new IllegalArgumentException("a print of another size needs a solid of its own");
+        }
+        return settings.sameShape(this.settings) ? this
+            : new Printable(model, settings, solid, PrintPrep.prepareSolid(solid, settings));
     }
 
     /** Whether there's anything to print: a model too thin to hold a wall can come out empty. */

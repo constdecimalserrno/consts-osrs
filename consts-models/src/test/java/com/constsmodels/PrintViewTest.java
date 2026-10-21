@@ -4,10 +4,13 @@ import static com.constsmodels.TestMeshes.RED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +24,7 @@ import java.util.zip.ZipFile;
 import javax.swing.AbstractButton;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.SwingUtilities;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -222,6 +226,136 @@ public class PrintViewTest
         panel.refresh();
         assertEquals(0xFFFFFF, panel.canvas().backgroundColor());
         assertTrue(bg.getToolTipText().contains("White"));
+    }
+
+    @Test
+    public void theBaseSwitchStartsAsTheSettingAndStandsThePrintOnABaseOrNot() throws Exception
+    {
+        PrintSettings[] settings = {new PrintSettings(40, true, 2)};
+        ViewerPanel panel = new ViewerPanel(openBox(), actions(settings));
+        FilamentControls filaments = panel.filaments();
+        FilamentControls.Switch base = find(panel, FilamentControls.Switch.class);
+        assertNotNull(base);
+        assertTrue(filaments.base());
+        assertFalse(filaments.showsPrint());
+
+        // Turning it off shows the print, made without a base
+        press(base);
+        assertTrue(filaments.showsPrint());
+        assertFalse(filaments.base());
+        Printable bare = waitForPrint(panel);
+        assertFalse(bare.settings.base);
+        assertEquals(bare.print.mesh.faceCount(), bare.print.modelFaces);
+
+        // Back on, the same solid stands on a base at once
+        press(base);
+        Printable onBase = panel.printable();
+        assertTrue(onBase.settings.base);
+        assertSame(bare.solid, onBase.solid);
+        assertEquals(onBase.print.modelFaces + 12, onBase.print.mesh.faceCount());
+        assertTrue(TestMeshes.closed(onBase.print.mesh, onBase.print.modelFaces, onBase.print.mesh.faceCount()));
+
+        // The switch is the viewer's own while the setting stays as it was, and follows the setting when it changes
+        press(base);
+        panel.refresh();
+        assertFalse(filaments.base());
+        settings[0] = new PrintSettings(40, false, 2);
+        panel.refresh();
+        assertFalse(filaments.base());
+        settings[0] = new PrintSettings(40, true, 2);
+        panel.refresh();
+        assertTrue(filaments.base());
+        assertTrue(panel.printable().settings.base);
+    }
+
+    /** Actions that save nothing, with the settings in the array, which a test may change. */
+    static ViewerActions actions(PrintSettings[] settings)
+    {
+        return new ViewerActions()
+        {
+            @Override
+            public void save(Mesh m, ExportFormat format, PrintColors colors)
+            {
+            }
+
+            @Override
+            public void savePrint(Printable printable, ExportFormat format, PrintColors colors)
+            {
+            }
+
+            @Override
+            public void saveImage(Mesh m, BufferedImage image)
+            {
+            }
+
+            @Override
+            public void openFolder()
+            {
+            }
+
+            @Override
+            public ExportFormat defaultFormat()
+            {
+                return ExportFormat.THREE_MF;
+            }
+
+            @Override
+            public PrintSettings printSettings()
+            {
+                return settings[0];
+            }
+
+            @Override
+            public int background()
+            {
+                return ViewerCanvas.DEFAULT_BACKGROUND;
+            }
+
+            @Override
+            public void setBackground(int rgb)
+            {
+            }
+        };
+    }
+
+    /** Waits for the panel's print to be made, which happens off the Swing thread. */
+    static Printable waitForPrint(ViewerPanel panel) throws Exception
+    {
+        Printable[] made = new Printable[1];
+        for (int i = 0; i < 600 && made[0] == null; i++)
+        {
+            Thread.sleep(50);
+            SwingUtilities.invokeAndWait(() -> made[0] = panel.printable());
+        }
+        assertNotNull("the print was never made", made[0]);
+        return made[0];
+    }
+
+    /** Presses the left mouse button on a component, as a click starts. */
+    static void press(java.awt.Component c)
+    {
+        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+            InputEvent.BUTTON1_DOWN_MASK, 2, 2, 1, false, MouseEvent.BUTTON1));
+    }
+
+    static <T> T find(Container root, Class<T> type)
+    {
+        for (Component c : root.getComponents())
+        {
+            if (type.isInstance(c))
+            {
+                return type.cast(c);
+            }
+            if (c instanceof Container)
+            {
+                T found = find((Container) c, type);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     @Test
