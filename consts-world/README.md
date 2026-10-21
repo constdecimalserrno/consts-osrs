@@ -2,17 +2,19 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ): a world switcher in the sidebar with your hot list first. Search every world by its activity, sort what you find, star the worlds you hop between, then hop to one with a click.
+RuneLite plugin for Old School RuneScape ( OSRS ): a world switcher in the sidebar that opens on your hot list. Star the worlds you hop between once, in All worlds, and after that the hot list is all you see: click a world in it to hop there.
 
-![The consts-World panel: a hot list of five skilling worlds (Blast Furnace, Wintertodt, Tempoross, Forestry, Guardians of the Rift) with the current one in green, then a search for "blast furnace" that matches 15 worlds, sorted by players](screenshots/panel.png)
+![The consts-World panel on its Hot list tab: five skilling worlds (Wintertodt, Tempoross, Blast Furnace, Forestry, Guardians of the Rift), each starred, the current one in green](screenshots/panel.png)
+
+![The All worlds tab, searching for "blast furnace": 15 worlds, sorted by players, the one in the hot list starred](screenshots/all-worlds.png)
 
 ## What it does
 
-- **Hot list**: always first in the panel, whatever you search or sort. It starts empty. Click a world in it to hop there; on the login screen, the click picks that world instead. Worlds stay in the order you added them, and the list is saved with your RuneLite settings.
-- **Search**: type in the box to narrow the list of every world. Each word you type has to start one of a world's words: its activity (`wintertodt`, `blast`, `tempoross`), its number (`330`), its region (`uk`, `germany`, `us`, `aus`) or `members`, `p2p`, `free` or `f2p`. So `skill total 2000` finds the 2000 total level worlds, and `members uk` the UK members worlds. The line under the box counts the matches.
-- **Sort**: click World, # (players) or Activity to sort the list, and again to flip it. Worlds without an activity stay at the bottom, and total level worlds sort by their numbers: 500 before 1250. Right-click a heading to refresh the worlds.
+- **Two tabs**: Hot list and All worlds, each named with how many worlds it shows. The panel always opens on the hot list. The hot list starts empty and is saved with your RuneLite settings.
+- **Hop**: click a world in the hot list to hop there; on the login screen, the click picks that world instead. In All worlds, double-click a world, as in RuneLite's World Hopper. The world you're on is green.
 - **Stars**: the star at the end of a row adds that world to the hot list, or removes it once it's filled. A row's right-click menu does the same.
-- **Hop**: double-click a world in the list to hop there, as in RuneLite's World Hopper. The world you're on is green.
+- **Search**: the box at the top searches the tab that's showing, and starts empty on each tab. Each word you type has to start one of a world's words: its activity (`wintertodt`, `blast`, `tempoross`), its number (`330`), its region (`uk`, `germany`, `us`, `aus`) or `members`, `p2p`, `free` or `f2p`. So `skill total 2000` finds the 2000 total level worlds, and `members uk` the UK members worlds.
+- **Sort**: click World, # (players) or Activity to sort the tab, and again to flip it. Worlds without an activity stay at the bottom, and total level worlds sort by their numbers: 500 before 1250. Right-click a heading to refresh the worlds.
 
 There are no settings.
 

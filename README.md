@@ -7,7 +7,7 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 | [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
 | [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done. Folds in RuneLite's Interact Highlight. |
 | [consts-Leaderboard](consts-leaderboard/) | Any player's skills from the hiscores in a sidebar panel: right-click and Lookup, or one button for your own. Levels stop at 99: a 99 is yellow, the lowest skill red. Cut down from RuneLite's HiScore. |
-| [consts-World](consts-world/) | A world switcher with your hot list first: search every world by activity, number or region, sort what you find, star the worlds you hop between and hop with a click. Cut down from RuneLite's World Hopper. |
+| [consts-World](consts-world/) | A world switcher that opens on your hot list: star the worlds you hop between once, then hop with a click. Search and sort either tab, the hot list or all worlds, by activity, number or region. Cut down from RuneLite's World Hopper. |
 
 ![The consts-AFK status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-afk/screenshots/status-panel.gif)
 

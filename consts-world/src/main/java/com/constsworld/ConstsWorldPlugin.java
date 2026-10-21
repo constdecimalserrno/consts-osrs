@@ -66,13 +66,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * consts-World: a world switcher in the sidebar, with your hot list first. Search the worlds by activity, number or
- * region, sort what you find, star the ones you hop between and hop to one with a click. RuneLite's World Hopper
- * plugin by Adam, cut down to its panel, with a hot list in place of its favourites.
+ * consts-World: a world switcher in the sidebar that opens on your hot list. Star the worlds you hop between once, in
+ * All worlds, then hop to one with a click. Either tab can be searched by activity, number or region and sorted.
+ * RuneLite's World Hopper plugin by Adam, cut down to its panel, with a hot list in place of its favourites.
  */
 @PluginDescriptor(
     name = "consts-World",
-    description = "A world switcher with a hot list first: search worlds by activity, star the ones you hop between, hop with a click",
+    description = "A world switcher that opens on your hot list: star the worlds you hop between once, then hop with a click",
     tags = {"world", "worlds", "hopper", "switcher", "hop", "search", "activity", "hot list", "favourites", "skilling"}
 )
 public class ConstsWorldPlugin extends Plugin

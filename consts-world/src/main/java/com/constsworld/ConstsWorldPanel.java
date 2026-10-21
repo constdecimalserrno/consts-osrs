@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2018, Psikoi <https://github.com/Psikoi>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's World Hopper plugin
- *   (WorldSwitcherPanel) into consts-World; the hot list first, then a search box over the worlds; no ping column,
- *   filters or favourites)
+ *   (WorldSwitcherPanel) into consts-World; a search box over two tabs, the hot list and every world; no ping
+ *   column, filters or favourites)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,8 @@ package com.constsworld;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
@@ -47,6 +49,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
@@ -57,13 +60,16 @@ import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.IconTextField;
+import net.runelite.client.ui.components.materialtabs.MaterialTab;
+import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldType;
 
 /**
- * The sidebar. The hot list always comes first, whatever the search or the sort: click a world there to hop to it.
- * Under it, a search box over every world, sorted by the column header you click; double-click a world to hop to it.
- * The star at the end of a row adds the world to the hot list or removes it.
+ * The sidebar: a search box, then two tabs, the hot list and every world. The search box searches the tab that's
+ * showing. The panel always opens on the hot list: click a world there to hop to it. In all worlds, double-click a
+ * world to hop to it. The star at the end of a row adds the world to the hot list or removes it, and the column
+ * headers sort whichever tab is showing.
  */
 class ConstsWorldPanel extends PluginPanel
 {
@@ -76,17 +82,15 @@ class ConstsWorldPanel extends PluginPanel
     static final int PLAYERS_COLUMN_WIDTH = 40;
     static final int STAR_COLUMN_WIDTH = 22;
 
-    /* What the line under the search box says before anything's typed */
-    static final String SEARCH_HINT = "Search activities, worlds or regions";
-
     private final ConstsWorldPlugin plugin;
 
-    private final JPanel hotContainer = new JPanel(new GridLayout(0, 1));
-    private final JLabel hotEmpty = new JLabel();
     private final IconTextField searchBar = new IconTextField();
-    private final JLabel searchStatus = new JLabel();
+    private final MaterialTabGroup tabGroup = new MaterialTabGroup();
+    private final MaterialTab hotTab;
+    private final MaterialTab allTab;
     private final JPanel listContainer = new JPanel(new GridLayout(0, 1));
     private final JLabel listEmpty = new JLabel();
+    private final JScrollPane scrollPane;
 
     private WorldTableHeader worldHeader;
     private WorldTableHeader playersHeader;
@@ -94,6 +98,8 @@ class ConstsWorldPanel extends PluginPanel
 
     private WorldOrder orderIndex = WorldOrder.WORLD;
     private boolean ascendingOrder = true;
+
+    private Tab tab = Tab.HOT_LIST;
 
     // A row for every world, then one for every world in the hot list
     private final ArrayList<WorldRow> rows = new ArrayList<>();
@@ -114,24 +120,6 @@ class ConstsWorldPanel extends PluginPanel
 
         JPanel top = new JPanel(new DynamicGridLayout(0, 1));
         top.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-        JLabel hotTitle = new JLabel("Hot list");
-        hotTitle.setFont(FontManager.getRunescapeBoldFont());
-        hotTitle.setForeground(Color.WHITE);
-        hotTitle.setBorder(new EmptyBorder(8, 5, 4, 5));
-        top.add(hotTitle);
-
-        // Lined up with the rows under it, which leave room for the scroll bar
-        hotContainer.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        hotContainer.setBorder(new EmptyBorder(0, 0, 0, SCROLLBAR_WIDTH));
-        hotEmpty.setText("<html><body style='width: 150px'>Star a world below to add it here, then click it to hop."
-            + "</body></html>");
-        hotEmpty.setIcon(WorldRow.STAR_OFF);
-        hotEmpty.setIconTextGap(8);
-        hotEmpty.setFont(FontManager.getRunescapeSmallFont());
-        hotEmpty.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        hotEmpty.setBorder(new EmptyBorder(4, 5, 4, 5));
-        top.add(hotContainer);
 
         searchBar.setIcon(IconTextField.Icon.SEARCH);
         searchBar.setPreferredSize(new Dimension(0, 30));
@@ -159,14 +147,19 @@ class ConstsWorldPanel extends PluginPanel
         });
         JPanel search = new JPanel(new BorderLayout());
         search.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        search.setBorder(new EmptyBorder(12, 5, 0, 5));
+        search.setBorder(new EmptyBorder(10, 5, 4, 5));
         search.add(searchBar, BorderLayout.CENTER);
         top.add(search);
 
-        searchStatus.setFont(FontManager.getRunescapeSmallFont());
-        searchStatus.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        searchStatus.setBorder(new EmptyBorder(4, 5, 6, 5));
-        top.add(searchStatus);
+        hotTab = new MaterialTab("", tabGroup, null);
+        hotTab.setOnSelectEvent(() -> show(Tab.HOT_LIST));
+        allTab = new MaterialTab("", tabGroup, null);
+        allTab.setOnSelectEvent(() -> show(Tab.ALL_WORLDS));
+        tabGroup.setBorder(new EmptyBorder(0, 0, 6, 0));
+        tabGroup.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        tabGroup.addTab(hotTab);
+        tabGroup.addTab(allTab);
+        top.add(tabGroup);
 
         listContainer.setBackground(ColorScheme.DARK_GRAY_COLOR);
         listEmpty.setFont(FontManager.getRunescapeSmallFont());
@@ -185,7 +178,7 @@ class ConstsWorldPanel extends PluginPanel
         listWrapper.setBackground(ColorScheme.DARK_GRAY_COLOR);
         listWrapper.add(listContainer, BorderLayout.NORTH);
 
-        JScrollPane scrollPane = new JScrollPane(listWrapper);
+        scrollPane = new JScrollPane(listWrapper);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setColumnHeaderView(buildHeader());
         JPanel corner = new JPanel();
@@ -200,13 +193,48 @@ class ConstsWorldPanel extends PluginPanel
         add(scrollPane, BorderLayout.CENTER);
 
         rebuildHotList();
-        updateList();
+        tabGroup.select(hotTab);
     }
 
     @Override
     public void onActivate()
     {
+        // Opening the panel always shows the hot list
+        tabGroup.select(hotTab);
         plugin.refresh();
+    }
+
+    /** Shows a tab, with an empty search box that searches it. */
+    private boolean show(Tab tab)
+    {
+        this.tab = tab;
+        setPlaceholder(searchBar, tab == Tab.HOT_LIST ? "Search your hot list" : "Search all worlds");
+        searchBar.setText("");
+        updateList();
+        SwingUtilities.invokeLater(() -> scrollPane.getVerticalScrollBar().setValue(0));
+        return true;
+    }
+
+    /** The grey text in the empty search box, through RuneLite's look and feel; nothing happens without it. */
+    private static void setPlaceholder(Container container, String text)
+    {
+        for (Component child : container.getComponents())
+        {
+            if (child instanceof JTextField)
+            {
+                ((JTextField) child).putClientProperty("JTextField.placeholderText", text);
+                child.repaint();
+            }
+            else if (child instanceof Container)
+            {
+                setPlaceholder((Container) child, text);
+            }
+        }
+    }
+
+    Tab getTab()
+    {
+        return tab;
     }
 
     void switchCurrentHighlight(int newWorld, int lastWorld)
@@ -251,17 +279,18 @@ class ConstsWorldPanel extends PluginPanel
     }
 
     /**
-     * Sorts the list of every world and shows the ones that match the search. The hot list stays as it is.
+     * Sorts the tab that's showing, shows the worlds in it that match the search and counts them in the tab's name.
      */
     void updateList()
     {
         String query = searchBar.getText();
-        rows.sort(Comparator.comparing(WorldRow::getWorld, comparator(orderIndex, ascendingOrder, this::playerCount)));
+        List<WorldRow> list = tab == Tab.HOT_LIST ? hotRows : rows;
+        list.sort(Comparator.comparing(WorldRow::getWorld, comparator(orderIndex, ascendingOrder, this::playerCount)));
 
         listContainer.removeAll();
 
         int shown = 0;
-        for (WorldRow row : rows)
+        for (WorldRow row : list)
         {
             if (!WorldSearch.matches(row.getWorld(), query))
             {
@@ -271,35 +300,44 @@ class ConstsWorldPanel extends PluginPanel
             listContainer.add(row);
         }
 
+        boolean searching = query != null && !query.isBlank();
         if (shown == 0)
         {
-            listEmpty.setText(loaded
-                ? "<html><body style='width: 170px'>Try an activity like Tempoross, a world like 330 or a region"
-                    + " like UK.</body></html>"
-                : "Loading worlds...");
+            listEmpty.setText("<html><body style='width: 170px'>" + emptyMessage(tab, loaded, searching)
+                + "</body></html>");
             listContainer.add(listEmpty);
         }
-        searchStatus.setText(status(query, shown, loaded));
+
+        hotTab.setText(tabTitle("Hot list", tab == Tab.HOT_LIST ? shown : hotRows.size()));
+        allTab.setText(tabTitle("All worlds", tab == Tab.ALL_WORLDS ? shown : rows.size()));
 
         listContainer.revalidate();
         listContainer.repaint();
     }
 
-    /** The line under the search box. */
-    static String status(String query, int shown, boolean loaded)
+    /** A tab's name and how many worlds it shows. */
+    static String tabTitle(String name, int count)
     {
-        if (!loaded || query == null || query.isBlank())
-        {
-            return SEARCH_HINT;
-        }
-        if (shown == 0)
-        {
-            return "No worlds match";
-        }
-        return shown == 1 ? "1 world matches" : shown + " worlds match";
+        return name + " (" + count + ")";
     }
 
-    /** The order of the list of every world, by the column clicked. */
+    /** What a tab says when it has no worlds to show. */
+    static String emptyMessage(Tab tab, boolean loaded, boolean searching)
+    {
+        if (tab == Tab.HOT_LIST)
+        {
+            return searching
+                ? "Nothing in your hot list matches. Try All worlds."
+                : "Your hot list is empty. Star worlds in All worlds to add them here, then click one here to hop.";
+        }
+        if (!loaded)
+        {
+            return "Loading worlds...";
+        }
+        return "No world matches. Try an activity like Tempoross, a world like 330 or a region like UK.";
+    }
+
+    /** The order of a tab, by the column clicked. */
     static Comparator<World> comparator(WorldOrder order, boolean ascending, ToIntFunction<World> players)
     {
         Comparator<World> byWorld = Comparator.comparingInt(World::getId);
@@ -359,13 +397,12 @@ class ConstsWorldPanel extends PluginPanel
     }
 
     /**
-     * Rebuilds the hot list's rows, in the order the worlds were added. A world the world list doesn't have (or not
-     * yet) still gets a row, so it can be removed.
+     * Rebuilds the hot list's rows. A world the world list doesn't have (or not yet) still gets a row, so it can be
+     * removed.
      */
     void rebuildHotList()
     {
         hotRows.clear();
-        hotContainer.removeAll();
 
         for (int id : plugin.getHotList())
         {
@@ -379,20 +416,8 @@ class ConstsWorldPanel extends PluginPanel
                     .players(-1)
                     .build();
             }
-
-            WorldRow row = buildRow(world, true);
-            row.setBackground(hotRows.size() % 2 == 0 ? ODD_ROW : ColorScheme.DARK_GRAY_COLOR);
-            hotRows.add(row);
-            hotContainer.add(row);
+            hotRows.add(buildRow(world, true));
         }
-
-        if (hotRows.isEmpty())
-        {
-            hotContainer.add(hotEmpty);
-        }
-
-        hotContainer.revalidate();
-        hotContainer.repaint();
     }
 
     void populate(List<World> worldList, EnumComposition locations)
@@ -505,7 +530,7 @@ class ConstsWorldPanel extends PluginPanel
             this::star);
     }
 
-    /** A star clicked, in either list: the world goes into the hot list or comes out of it. */
+    /** A star clicked, on either tab: the world goes into the hot list or comes out of it. */
     private void star(World world, boolean add)
     {
         if (add)
@@ -525,6 +550,7 @@ class ConstsWorldPanel extends PluginPanel
             }
         }
         rebuildHotList();
+        updateList();
     }
 
     /**
@@ -535,5 +561,12 @@ class ConstsWorldPanel extends PluginPanel
         WORLD,
         PLAYERS,
         ACTIVITY
+    }
+
+    /** The two tabs: the hot list, which the panel opens on, and every world. */
+    enum Tab
+    {
+        HOT_LIST,
+        ALL_WORLDS
     }
 }

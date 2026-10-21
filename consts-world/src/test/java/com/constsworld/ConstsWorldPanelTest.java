@@ -62,13 +62,27 @@ public class ConstsWorldPanelTest
     }
 
     @Test
-    public void theLineUnderTheSearchBoxCountsTheMatches()
+    public void eachTabCountsTheWorldsItShows()
     {
-        assertEquals(ConstsWorldPanel.SEARCH_HINT, ConstsWorldPanel.status("", 312, true));
-        assertEquals(ConstsWorldPanel.SEARCH_HINT, ConstsWorldPanel.status("tempoross", 0, false));
-        assertEquals("No worlds match", ConstsWorldPanel.status("zzz", 0, true));
-        assertEquals("1 world matches", ConstsWorldPanel.status("330", 1, true));
-        assertEquals("14 worlds match", ConstsWorldPanel.status("tempoross", 14, true));
+        assertEquals("Hot list (0)", ConstsWorldPanel.tabTitle("Hot list", 0));
+        assertEquals("All worlds (15)", ConstsWorldPanel.tabTitle("All worlds", 15));
+    }
+
+    @Test
+    public void anEmptyHotListSaysWhereToAddWorlds()
+    {
+        assertEquals("Your hot list is empty. Star worlds in All worlds to add them here, then click one here to hop.",
+            ConstsWorldPanel.emptyMessage(ConstsWorldPanel.Tab.HOT_LIST, true, false));
+        assertEquals("Nothing in your hot list matches. Try All worlds.",
+            ConstsWorldPanel.emptyMessage(ConstsWorldPanel.Tab.HOT_LIST, true, true));
+    }
+
+    @Test
+    public void allWorldsSaysWhenItsLoadingAndWhatToSearchFor()
+    {
+        assertEquals("Loading worlds...", ConstsWorldPanel.emptyMessage(ConstsWorldPanel.Tab.ALL_WORLDS, false, false));
+        assertEquals("No world matches. Try an activity like Tempoross, a world like 330 or a region like UK.",
+            ConstsWorldPanel.emptyMessage(ConstsWorldPanel.Tab.ALL_WORLDS, true, true));
     }
 
     @Test
