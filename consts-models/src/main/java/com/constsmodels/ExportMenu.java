@@ -301,10 +301,14 @@ class ExportMenu
         }
     }
 
-    /** An item's model with its own recolors and retextures, lit as the game lights it; the cached model is untouched. */
+    /**
+     * An item's model with its own recolors and retextures, lit as the game lights it; the cached model is untouched.
+     * Its textures are copied only when the item changes some, since a model without any can't copy them: the game
+     * throws.
+     */
     static Model itemModel(ItemComposition item, ModelData data)
     {
-        ModelData copy = data.shallowCopy().cloneColors().cloneTextures();
+        ModelData copy = data.shallowCopy().cloneColors();
         short[] from = item.getColorToReplace();
         short[] to = item.getColorToReplaceWith();
         if (from != null && to != null)
@@ -316,11 +320,19 @@ class ExportMenu
         }
         from = item.getTextureToReplace();
         to = item.getTextureToReplaceWith();
-        if (from != null && to != null)
+        if (from != null && to != null && Math.min(from.length, to.length) > 0)
         {
-            for (int i = 0; i < Math.min(from.length, to.length); i++)
+            try
             {
-                copy.retexture(from[i], to[i]);
+                copy = copy.cloneTextures();
+                for (int i = 0; i < Math.min(from.length, to.length); i++)
+                {
+                    copy.retexture(from[i], to[i]);
+                }
+            }
+            catch (NullPointerException e)
+            {
+                // The model has no textures for the item to change
             }
         }
         return copy.light();

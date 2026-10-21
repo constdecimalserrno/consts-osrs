@@ -4,8 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyShort;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -376,6 +380,67 @@ public class ExportMenuTest
 
         verify(copy).recolor((short) 10, (short) 11);
         verify(copy).recolor((short) 20, (short) 21);
+        verify(plugin).show(mesh);
+    }
+
+    @Test
+    public void anItemWhoseModelHasNoTexturesStillExports()
+    {
+        // Logs in the inventory: the game throws if a model without textures is asked to copy them
+        when(itemManager.canonicalize(1511)).thenReturn(1511);
+        ItemComposition logs = mock(ItemComposition.class);
+        when(logs.getInventoryModel()).thenReturn(2672);
+        when(client.getItemDefinition(1511)).thenReturn(logs);
+        ModelData cached = mock(ModelData.class);
+        ModelData copy = mock(ModelData.class);
+        when(cached.shallowCopy()).thenReturn(copy);
+        when(copy.cloneColors()).thenReturn(copy);
+        when(copy.cloneTextures()).thenThrow(new NullPointerException());
+        Model lit = mock(Model.class);
+        when(copy.light()).thenReturn(lit);
+        when(client.loadModelData(2672)).thenReturn(cached);
+        Mesh mesh = CoreTest.triangle(0x8B5A2B);
+        when(plugin.captureModel(lit, "Item Logs")).thenReturn(mesh);
+
+        exportMenu.exportItem(1511, "<col=ff9040>Logs");
+
+        verify(copy, never()).cloneTextures();
+        verify(plugin).show(mesh);
+
+        // An item that changes textures the model turns out not to have exports without them
+        when(logs.getTextureToReplace()).thenReturn(new short[]{1});
+        when(logs.getTextureToReplaceWith()).thenReturn(new short[]{2});
+
+        exportMenu.exportItem(1511, "<col=ff9040>Logs");
+
+        verify(copy, never()).retexture(anyShort(), anyShort());
+        verify(plugin, times(2)).show(mesh);
+        verify(plugin, never()).chat(anyString());
+    }
+
+    @Test
+    public void anItemsOwnTexturesAreChanged()
+    {
+        when(itemManager.canonicalize(4587)).thenReturn(4587);
+        ItemComposition scimitar = mock(ItemComposition.class);
+        when(scimitar.getInventoryModel()).thenReturn(2373);
+        when(scimitar.getTextureToReplace()).thenReturn(new short[]{40});
+        when(scimitar.getTextureToReplaceWith()).thenReturn(new short[]{41});
+        when(client.getItemDefinition(4587)).thenReturn(scimitar);
+        ModelData cached = mock(ModelData.class);
+        ModelData copy = mock(ModelData.class);
+        when(cached.shallowCopy()).thenReturn(copy);
+        when(copy.cloneColors()).thenReturn(copy);
+        when(copy.cloneTextures()).thenReturn(copy);
+        Model lit = mock(Model.class);
+        when(copy.light()).thenReturn(lit);
+        when(client.loadModelData(2373)).thenReturn(cached);
+        Mesh mesh = CoreTest.triangle(0xAAAAAA);
+        when(plugin.captureModel(lit, "Item Dragon scimitar")).thenReturn(mesh);
+
+        exportMenu.exportItem(4587, "<col=ff9040>Dragon scimitar");
+
+        verify(copy).retexture((short) 40, (short) 41);
         verify(plugin).show(mesh);
     }
 
