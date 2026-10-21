@@ -15,6 +15,7 @@ RuneLite plugins for Old School RuneScape, published under the pseudonym `constd
 ## Build and release
 
 - Test: `./gradlew test`. The launcher needs JDK 17+ for Gradle and JDK 11 for the client (see the root README).
+- **Each plugin has its own version number**, in its own `build.gradle`, released on its own tag. Bump and release only the plugins that changed; there is no version for the repo as a whole. The landing page shows each plugin's version, so a release updates it there too.
 - Release: bump `version` in the plugin's own `build.gradle`, build `<plugin>/build/libs/<plugin>-<version>.jar`, then `gh release create <plugin>-v<version>` with the jar attached, titled `OSRS plugin "<Name>" v<major>.<minor>`. consts-AFK's releases before 1.8.0 are tagged plain `v<version>`.
 - License: MIT. Every plugin folder keeps its own `LICENSE` (the Hub refuses a build without one at the root of what it builds). Code ported from elsewhere keeps its license, credited in the plugin's `NOTICE` and README.
 - Shared code is copied, not shared: the Hub builds each plugin folder alone. `ConfigSidePanel.java` (the sidebar settings panel) is the same in every plugin that has one, package line aside; change it in `consts-afk` and copy it, and `ConfigSidePanelCopyTest` fails until the copies match.
