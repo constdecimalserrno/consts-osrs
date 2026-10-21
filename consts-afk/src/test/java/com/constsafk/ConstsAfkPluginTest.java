@@ -22,6 +22,7 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -45,8 +46,13 @@ import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigDescriptor;
+import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -975,6 +981,11 @@ public class ConstsAfkPluginTest
         setField("flashOverlay", mock(ConstsAfkFlashOverlay.class));
         setField("statusOverlay", mock(ConstsAfkStatusOverlay.class));
         setField("aggroAreaOverlay", mock(ConstsAfkAggroAreaOverlay.class));
+        setField("clientToolbar", mock(ClientToolbar.class));
+        setField("colorPickerManager", mock(ColorPickerManager.class));
+        setField("eventBus", mock(EventBus.class));
+        when(configManager.getConfigDescriptor(any())).thenReturn(
+            new ConfigDescriptor(ConstsAfkConfig.class.getAnnotation(ConfigGroup.class), List.of(), List.of()));
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
 
         plugin.startUp();
