@@ -1,7 +1,7 @@
 package com.constsmodels;
 
-/** The files a mesh can be saved as. */
-enum ExportFormat
+/** The files a mesh can be saved as. Public because it's a setting: RuneLite's config proxy has to see it. */
+public enum ExportFormat
 {
     /** Shape only, in millimetres, for any slicer. */
     STL("STL", "stl"),
