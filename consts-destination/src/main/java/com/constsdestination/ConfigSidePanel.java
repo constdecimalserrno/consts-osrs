@@ -115,8 +115,8 @@ import org.slf4j.LoggerFactory;
  * <p>A plugin can name one of its boolean settings as its master switch: it's drawn beside the title, like RuneLite's
  * own on/off switch, instead of as a row. Off quiets the plugin without turning it off, so this panel stays put.
  *
- * <p>A plugin can also add tabs of its own (addTab). Then the title and switch sit over a row of tabs: the plugin's,
- * then Settings. Without one there are no tabs, only the settings.
+ * <p>A plugin can also add tabs of its own (addTab). Then the title and switch sit over a row of tabs: Settings,
+ * which the panel opens on, then the plugin's. Without one there are no tabs, only the settings.
  *
  * <p>Each consts-osrs plugin keeps its own copy, since each one is built alone for the Plugin Hub. The copies differ
  * only in their package line.
@@ -261,8 +261,8 @@ class ConfigSidePanel extends PluginPanel
     }
 
     /**
-     * Adds a tab of the plugin's own. The first one puts the panel in tabs under the title: the plugin's tabs in the
-     * order they were added, then Settings. The panel shows the first tab.
+     * Adds a tab of the plugin's own. The first one puts the panel in tabs under the title: Settings, then the
+     * plugin's tabs in the order they were added. The panel shows Settings.
      */
     void addTab(String title, JComponent content)
     {
@@ -283,13 +283,14 @@ class ConfigSidePanel extends PluginPanel
         // MaterialTabGroup can't put a tab before another, so it's built again with every tab in its place.
         tabGroup = new MaterialTabGroup(tabDisplay);
         tabGroup.setBorder(new EmptyBorder(0, 0, 6, 0));
+        MaterialTab settingsTab = new MaterialTab(SETTINGS_TAB, tabGroup, settingsView);
+        tabGroup.addTab(settingsTab);
         for (Map.Entry<String, JComponent> tab : tabs.entrySet())
         {
             tabGroup.addTab(new MaterialTab(tab.getKey(), tabGroup, tab.getValue()));
         }
-        tabGroup.addTab(new MaterialTab(SETTINGS_TAB, tabGroup, settingsView));
         header.add(tabGroup, BorderLayout.SOUTH);
-        tabGroup.select(tabGroup.getTab(0));
+        tabGroup.select(settingsTab);
 
         revalidate();
         repaint();
