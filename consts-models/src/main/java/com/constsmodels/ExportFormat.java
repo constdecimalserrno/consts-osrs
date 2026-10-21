@@ -3,10 +3,6 @@ package com.constsmodels;
 /** The files a mesh can be saved as. Public because it's a setting: RuneLite's config proxy has to see it. */
 public enum ExportFormat
 {
-    /** Shape only, in millimetres, for any slicer. */
-    STL("STL", "stl"),
-    /** Shape and colors, in millimetres, for multicolor printers and slicers that read 3MF. */
-    THREE_MF("3MF", "3mf"),
     /** Shape with colors in a material file, for Blender and other 3D software. */
     OBJ("OBJ", "obj"),
     /** Shape with a color on every corner. */

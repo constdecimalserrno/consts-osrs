@@ -1,38 +1,29 @@
 package com.constsmodels;
 
+import static com.constsmodels.TestMeshes.BLUE;
+import static com.constsmodels.TestMeshes.RED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.swing.AbstractButton;
+import javax.swing.JButton;
 import org.junit.Test;
 
 public class ViewerPanelTest
 {
     @Test
-    public void theSizeLineCountsTrianglesAndScalesTheLongestSideToThePrintSize()
+    public void theLineInTheCornerCountsTriangles()
     {
-        Mesh box = OrbitCameraTest.box(0, 0, 0, 400, 200, 100, 0xFFFFFF);
-        assertEquals("12 triangles  ·  prints at 100 × 50 × 25 mm",
-            ViewerPanel.sizeText(box, new PrintSettings(100, false, 4)));
-
-        assertEquals("12 triangles  \u00b7  prints at 40 \u00d7 20 \u00d7 10 mm",
-            ViewerPanel.sizeText(box, new PrintSettings(40, false, 4)));
-
-        // Tenths of a millimetre below ten, written the player's own way
-        assertEquals("12 triangles  \u00b7  prints at 16 \u00d7 " + String.format("%.1f", 8f) + " \u00d7 "
-            + String.format("%.1f", 4f) + " mm", ViewerPanel.sizeText(box, new PrintSettings(16, false, 4)));
-    }
-
-    @Test
-    public void oneTriangleIsATriangleAndAFlatNothingHasNoSize()
-    {
-        assertEquals("1 triangle  ·  prints at 100 × 100 × 50 mm",
-            ViewerPanel.sizeText(CoreTest.triangle(0xFF0000), new PrintSettings(100, false, 4)));
-        MeshBuilder b = new MeshBuilder("Point");
-        int v = b.addVertex(5, 5, 5);
-        b.addTriangle(v, v, v, 0);
-        assertEquals("1 triangle", ViewerPanel.sizeText(b.build(), new PrintSettings(100, false, 4)));
-        assertEquals("1 triangle", ViewerPanel.sizeText(b.build(), null));
+        assertEquals("12 triangles", ViewerPanel.sizeText(OrbitCameraTest.box(0, 0, 0, 400, 200, 100, 0xFFFFFF)));
+        assertEquals("1 triangle", ViewerPanel.sizeText(CoreTest.triangle(0xFF0000)));
     }
 
     @Test
@@ -44,42 +35,98 @@ public class ViewerPanelTest
     }
 
     @Test
-    public void theFilamentsStartAtTheSettingsCountAndTheViewOnTheGamesColors()
+    public void theBarSavesTheModelAndFollowsTheBackground()
     {
-        MeshBuilder b = new MeshBuilder("Two colors");
-        int v0 = b.addVertex(0, 0, 0);
-        int v1 = b.addVertex(100, 0, 0);
-        int v2 = b.addVertex(0, 100, 0);
-        int v3 = b.addVertex(0, 0, 100);
-        b.addTriangle(v0, v1, v2, 0xFF0000);
-        b.addTriangle(v0, v1, v3, 0x0000FF);
-        b.addTriangle(v0, v2, v3, 0x0000FE);
-        Mesh mesh = b.build();
+        MeshBuilder b = new MeshBuilder("Box");
+        TestMeshes.box(b, 0, 0, 0, 40, 40, 40, true, RED, BLUE);
+        List<String> saved = new ArrayList<>();
+        int[] background = {ViewerCanvas.DEFAULT_BACKGROUND};
+        ViewerPanel panel = new ViewerPanel(b.build(), actions(saved, background));
 
-        int[] changes = new int[1];
-        FilamentControls controls = new FilamentControls(mesh, 2, false, () -> changes[0]++);
-        assertNotNull(controls.colors());
-        assertEquals(2, controls.colors().count());
-        assertNull(controls.shownColors());
-        assertEquals(1, changes[0]);
+        List<AbstractButton> buttons = new ArrayList<>();
+        collect(panel, buttons);
+        List<String> texts = buttons.stream().map(AbstractButton::getText).collect(Collectors.toList());
+        assertTrue(texts.toString(), texts.containsAll(List.of("Open folder", "Save image", "Save")));
+        assertFalse("no Print view any more", texts.contains("Print") || texts.contains("Base"));
+        BackgroundButton bg = (BackgroundButton) buttons.stream().filter(c -> c instanceof BackgroundButton)
+            .findFirst().orElse(null);
+        assertNotNull(bg);
+        JButton save = (JButton) buttons.stream().filter(c -> "Save".equals(c.getText())).findFirst().orElse(null);
+        assertNotNull(save);
+        save.doClick();
+        assertEquals(List.of("12 OBJ"), saved);
 
-        // Never more filaments than colors
-        assertEquals(3, FilamentControls.distinctColors(mesh, 9));
-        assertEquals(1, new FilamentControls(mesh, 1, false, () -> { }).colors().count());
-        assertEquals(3, new FilamentControls(mesh, 9, false, () -> { }).colors().count());
+        // A background picked elsewhere shows when the window comes back
+        background[0] = 0xFFFFFF;
+        panel.refresh();
+        assertEquals(0xFFFFFF, panel.canvas().backgroundColor());
+        assertTrue(bg.getToolTipText().contains("White"));
     }
 
     @Test
-    public void countingColorsStopsOncePastTheMost()
+    public void lightBackgroundsGetDarkText()
     {
-        MeshBuilder b = new MeshBuilder("Many colors");
-        int v = b.addVertex(0, 0, 0);
-        for (int i = 0; i < 100; i++)
+        assertFalse(ViewerCanvas.light(ViewerCanvas.DEFAULT_BACKGROUND));
+        assertFalse(ViewerCanvas.light(0x000000));
+        assertTrue(ViewerCanvas.light(0xFFFFFF));
+        assertTrue(ViewerCanvas.light(0x87CEEB));
+        assertEquals(BackgroundButton.BACKGROUNDS.length, BackgroundButton.BACKGROUND_NAMES.length);
+        assertEquals("#123456", BackgroundButton.name(0x123456));
+    }
+
+    /** Viewer actions that note each save as "triangles format", start on OBJ and keep the background given. */
+    static ViewerActions actions(List<String> saved, int[] background)
+    {
+        return new ViewerActions()
         {
-            b.addTriangle(v, v, v, i);
+            @Override
+            public void save(Mesh mesh, ExportFormat format)
+            {
+                saved.add(mesh.faceCount() + " " + format);
+            }
+
+            @Override
+            public void saveImage(Mesh mesh, BufferedImage image)
+            {
+            }
+
+            @Override
+            public void openFolder()
+            {
+            }
+
+            @Override
+            public ExportFormat defaultFormat()
+            {
+                return ExportFormat.OBJ;
+            }
+
+            @Override
+            public int background()
+            {
+                return background[0];
+            }
+
+            @Override
+            public void setBackground(int rgb)
+            {
+                background[0] = rgb;
+            }
+        };
+    }
+
+    private static void collect(Container root, List<AbstractButton> out)
+    {
+        for (Component c : root.getComponents())
+        {
+            if (c instanceof AbstractButton)
+            {
+                out.add((AbstractButton) c);
+            }
+            if (c instanceof Container)
+            {
+                collect((Container) c, out);
+            }
         }
-        assertEquals(10, FilamentControls.distinctColors(b.build(), 9));
-        assertEquals("#00A0FF", FilamentControls.hex(0x00A0FF));
-        assertEquals(FilamentControls.FILAMENTS.length, FilamentControls.FILAMENT_NAMES.length);
     }
 }

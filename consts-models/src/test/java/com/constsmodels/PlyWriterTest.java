@@ -33,7 +33,7 @@ public class PlyWriterTest
         b.addTriangle(v0, v2, v3, BLUE);
         Mesh mesh = b.build();
 
-        File file = MeshExporter.export(mesh, ExportFormat.PLY, folder.getRoot(), new PrintSettings(100, true, 4));
+        File file = MeshExporter.export(mesh, ExportFormat.PLY, folder.getRoot());
         assertTrue(file.getName().endsWith(".ply"));
         byte[] bytes = Files.readAllBytes(file.toPath());
         String text = new String(bytes, StandardCharsets.US_ASCII);

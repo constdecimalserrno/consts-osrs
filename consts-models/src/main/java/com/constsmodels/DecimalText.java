@@ -1,7 +1,7 @@
 package com.constsmodels;
 
 /**
- * Writes numbers for text formats (3MF, OBJ, MTL): at most four decimals, no trailing zeros and never an exponent,
+ * Writes numbers for text formats (OBJ, MTL): at most four decimals, no trailing zeros and never an exponent,
  * so files stay small and every reader takes them.
  */
 final class DecimalText

@@ -39,15 +39,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * consts-Models: export any model in the game, or a whole area, to look at or to 3D print. Right-click anything and
- * pick Export Model, or use the sidebar to capture yourself or the area around you. Each capture opens in a viewer
- * to turn and inspect, and saves as STL or 3MF for a printer or OBJ or PLY for 3D software, into a folder you choose.
- * Built on the Model Exporter plugin by Bram91.
+ * consts-Models: export any model in the game, or a whole area, to look at or to use elsewhere. Right-click anything
+ * and pick Export Model, or use the sidebar to capture yourself or the area around you. Each capture opens in a
+ * viewer to turn and inspect, and saves as OBJ or PLY for 3D software, into a folder you choose. Built on the Model
+ * Exporter plugin by Bram91.
  */
 @PluginDescriptor(
     name = "consts-Models",
-    description = "Export any model or the area around you to look at or 3D print: right-click Export Model, turn it in a viewer, save STL, 3MF, OBJ or PLY",
-    tags = {"model", "models", "export", "exporter", "3d", "print", "printing", "stl", "3mf", "obj", "diorama", "scene"}
+    description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, save it as OBJ or PLY",
+    tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "blender", "diorama", "scene"}
 )
 public class ConstsModelsPlugin extends Plugin
 {
@@ -89,15 +89,9 @@ public class ConstsModelsPlugin extends Plugin
     private final ViewerActions viewerActions = new ViewerActions()
     {
         @Override
-        public void save(Mesh mesh, ExportFormat format, PrintColors colors, PrintSettings settings)
+        public void save(Mesh mesh, ExportFormat format)
         {
-            ConstsModelsPlugin.this.save(mesh, format, colors, settings);
-        }
-
-        @Override
-        public void savePrint(Printable printable, ExportFormat format, PrintColors colors)
-        {
-            ConstsModelsPlugin.this.savePrint(printable, format, colors);
+            ConstsModelsPlugin.this.save(mesh, format);
         }
 
         @Override
@@ -116,12 +110,6 @@ public class ConstsModelsPlugin extends Plugin
         public ExportFormat defaultFormat()
         {
             return config.format();
-        }
-
-        @Override
-        public PrintSettings printSettings()
-        {
-            return ConstsModelsPlugin.this.printSettings();
         }
 
         @Override
@@ -303,11 +291,6 @@ public class ConstsModelsPlugin extends Plugin
         });
     }
 
-    PrintSettings printSettings()
-    {
-        return new PrintSettings(config.printSizeMm(), config.addBase(), config.maxColors());
-    }
-
     /** Where files are saved: the folder chosen in the sidebar, or the default one. */
     File outputFolder()
     {
@@ -331,10 +314,9 @@ public class ConstsModelsPlugin extends Plugin
         LinkBrowser.open(folder.getAbsolutePath());
     }
 
-    void save(Mesh mesh, ExportFormat format, PrintColors colors, PrintSettings viewer)
+    void save(Mesh mesh, ExportFormat format)
     {
         File folder = outputFolder();
-        PrintSettings settings = viewer != null ? viewer : printSettings();
         executor.execute(() ->
         {
             try
@@ -343,36 +325,13 @@ public class ConstsModelsPlugin extends Plugin
                 {
                     throw new IOException("couldn't make " + folder);
                 }
-                File file = MeshExporter.export(mesh, format, folder, settings, colors);
+                File file = MeshExporter.export(mesh, format, folder);
                 chat("Saved " + file.getName() + " in " + folder + ".");
             }
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't save {} as {}", mesh.name, format, e);
                 chat("Couldn't save " + mesh.name + ": " + e.getMessage());
-            }
-        });
-    }
-
-    void savePrint(Printable printable, ExportFormat format, PrintColors colors)
-    {
-        File folder = outputFolder();
-        String name = printable.model.name;
-        executor.execute(() ->
-        {
-            try
-            {
-                if (!folder.isDirectory() && !folder.mkdirs())
-                {
-                    throw new IOException("couldn't make " + folder);
-                }
-                File file = MeshExporter.export(printable, colors, format, folder);
-                chat("Saved " + file.getName() + " in " + folder + ".");
-            }
-            catch (IOException | RuntimeException e)
-            {
-                log.warn("Couldn't save the print of {} as {}", name, format, e);
-                chat("Couldn't save " + name + ": " + e.getMessage());
             }
         });
     }

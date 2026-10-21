@@ -28,7 +28,7 @@ public class ConstsModelsConfigTest
     public void theConfigProxyCanHandBackTheFormat()
     {
         ConstsModelsConfig config = (ConstsModelsConfig) Proxy.newProxyInstance(ConstsModelsConfig.class.getClassLoader(),
-            new Class<?>[]{ConstsModelsConfig.class}, (proxy, method, args) -> ExportFormat.THREE_MF);
-        assertEquals(ExportFormat.THREE_MF, config.format());
+            new Class<?>[]{ConstsModelsConfig.class}, (proxy, method, args) -> ExportFormat.PLY);
+        assertEquals(ExportFormat.PLY, config.format());
     }
 }

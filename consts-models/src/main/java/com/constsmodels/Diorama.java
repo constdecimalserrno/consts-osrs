@@ -3,8 +3,8 @@ package com.constsmodels;
 import java.util.Arrays;
 
 /**
- * An area capture put together as one piece to print: the ground closed into a solid block, side walls running down
- * from its edge to a flat bottom, with everything in the area standing on it. It's centered on your tile: x and y
+ * An area capture put together as one piece, a diorama: the ground closed into a solid block, side walls running
+ * down from its edge to a flat bottom, with everything in the area standing on it. It's centered on your tile: x and y
  * count from the middle of it and z from the ground there.
  *
  * <p>Parts come in the scene's local coordinates (128 to a tile) turned into east, north, up, as
@@ -12,7 +12,7 @@ import java.util.Arrays;
  */
 final class Diorama
 {
-    /** How far below the lowest ground the bottom is: a tile, so even the lowest point prints with some body. */
+    /** How far below the lowest ground the bottom is: a tile, so even the lowest point has some ground under it. */
     static final int DEPTH = 128;
 
     /** The side walls' and the bottom's color: dark earth. */

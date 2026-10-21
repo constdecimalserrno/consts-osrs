@@ -22,8 +22,8 @@ final class ViewerWindow extends JFrame
         panel = new ViewerPanel(mesh, actions);
         setContentPane(panel);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        // Wide enough for the bar with all nine filaments
-        setMinimumSize(new Dimension(960, 480));
+        // Wide enough for the bar's buttons
+        setMinimumSize(new Dimension(640, 420));
         addWindowListener(new WindowAdapter()
         {
             @Override

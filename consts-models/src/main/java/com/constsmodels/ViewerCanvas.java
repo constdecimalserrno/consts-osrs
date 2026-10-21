@@ -36,8 +36,7 @@ import org.slf4j.LoggerFactory;
 /**
  * The viewer's picture of a mesh, and the mouse on it: drag to turn it, scroll to zoom towards the cursor,
  * right-drag or Shift-drag to move it, double-click or R to see all of it again, and click to pick what's under the
- * cursor. A few controls can sit in the top right corner, over the picture, and while a print is made a bar along the
- * bottom fills as it goes.
+ * cursor. A few controls can sit in the top right corner, over the picture.
  *
  * <p>Pictures are drawn on a thread of the view's own, never on the Swing thread, and only the newest one asked for
  * is drawn. While the mouse is moving the model the picture is drawn smaller, as small as it takes to keep up, and
@@ -75,15 +74,6 @@ final class ViewerCanvas extends JComponent
     private static final Color HINT_COLOR_ON_LIGHT = new Color(0, 0, 0, 140);
     private static final Color INFO_COLOR_ON_LIGHT = new Color(0x3A3A3A);
 
-    // The bar that fills while a print is made: its widest, its height, its empty part on a dark or a light
-    // background, and the light that runs along its full part
-    private static final int PROGRESS_WIDTH = 280;
-    private static final int PROGRESS_HEIGHT = 6;
-    private static final Color PROGRESS_TRACK = new Color(255, 255, 255, 38);
-    private static final Color PROGRESS_TRACK_ON_LIGHT = new Color(0, 0, 0, 38);
-    private static final int SHEEN_WIDTH = 48;
-    private static final int SHEEN_MS = 40;
-
     private final Mesh mesh;
     private final OrbitCamera camera = new OrbitCamera();
     private final Timer settle;
@@ -104,15 +94,12 @@ final class ViewerCanvas extends JComponent
     private volatile int movingScale;
     private volatile double screenScaleSeen = 1;
 
-    // What is shown, on the Swing thread: the mesh (the model, or its print), the colors it's drawn in (null for
-    // its own), the background, and a line about it
+    // What is shown, on the Swing thread: the mesh (the model, any pieces taken out), the colors it's drawn in
+    // (null for its own), the background, and a line about it
     private Mesh shown;
     private int[] colors;
     private int background = DEFAULT_BACKGROUND;
     private String info = "";
-    // How far the print being made has got, 0 to 1, or less than 0 for no bar; and what moves the bar's light
-    private double progress = -1;
-    private final Timer sheen;
 
     // The mouse, on the Swing thread
     private Point last;
@@ -136,7 +123,6 @@ final class ViewerCanvas extends JComponent
 
         settle = new Timer(SETTLE_MS, this::settled);
         settle.setRepeats(false);
-        sheen = new Timer(SHEEN_MS, e -> repaint());
 
         MouseAdapter mouse = new MouseAdapter()
         {
@@ -278,7 +264,6 @@ final class ViewerCanvas extends JComponent
     void stop()
     {
         settle.stop();
-        sheen.stop();
         synchronized (lock)
         {
             stopped = true;
@@ -302,7 +287,7 @@ final class ViewerCanvas extends JComponent
 
     /**
      * Shows this mesh, where the view is looking now, its triangles in these colors (one for each), or null for its
-     * own. The Print view's mesh sits where the model does, so the view stays put between the two.
+     * own. The view keeps looking where it was, so taking a piece out doesn't move it.
      */
     void show(Mesh mesh, int[] colors)
     {
@@ -379,35 +364,6 @@ final class ViewerCanvas extends JComponent
         repaint();
     }
 
-    /**
-     * Shows a bar along the bottom of the picture that fills as a print is made, share 0 to 1 of the way; less than 0
-     * takes it away. While it shows it never goes back, and a light runs along it so it's seen to be busy between
-     * steps.
-     */
-    void setProgress(double share)
-    {
-        double next = share < 0 ? -1 : Math.max(progress, Math.min(1, share));
-        if (next == progress)
-        {
-            return;
-        }
-        progress = next;
-        if (progress < 0)
-        {
-            sheen.stop();
-        }
-        else if (!sheen.isRunning())
-        {
-            sheen.start();
-        }
-        repaint();
-    }
-
-    double progress()
-    {
-        return progress;
-    }
-
     /** Draws the current view at full resolution, off the Swing thread, then hands it over on the Swing thread. */
     void picture(Consumer<BufferedImage> then)
     {
@@ -468,7 +424,7 @@ final class ViewerCanvas extends JComponent
 
     private void drawLoop()
     {
-        // One renderer per mesh shown, made again when the view switches between the model and its print
+        // One renderer per mesh shown, made again when the mesh changes, as when a piece is taken out
         MeshRenderer renderer = null;
         Mesh rendered = null;
         while (true)
@@ -635,10 +591,7 @@ final class ViewerCanvas extends JComponent
         g2.dispose();
     }
 
-    /**
-     * The line about the model in the top left corner, and the line of help along the bottom, both quiet; above the
-     * help, the bar while a print is made.
-     */
+    /** The line about the model in the top left corner, and the line of help along the bottom, both quiet. */
     private void paintText(Graphics2D g, int width, int height)
     {
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
@@ -647,58 +600,11 @@ final class ViewerCanvas extends JComponent
         boolean light = light(background);
         g.setColor(light ? INFO_COLOR_ON_LIGHT : INFO_COLOR);
         g.drawString(info, 12, 10 + metrics.getAscent());
-        int above = height - 10;
         if (metrics.stringWidth(HINT) <= width - 20)
         {
             g.setColor(light ? HINT_COLOR_ON_LIGHT : HINT_COLOR);
             g.drawString(HINT, (width - metrics.stringWidth(HINT)) / 2, height - 10 - metrics.getDescent());
-            above -= metrics.getHeight();
         }
-        if (progress >= 0)
-        {
-            paintProgress(g, metrics, light, width, above - 14);
-        }
-    }
-
-    /** The bar that fills as a print is made, its bottom at y, with how far it's got over it. */
-    private void paintProgress(Graphics2D g, FontMetrics metrics, boolean light, int width, int y)
-    {
-        int barWidth = Math.min(PROGRESS_WIDTH, width - 48);
-        if (barWidth <= 0)
-        {
-            return;
-        }
-        int x = (width - barWidth) / 2;
-        int top = y - PROGRESS_HEIGHT;
-        String text = progressText(progress);
-        g.setColor(light ? INFO_COLOR_ON_LIGHT : INFO_COLOR);
-        g.drawString(text, (width - metrics.stringWidth(text)) / 2, top - 6 - metrics.getDescent());
-
-        Graphics2D bar = (Graphics2D) g.create();
-        bar.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        bar.setColor(light ? PROGRESS_TRACK_ON_LIGHT : PROGRESS_TRACK);
-        bar.fillRoundRect(x, top, barWidth, PROGRESS_HEIGHT, PROGRESS_HEIGHT, PROGRESS_HEIGHT);
-        int full = (int) Math.round(barWidth * progress);
-        if (full > 0)
-        {
-            bar.setColor(ColorScheme.BRAND_ORANGE);
-            bar.fillRoundRect(x, top, Math.max(full, PROGRESS_HEIGHT), PROGRESS_HEIGHT, PROGRESS_HEIGHT,
-                PROGRESS_HEIGHT);
-            // The light running along the full part, round and round
-            int run = full + SHEEN_WIDTH;
-            int at = x - SHEEN_WIDTH + (int) (System.currentTimeMillis() / 4 % run);
-            bar.clipRect(x, top, full, PROGRESS_HEIGHT);
-            bar.setPaint(new GradientPaint(at, 0, new Color(255, 255, 255, 0), at + SHEEN_WIDTH / 2f, 0,
-                new Color(255, 255, 255, 110), true));
-            bar.fillRect(at, top, SHEEN_WIDTH, PROGRESS_HEIGHT);
-        }
-        bar.dispose();
-    }
-
-    /** "Making it printable  ·  42%". */
-    static String progressText(double share)
-    {
-        return "Making it printable  \u00b7  " + (int) Math.floor(Math.max(0, Math.min(1, share)) * 100) + "%";
     }
 
     /**

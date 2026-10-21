@@ -15,66 +15,40 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * What a viewer window holds: the picture of the model, with a line about it in the corner, and a bar along the
- * bottom. On the left of the bar, Game or Print, the print's base and its colors; on the right, what to do with it:
- * open the folder, pick the background, save a picture, and Save, in the format picked beside it.
+ * bottom with what to do with it: open the folder, pick the background, save a picture, and Save, in the format
+ * picked beside it.
  *
- * <p>Game shows the model as the game has it, and Save saves that. Print shows it made printable, one closed solid
- * on its base (if the Base switch is on) in the filaments' colors ({@link Printable}), and Save saves exactly that.
- * The print is made off the Swing thread the first time it's shown, which takes a few seconds, and again only when
- * the print size changes; until it's ready the view shows the model in the filaments' colors and Save waits. Turning
- * the base on or off only stands the same solid on the plate again, which is quick.
- *
- * <p>A click on the picture picks the piece of the model under it ({@link Pieces}), lit up in orange, in either view;
- * Remove piece, or Delete, takes it out of the model, for Game, Print and Save alike, and Bring back puts every piece
- * taken out back. Those two show in the picture's top right corner while there's a piece picked or taken out.
+ * <p>A click on the picture picks the piece of the model under it ({@link Pieces}), lit up in orange; Remove piece, or
+ * Delete, takes it out of the model, for the view and Save alike, and Bring back puts every piece taken out back.
+ * Those two show in the picture's top right corner while there's a piece picked or taken out.
  */
 final class ViewerPanel extends JPanel
 {
-    private static final Logger log = LoggerFactory.getLogger(ViewerPanel.class);
-
     private static final int BAR_HEIGHT = 44;
 
     private final Mesh mesh;
     private final ViewerActions actions;
     private final ViewerCanvas canvas;
-    private FilamentControls filaments;
     private final JComboBox<ExportFormat> format = new JComboBox<>(ExportFormat.values());
     private final JButton save = new JButton("Save");
     private BackgroundButton background;
 
-    // The print once made; the settings it was last tried with; whether it's being made; why it couldn't be
-    private Printable printable;
-    private PrintSettings tried;
-    private boolean making;
-    private String problem;
-    // Which print was asked for last, so an older one finishing late is let go; how far the one being made has got
-    private int asked;
-    private double madeShare;
-    // The Add a base setting as last seen, so the Base switch follows it when it changes but is the viewer's own
-    // otherwise
-    private boolean baseSetting;
-
     // The model as it's shown and saved: the mesh with any pieces taken out, and each of its triangles' number in
-    // the mesh; the model the print was last tried with; the mesh the picture shows
+    // the mesh
     private Mesh model;
     private int[] modelFaces;
-    private Mesh triedModel;
-    private Mesh onCanvas;
     // The mesh's pieces, found when one is first picked; those taken out; the one picked, or -1
     private Pieces pieces;
     private boolean[] removed;
     private int picked = -1;
     private final JButton remove = quietButton("Remove piece",
-        "Take the piece you picked out of the model, for Game, Print and Save (Delete)");
+        "Take the piece you picked out of the model, for the view and Save (Delete)");
     private final JButton restore = quietButton("Bring back", "Put back every piece you took out");
 
     ViewerPanel(Mesh mesh, ViewerActions actions)
@@ -88,10 +62,6 @@ final class ViewerPanel extends JPanel
         canvas.setBackgroundColor(actions.background());
         canvas.onPick(this::picked);
         canvas.setCorner(pieceButtons());
-        PrintSettings settings = actions.printSettings();
-        baseSetting = settings != null && settings.base;
-        filaments = new FilamentControls(mesh, settings == null ? 4 : settings.maxColors, baseSetting,
-            this::viewChanged);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         add(canvas, BorderLayout.CENTER);
@@ -166,6 +136,7 @@ final class ViewerPanel extends JPanel
         save.setFocusPainted(false);
         save.setPreferredSize(new Dimension(84, 28));
         save.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        save.setToolTipText("Save the model as you see it, any pieces you took out left out");
         save.addActionListener(e -> save());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -182,7 +153,6 @@ final class ViewerPanel extends JPanel
         bar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(1, 0, 0, 0, ColorScheme.BORDER_COLOR),
             new EmptyBorder((BAR_HEIGHT - 28) / 2, 12, (BAR_HEIGHT - 28) / 2 - 1, 8)));
-        bar.add(filaments, BorderLayout.WEST);
         bar.add(buttons, BorderLayout.EAST);
         return bar;
     }
@@ -214,20 +184,10 @@ final class ViewerPanel extends JPanel
         return gap;
     }
 
-    /** Saves what the view shows: the game's model, or the print once it's made. */
+    /** Saves the model as the view shows it, without any pieces taken out. */
     private void save()
     {
-        ExportFormat chosen = (ExportFormat) format.getSelectedItem();
-        PrintColors colors = filaments.colors();
-        if (!filaments.showsPrint())
-        {
-            actions.save(model, chosen, colors == null || model == mesh ? colors : colors.forFaces(modelFaces),
-                printSettings());
-        }
-        else if (printable != null && printable.model == model && !printable.isEmpty() && colors != null)
-        {
-            actions.savePrint(printable, chosen, colors);
-        }
+        actions.save(model, (ExportFormat) format.getSelectedItem());
     }
 
     /** The mesh's pieces, found the first time they're needed. */
@@ -242,17 +202,12 @@ final class ViewerPanel extends JPanel
     }
 
     /**
-     * A click on the picture, on a triangle of what it shows or -1 for none: picks the piece that triangle is part
+     * A click on the picture, on a triangle of the model shown or -1 for none: picks the piece that triangle is part
      * of, or lets go of the piece picked if it's that one again or nothing.
      */
     void picked(int face)
     {
-        int piece = -1;
-        if (face >= 0 && (onCanvas == model || printable != null && onCanvas == printable.shown))
-        {
-            int modelFace = onCanvas == model ? face : printable.modelFace(face);
-            piece = modelFace < 0 ? -1 : pieces().piece[modelFaces[modelFace]];
-        }
+        int piece = face >= 0 && face < modelFaces.length ? pieces().piece[modelFaces[face]] : -1;
         int was = picked;
         picked = piece == picked ? -1 : piece;
         if (picked != was)
@@ -296,7 +251,7 @@ final class ViewerPanel extends JPanel
         return count;
     }
 
-    /** Pieces were taken out or put back: the model is made again, and its print. */
+    /** Pieces were taken out or put back: the model is made again from what's left. */
     private void modelChanged()
     {
         if (removedCount() == 0)
@@ -308,17 +263,6 @@ final class ViewerPanel extends JPanel
         {
             modelFaces = pieces.kept(removed);
             model = Pieces.only(mesh, modelFaces);
-        }
-        // The print was of the model as it was: it goes, along with any being made
-        asked++;
-        printable = null;
-        making = false;
-        problem = null;
-        tried = null;
-        triedModel = null;
-        if (filaments.showsPrint())
-        {
-            makePrintIfNeeded(printSettings());
         }
         updatePieceButtons();
         showView();
@@ -346,182 +290,21 @@ final class ViewerPanel extends JPanel
         return faces;
     }
 
-    /** Game or Print, or the filaments, changed. */
-    private void viewChanged()
-    {
-        // The first merge of a small model is done before the controls are
-        if (filaments == null)
-        {
-            return;
-        }
-        if (filaments.showsPrint())
-        {
-            makePrintIfNeeded(printSettings());
-        }
-        showView();
-    }
-
-    /** The settings the print is made with: the plugin's, with the base as the Base switch has it. */
-    private PrintSettings printSettings()
-    {
-        PrintSettings settings = actions.printSettings();
-        return settings == null ? null : new PrintSettings(settings.sizeMm, filaments.base(), settings.maxColors);
-    }
-
-    /**
-     * Makes the print, unless it was already made, or tried, at this size and base. A print of the same size only
-     * changing its base keeps its solid, so that's done at once, or as soon as the solid being made is ready.
-     */
-    private void makePrintIfNeeded(PrintSettings settings)
-    {
-        if (settings == null || settings.sameShape(tried) && triedModel == model)
-        {
-            return;
-        }
-        if (tried != null && triedModel == model && tried.sizeMm == settings.sizeMm
-            && (making || printable != null || problem != null))
-        {
-            tried = settings;
-            if (printable != null)
-            {
-                printable = printable.placed(settings);
-            }
-            return;
-        }
-        int ticket = ++asked;
-        tried = settings;
-        triedModel = model;
-        Mesh target = model;
-        making = true;
-        madeShare = 0;
-        printable = null;
-        problem = null;
-        Thread thread = new Thread(() ->
-        {
-            // A hundred steps at most reach the Swing thread
-            double[] told = {0};
-            PrintProgress progress = share ->
-            {
-                if (share >= told[0] + 0.01 || share >= 1 && told[0] < 1)
-                {
-                    told[0] = share;
-                    SwingUtilities.invokeLater(() -> madeSoFar(ticket, share));
-                }
-            };
-            Printable made = null;
-            String failed = null;
-            try
-            {
-                made = Printable.of(target, settings, progress);
-                if (made.isEmpty())
-                {
-                    failed = "it's too thin to hold a wall";
-                }
-            }
-            catch (RuntimeException | OutOfMemoryError e)
-            {
-                log.warn("Couldn't make {} printable", mesh.name, e);
-                failed = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            }
-            Printable result = made;
-            String why = failed;
-            SwingUtilities.invokeLater(() ->
-            {
-                if (ticket != asked)
-                {
-                    return;
-                }
-                making = false;
-                // Stood on the plate again if the base was turned on or off while it was being made
-                printable = why == null ? result.placed(tried) : null;
-                problem = why;
-                showView();
-            });
-        }, "consts-Models print");
-        thread.setDaemon(true);
-        thread.start();
-    }
-
-    /** How far the print asked for last has got, for the bar that fills while it's made. */
-    private void madeSoFar(int ticket, double share)
-    {
-        if (ticket != asked || !making)
-        {
-            return;
-        }
-        madeShare = Math.max(madeShare, share);
-        if (filaments.showsPrint())
-        {
-            canvas.setProgress(madeShare);
-        }
-    }
-
-    /**
-     * Puts what the view is on into the picture, the line about it in the corner, the bar while a print is made, and
-     * Save in step with it.
-     */
+    /** Puts the model into the picture, the piece picked lit up, and the line about it in the corner. */
     private void showView()
     {
-        boolean print = filaments.showsPrint();
-        PrintColors colors = filaments.colors();
-        if (print && printable != null && colors != null)
-        {
-            int[] rgb = printable.colors(colors);
-            for (int t = 0; picked >= 0 && t < rgb.length; t++)
-            {
-                int face = printable.modelFace(t);
-                if (face >= 0 && pieces.piece[modelFaces[face]] == picked)
-                {
-                    rgb[t] = lit(rgb[t]);
-                }
-            }
-            show(printable.shown, rgb);
-        }
-        else if (print)
-        {
-            // Until the print is ready: the model in the filaments' colors
-            int[] all = filaments.shownColors();
-            int[] rgb = null;
-            if (all != null)
-            {
-                rgb = new int[model.faceCount()];
-                for (int f = 0; f < rgb.length; f++)
-                {
-                    rgb[f] = all[modelFaces[f]];
-                }
-            }
-            show(model, lightPicked(rgb));
-        }
-        else
-        {
-            show(model, lightPicked(null));
-        }
-        // While the print is made, the bar says so and the corner what it will be
-        canvas.setInfo(print && !making ? printText(printable, false, problem)
-            : sizeText(model, actions.printSettings()));
-        canvas.setProgress(print && making ? madeShare : -1);
-
-        boolean ready = !print || printable != null && colors != null;
-        save.setEnabled(ready);
-        save.setToolTipText(!print ? "Save the model as the game has it, in the format picked beside it"
-            : ready ? "Save the print as you see it, ready for a slicer"
-            : making ? "Making it printable…" : "There's no print to save");
+        canvas.show(model, lightPicked());
+        canvas.setInfo(sizeText(model));
     }
 
-    private void show(Mesh shown, int[] rgb)
-    {
-        onCanvas = shown;
-        canvas.show(shown, rgb);
-    }
-
-    /** The model's colors, these or its own, with the piece picked lit up; null for its own when none is. */
-    private int[] lightPicked(int[] rgb)
+    /** The model's colors with the piece picked lit up, or null for its own when none is. */
+    private int[] lightPicked()
     {
         if (picked < 0)
         {
-            return rgb;
+            return null;
         }
-        int[] out = (rgb != null ? rgb : model.color).clone();
+        int[] out = model.color.clone();
         for (int f = 0; f < out.length; f++)
         {
             if (pieces.piece[modelFaces[f]] == picked)
@@ -553,10 +336,7 @@ final class ViewerPanel extends JPanel
         return model;
     }
 
-    /**
-     * Reads the settings again, which may have changed: the print's size, the background, and the base, which the
-     * Base switch takes up only if the setting itself changed.
-     */
+    /** Reads the background again, which may have been changed in another viewer. */
     void refresh()
     {
         int rgb = actions.background();
@@ -565,84 +345,14 @@ final class ViewerPanel extends JPanel
         {
             background.setBackgroundColor(rgb);
         }
-        PrintSettings settings = actions.printSettings();
-        if (settings != null && settings.base != baseSetting)
-        {
-            baseSetting = settings.base;
-            filaments.setBase(baseSetting);
-        }
-        if (filaments.showsPrint())
-        {
-            makePrintIfNeeded(printSettings());
-        }
         showView();
     }
 
-    /** The print as made so far, or null. */
-    Printable printable()
-    {
-        return printable;
-    }
-
-    FilamentControls filaments()
-    {
-        return filaments;
-    }
-
-    /**
-     * The line about the print: "Making it printable…" while it's being made, then "8,214 triangles  ·  one
-     * closed solid  ·  100 × 62 × 80 mm", base and all, or why it couldn't be made.
-     */
-    static String printText(Printable printable, boolean making, String problem)
-    {
-        if (making)
-        {
-            return "Making it printable\u2026";
-        }
-        if (problem != null)
-        {
-            return "Couldn't make it printable: " + problem;
-        }
-        if (printable == null)
-        {
-            return "";
-        }
-        Mesh mesh = printable.print.mesh;
-        int faces = mesh.faceCount();
-        float[] box = mesh.bounds();
-        int solids = printable.solids();
-        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles") + "  \u00b7  "
-            + (solids == 1 ? "one closed solid" : solids + " closed solids") + "  \u00b7  "
-            + millimetres(box[3] - box[0]) + " \u00d7 " + millimetres(box[4] - box[1]) + " \u00d7 "
-            + millimetres(box[5] - box[2]) + " mm";
-    }
-
-    /**
-     * "12,345 triangles  ·  prints at 100 × 62 × 80 mm": how many triangles, and the print's width, depth and
-     * height.
-     */
-    static String sizeText(Mesh mesh, PrintSettings settings)
+    /** "12,345 triangles": how many the model has. */
+    static String sizeText(Mesh mesh)
     {
         int faces = mesh.faceCount();
-        String text = String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles");
-        float[] box = mesh.bounds();
-        float wide = box[3] - box[0];
-        float deep = box[4] - box[1];
-        float high = box[5] - box[2];
-        float longest = Math.max(wide, Math.max(deep, high));
-        if (settings == null || settings.sizeMm <= 0 || longest <= 0)
-        {
-            return text;
-        }
-        float scale = settings.sizeMm / longest;
-        return text + "  \u00b7  prints at " + millimetres(wide * scale) + " \u00d7 " + millimetres(deep * scale)
-            + " \u00d7 " + millimetres(high * scale) + " mm";
-    }
-
-    /** Whole millimetres, or tenths below ten. */
-    private static String millimetres(float mm)
-    {
-        return mm < 9.95f ? String.format("%.1f", mm) : String.format("%.0f", mm);
+        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles");
     }
 
     private static String describe(ExportFormat format)
@@ -653,10 +363,6 @@ final class ViewerPanel extends JPanel
         }
         switch (format)
         {
-            case STL:
-                return "STL: shape only, for any slicer";
-            case THREE_MF:
-                return "3MF: shape and colors, for multicolor printers";
             case OBJ:
                 return "OBJ: shape and colors, for Blender and other 3D software";
             default:

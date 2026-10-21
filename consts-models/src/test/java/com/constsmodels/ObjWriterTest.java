@@ -35,7 +35,7 @@ public class ObjWriterTest
         b.addTriangle(v0, v3, v1, RED);
         Mesh mesh = b.build();
 
-        File file = MeshExporter.export(mesh, ExportFormat.OBJ, folder.getRoot(), new PrintSettings(100, true, 4));
+        File file = MeshExporter.export(mesh, ExportFormat.OBJ, folder.getRoot());
         assertTrue(file.getName().startsWith("NPC Goblin "));
         assertTrue(file.getName().endsWith(".obj"));
         String base = file.getName().substring(0, file.getName().length() - 4);

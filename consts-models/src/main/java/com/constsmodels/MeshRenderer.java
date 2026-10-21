@@ -115,8 +115,8 @@ final class MeshRenderer
     }
 
     /**
-     * Draws the triangles in these colors instead of the mesh's own, one 0xRRGGBB for each triangle, as the print
-     * colors preview does; null goes back to the mesh's own.
+     * Draws the triangles in these colors instead of the mesh's own, one 0xRRGGBB for each triangle, as the viewer
+     * does to light up a piece picked; null goes back to the mesh's own.
      */
     void useColors(int[] colors)
     {

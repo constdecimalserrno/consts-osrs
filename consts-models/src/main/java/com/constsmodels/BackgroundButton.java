@@ -56,7 +56,7 @@ final class BackgroundButton extends JButton
     void setBackgroundColor(int background)
     {
         this.background = background;
-        setIcon(new FilamentControls.SwatchIcon(swatch(background)));
+        setIcon(new Swatches.SwatchIcon(swatch(background)));
         setToolTipText("Background: " + name(background) + ". Click to change it");
     }
 
@@ -74,7 +74,7 @@ final class BackgroundButton extends JButton
                 return BACKGROUND_NAMES[i];
             }
         }
-        return FilamentControls.hex(background);
+        return Swatches.hex(background);
     }
 
     private void open()
@@ -103,7 +103,7 @@ final class BackgroundButton extends JButton
         for (int i = 0; i < BACKGROUNDS.length; i++)
         {
             int choice = BACKGROUNDS[i];
-            FilamentControls.Swatch swatch = new FilamentControls.Swatch(swatch(choice), 24);
+            Swatches.Swatch swatch = new Swatches.Swatch(swatch(choice), 24);
             swatch.setSelected(choice == background);
             swatch.setToolTipText(BACKGROUND_NAMES[i]);
             swatch.onClick(() ->
@@ -115,7 +115,7 @@ final class BackgroundButton extends JButton
         }
         panel.add(grid, BorderLayout.CENTER);
 
-        JButton custom = FilamentControls.smallButton("Custom…");
+        JButton custom = Swatches.smallButton("Custom…");
         custom.setToolTipText("Any color");
         custom.addActionListener(e ->
         {

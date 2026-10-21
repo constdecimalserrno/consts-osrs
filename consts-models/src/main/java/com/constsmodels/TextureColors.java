@@ -32,8 +32,8 @@ import net.runelite.api.Client;
 import net.runelite.api.TextureProvider;
 
 /**
- * One color for each game texture, the average of its pixels: what a textured face (water, lava, a cape) prints as.
- * Use it on the client thread.
+ * One color for each game texture, the average of its pixels: what a textured face (water, lava, a cape) is drawn and
+ * saved in. Use it on the client thread.
  */
 class TextureColors
 {

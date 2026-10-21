@@ -122,26 +122,6 @@ final class TestMeshes
         return total / 6;
     }
 
-    /** Whether every triangle faces away from the point, as on a convex shape wound outward. */
-    static boolean facesAwayFrom(Mesh m, double px, double py, double pz)
-    {
-        for (int f = 0; f < m.faceCount(); f++)
-        {
-            int a = m.a[f];
-            int b = m.b[f];
-            int c = m.c[f];
-            double[] n = StlWriter.normal(m.x[a], m.y[a], m.z[a], m.x[b], m.y[b], m.z[b], m.x[c], m.y[c], m.z[c]);
-            double cx = (m.x[a] + m.x[b] + m.x[c]) / 3.0 - px;
-            double cy = (m.y[a] + m.y[b] + m.y[c]) / 3.0 - py;
-            double cz = (m.z[a] + m.z[b] + m.z[c]) / 3.0 - pz;
-            if (n[0] * cx + n[1] * cy + n[2] * cz <= 0)
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-
     /** {width, depth, height} of the mesh. */
     static float[] size(Mesh m)
     {

@@ -105,14 +105,14 @@ class ConstsModelsPanel extends PluginPanel
         // The two captures, the panel's main buttons, and the other way to capture
         areaCard = new ActionCard(icon("area_icon.png"), FontManager.getRunescapeBoldFont(), 9, plugin::captureArea);
         areaCard.setTitle("Capture area");
-        areaCard.setToolTipText("Everything around you, ground included, as one model to view or print");
+        areaCard.setToolTipText("Everything around you, ground included, as one model to view or save");
         addRow(areaCard, c, 0);
 
         ActionCard meCard = new ActionCard(icon("me_icon.png"), FontManager.getRunescapeBoldFont(), 9,
             plugin::captureMe);
         meCard.setTitle("Export yourself");
         meCard.setDetail("Your player, as you look now");
-        meCard.setToolTipText("Your own player, gear and all, as one model to view or print");
+        meCard.setToolTipText("Your own player, gear and all, as one model to view or save");
         addRow(meCard, c, 6);
 
         hint.setFont(FontManager.getRunescapeSmallFont());
