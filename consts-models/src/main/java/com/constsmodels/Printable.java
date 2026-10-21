@@ -1,10 +1,11 @@
 package com.constsmodels;
 
 /**
- * A model as it prints, what the viewer's Print view shows and saves: rebuilt as one closed solid by
- * {@link SolidRemesh}, scaled to the print size, stood flat on the plate, on a base if asked. Its triangles take the
- * filaments the viewer chose, each the one nearest its color. Making one takes a few seconds, so it's made once and
- * kept for as long as the print size stays the same; standing it on a base or taking the base away is quick.
+ * A model as it prints, what the viewer's Print view shows and saves: its holes capped ({@link ShellCaps}), so open
+ * shells fill in, then rebuilt as one closed solid by {@link SolidRemesh}, scaled to the print size, stood flat on
+ * the plate, on a base if asked. Its triangles take the filaments the viewer chose, each the one nearest its color.
+ * Making one takes a few seconds, so it's made once and kept for as long as the print size stays the same; standing
+ * it on a base or taking the base away is quick.
  */
 final class Printable
 {
@@ -33,7 +34,7 @@ final class Printable
     /** Makes the model printable; this is the slow part. */
     static Printable of(Mesh model, PrintSettings settings)
     {
-        Mesh solid = SolidRemesh.makeSolid(model, settings.sizeMm);
+        Mesh solid = SolidRemesh.makeSolid(ShellCaps.cap(model).mesh, settings.sizeMm);
         return new Printable(model, settings, solid, PrintPrep.prepareSolid(solid, settings));
     }
 
