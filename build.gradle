@@ -54,6 +54,7 @@ dependencies {
     implementation project(':consts-destination')
     implementation project(':consts-leaderboard')
     implementation project(':consts-world')
+    implementation project(':consts-models')
 
     testImplementation "net.runelite:client:${runeLiteVersion}"
     testImplementation "net.runelite:jshell:${runeLiteVersion}"
