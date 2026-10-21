@@ -57,7 +57,7 @@ public class ViewerPanelTest
         Mesh mesh = b.build();
 
         int[] changes = new int[1];
-        FilamentControls controls = new FilamentControls(mesh, 2, () -> changes[0]++);
+        FilamentControls controls = new FilamentControls(mesh, 2, false, () -> changes[0]++);
         assertNotNull(controls.colors());
         assertEquals(2, controls.colors().count());
         assertNull(controls.shownColors());
@@ -65,8 +65,8 @@ public class ViewerPanelTest
 
         // Never more filaments than colors
         assertEquals(3, FilamentControls.distinctColors(mesh, 9));
-        assertEquals(1, new FilamentControls(mesh, 1, () -> { }).colors().count());
-        assertEquals(3, new FilamentControls(mesh, 9, () -> { }).colors().count());
+        assertEquals(1, new FilamentControls(mesh, 1, false, () -> { }).colors().count());
+        assertEquals(3, new FilamentControls(mesh, 9, false, () -> { }).colors().count());
     }
 
     @Test

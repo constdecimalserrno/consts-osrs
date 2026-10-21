@@ -4,10 +4,13 @@ import static com.constsmodels.TestMeshes.RED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -21,6 +24,7 @@ import java.util.zip.ZipFile;
 import javax.swing.AbstractButton;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.SwingUtilities;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -139,6 +143,77 @@ public class PrintViewTest
     }
 
     @Test
+    public void thePrintStandsOnAFlatBottomWithOrWithoutABase()
+    {
+        Mesh ball = SolidRemeshTest.ball(50, 50, 60, 50, RED);
+        Printable bare = Printable.of(ball, new PrintSettings(40, false, 1));
+        Printable onBase = bare.placed(new PrintSettings(40, true, 1));
+        for (Printable printable : new Printable[]{bare, onBase})
+        {
+            PrintPrep.Print print = printable.print;
+            Mesh mesh = print.mesh;
+            assertTrue(TestMeshes.closed(mesh, 0, print.modelFaces));
+
+            // The model's lowest corners are all on one plane, and a disc of it lies flat there
+            float low = Float.MAX_VALUE;
+            for (int f = 0; f < print.modelFaces; f++)
+            {
+                low = Math.min(low, Math.min(mesh.z[mesh.a[f]], Math.min(mesh.z[mesh.b[f]], mesh.z[mesh.c[f]])));
+            }
+            double flat = 0;
+            float[] footprint = {Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+            for (int f = 0; f < print.modelFaces; f++)
+            {
+                int[] corners = {mesh.a[f], mesh.b[f], mesh.c[f]};
+                int on = 0;
+                for (int v : corners)
+                {
+                    assertTrue(mesh.z[v] == low || mesh.z[v] > low + 0.02);
+                    on += mesh.z[v] == low ? 1 : 0;
+                }
+                if (on == 3)
+                {
+                    flat += PrintPrep.area(mesh, f);
+                    for (int v : corners)
+                    {
+                        footprint[0] = Math.min(footprint[0], mesh.x[v]);
+                        footprint[1] = Math.min(footprint[1], mesh.y[v]);
+                        footprint[2] = Math.max(footprint[2], mesh.x[v]);
+                        footprint[3] = Math.max(footprint[3], mesh.y[v]);
+                    }
+                }
+            }
+            assertTrue("flat " + flat + " mm2", flat > Math.PI * 2 * 2);
+
+            if (printable == bare)
+            {
+                // On the plate itself
+                assertEquals(0, low, 1e-5);
+            }
+            else
+            {
+                // On the base: sunk into it a little, all of the flat bottom over it
+                float[] base = {Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                for (int f = print.modelFaces; f < mesh.faceCount(); f++)
+                {
+                    for (int v : new int[]{mesh.a[f], mesh.b[f], mesh.c[f]})
+                    {
+                        base[0] = Math.min(base[0], mesh.x[v]);
+                        base[1] = Math.min(base[1], mesh.y[v]);
+                        base[2] = Math.max(base[2], mesh.x[v]);
+                        base[3] = Math.max(base[3], mesh.y[v]);
+                        base[4] = Math.max(base[4], mesh.z[v]);
+                    }
+                }
+                assertEquals(print.lift, low, 1e-4);
+                assertTrue(low < base[4] && base[4] - low <= PrintPrep.BASE_SINK_MM + 1e-4);
+                assertTrue(footprint[0] > base[0] && footprint[1] > base[1]);
+                assertTrue(footprint[2] < base[2] && footprint[3] < base[3]);
+            }
+        }
+    }
+
+    @Test
     public void theLineAboutThePrintSaysWhatsHappening()
     {
         assertTrue(ViewerPanel.printText(null, true, null).startsWith("Making it printable"));
@@ -222,6 +297,136 @@ public class PrintViewTest
         panel.refresh();
         assertEquals(0xFFFFFF, panel.canvas().backgroundColor());
         assertTrue(bg.getToolTipText().contains("White"));
+    }
+
+    @Test
+    public void theBaseSwitchStartsAsTheSettingAndStandsThePrintOnABaseOrNot() throws Exception
+    {
+        PrintSettings[] settings = {new PrintSettings(40, true, 2)};
+        ViewerPanel panel = new ViewerPanel(openBox(), actions(settings));
+        FilamentControls filaments = panel.filaments();
+        FilamentControls.Switch base = find(panel, FilamentControls.Switch.class);
+        assertNotNull(base);
+        assertTrue(filaments.base());
+        assertFalse(filaments.showsPrint());
+
+        // Turning it off shows the print, made without a base
+        press(base);
+        assertTrue(filaments.showsPrint());
+        assertFalse(filaments.base());
+        Printable bare = waitForPrint(panel);
+        assertFalse(bare.settings.base);
+        assertEquals(bare.print.mesh.faceCount(), bare.print.modelFaces);
+
+        // Back on, the same solid stands on a base at once
+        press(base);
+        Printable onBase = panel.printable();
+        assertTrue(onBase.settings.base);
+        assertSame(bare.solid, onBase.solid);
+        assertEquals(onBase.print.modelFaces + 12, onBase.print.mesh.faceCount());
+        assertTrue(TestMeshes.closed(onBase.print.mesh, onBase.print.modelFaces, onBase.print.mesh.faceCount()));
+
+        // The switch is the viewer's own while the setting stays as it was, and follows the setting when it changes
+        press(base);
+        panel.refresh();
+        assertFalse(filaments.base());
+        settings[0] = new PrintSettings(40, false, 2);
+        panel.refresh();
+        assertFalse(filaments.base());
+        settings[0] = new PrintSettings(40, true, 2);
+        panel.refresh();
+        assertTrue(filaments.base());
+        assertTrue(panel.printable().settings.base);
+    }
+
+    /** Actions that save nothing, with the settings in the array, which a test may change. */
+    static ViewerActions actions(PrintSettings[] settings)
+    {
+        return new ViewerActions()
+        {
+            @Override
+            public void save(Mesh m, ExportFormat format, PrintColors colors)
+            {
+            }
+
+            @Override
+            public void savePrint(Printable printable, ExportFormat format, PrintColors colors)
+            {
+            }
+
+            @Override
+            public void saveImage(Mesh m, BufferedImage image)
+            {
+            }
+
+            @Override
+            public void openFolder()
+            {
+            }
+
+            @Override
+            public ExportFormat defaultFormat()
+            {
+                return ExportFormat.THREE_MF;
+            }
+
+            @Override
+            public PrintSettings printSettings()
+            {
+                return settings[0];
+            }
+
+            @Override
+            public int background()
+            {
+                return ViewerCanvas.DEFAULT_BACKGROUND;
+            }
+
+            @Override
+            public void setBackground(int rgb)
+            {
+            }
+        };
+    }
+
+    /** Waits for the panel's print to be made, which happens off the Swing thread. */
+    static Printable waitForPrint(ViewerPanel panel) throws Exception
+    {
+        Printable[] made = new Printable[1];
+        for (int i = 0; i < 600 && made[0] == null; i++)
+        {
+            Thread.sleep(50);
+            SwingUtilities.invokeAndWait(() -> made[0] = panel.printable());
+        }
+        assertNotNull("the print was never made", made[0]);
+        return made[0];
+    }
+
+    /** Presses the left mouse button on a component, as a click starts. */
+    static void press(java.awt.Component c)
+    {
+        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+            InputEvent.BUTTON1_DOWN_MASK, 2, 2, 1, false, MouseEvent.BUTTON1));
+    }
+
+    static <T> T find(Container root, Class<T> type)
+    {
+        for (Component c : root.getComponents())
+        {
+            if (type.isInstance(c))
+            {
+                return type.cast(c);
+            }
+            if (c instanceof Container)
+            {
+                T found = find((Container) c, type);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     @Test

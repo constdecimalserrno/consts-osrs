@@ -37,12 +37,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * The print's colors, along the left of the viewer's bar: whether the view shows the game's model or the print, how
- * many filaments the print uses (1 to {@link PrintColors#MAX}), and a swatch for each. Click a swatch to choose the
- * filament you'll load for it, from common filament colors or any color at all.
+ * The print's colors, along the left of the viewer's bar: whether the view shows the game's model or the print,
+ * whether the print stands on a base, how many filaments the print uses (1 to {@link PrintColors#MAX}), and a swatch
+ * for each. Click a swatch to choose the filament you'll load for it, from common filament colors or any color at all.
  *
  * <p>The model's colors are merged down to the filaments off the Swing thread when the model is big. Choosing a
- * color, or how many, shows the print.
+ * color, or how many, or turning the base on or off, shows the print.
  */
 final class FilamentControls extends JPanel
 {
@@ -63,14 +63,15 @@ final class FilamentControls extends JPanel
     // Big models are merged off the Swing thread
     private static final int MERGE_HERE = 30_000;
 
-    private static final int SWATCH = 18;
+    private static final int SWATCH = 16;
     private static final int CONTROL_HEIGHT = 28;
 
     private final Mesh mesh;
     private final Runnable changed;
     private final Toggle show = new Toggle("Game", "Print");
+    private final Switch base = new Switch("Base");
     private final JComboBox<Integer> count = new JComboBox<>();
-    private final JPanel swatches = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+    private final JPanel swatches = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 0));
 
     // The filaments as merged, and as chosen; null until the first merge is done
     private PrintColors merged;
@@ -81,9 +82,10 @@ final class FilamentControls extends JPanel
 
     /**
      * @param start how many filaments to start with, as in the settings
-     * @param changed called on the Swing thread when the filaments, or what the view shows, change
+     * @param onBase whether the print starts on a base, as in the settings
+     * @param changed called on the Swing thread when the filaments, the base, or what the view shows, change
      */
-    FilamentControls(Mesh mesh, int start, Runnable changed)
+    FilamentControls(Mesh mesh, int start, boolean onBase, Runnable changed)
     {
         super(new FlowLayout(FlowLayout.LEFT, 0, 0));
         this.mesh = mesh;
@@ -95,6 +97,21 @@ final class FilamentControls extends JPanel
             + "Save saves the one you see.</html>");
         show.onChange(changed);
 
+        base.setOn(onBase, false);
+        base.setToolTipText("<html>Whether the print stands on a solid base, in its darkest filament.<br>"
+            + "Starts as the Add a base setting.</html>");
+        base.onChange(() ->
+        {
+            if (show.isRight())
+            {
+                changed.run();
+            }
+            else
+            {
+                show.setRight(true);
+            }
+        });
+
         // No more filaments than the model has colors
         int most = Math.max(1, Math.min(PrintColors.MAX, distinctColors(mesh, PrintColors.MAX)));
         for (int i = 1; i <= most; i++)
@@ -105,7 +122,7 @@ final class FilamentControls extends JPanel
         count.setSelectedItem(first);
         count.setFont(FontManager.getRunescapeFont());
         count.setFocusable(false);
-        count.setPreferredSize(new Dimension(92, CONTROL_HEIGHT));
+        count.setPreferredSize(new Dimension(80, CONTROL_HEIGHT));
         count.setToolTipText("How many filament colors the print uses");
         count.setRenderer(new DefaultListCellRenderer()
         {
@@ -132,7 +149,9 @@ final class FilamentControls extends JPanel
         swatches.setBorder(new EmptyBorder((CONTROL_HEIGHT - SWATCH) / 2, 0, 0, 0));
 
         add(show);
-        add(gap(8));
+        add(gap(6));
+        add(base);
+        add(gap(6));
         add(count);
         add(gap(8));
         add(swatches);
@@ -149,6 +168,22 @@ final class FilamentControls extends JPanel
     boolean showsPrint()
     {
         return show.isRight();
+    }
+
+    /** Whether the print stands on a base. */
+    boolean base()
+    {
+        return base.isOn();
+    }
+
+    /** Puts the print on a base or takes it off, as when the setting changes, without changing what the view shows. */
+    void setBase(boolean on)
+    {
+        if (on != base.isOn())
+        {
+            base.setOn(on, false);
+            changed.run();
+        }
     }
 
     /** Each triangle's color in the filaments' colors while the print is on, or null for the game's own. */
@@ -456,6 +491,92 @@ final class FilamentControls extends JPanel
         }
     }
 
+    /** One choice, lit while it's on, with a mark that's filled: whether the print stands on a base. */
+    static final class Switch extends JComponent
+    {
+        private static final int MARK = 8;
+
+        private final String text;
+        private boolean on;
+        private Runnable change;
+
+        Switch(String text)
+        {
+            this.text = text;
+            setFont(FontManager.getRunescapeFont());
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            FontMetrics metrics = getFontMetrics(getFont());
+            setPreferredSize(new Dimension(metrics.stringWidth(text) + MARK + 18, CONTROL_HEIGHT));
+            addMouseListener(new MouseAdapter()
+            {
+                @Override
+                public void mousePressed(MouseEvent e)
+                {
+                    if (SwingUtilities.isLeftMouseButton(e))
+                    {
+                        setOn(!on, true);
+                    }
+                }
+            });
+        }
+
+        void onChange(Runnable change)
+        {
+            this.change = change;
+        }
+
+        boolean isOn()
+        {
+            return on;
+        }
+
+        /** Turns it on or off, and says so if asked to and it changed. */
+        void setOn(boolean on, boolean tell)
+        {
+            if (on == this.on)
+            {
+                return;
+            }
+            this.on = on;
+            repaint();
+            if (tell && change != null)
+            {
+                change.run();
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g)
+        {
+            Graphics2D g2 = (Graphics2D) g.create();
+            int w = getWidth();
+            int h = getHeight();
+            g2.setColor(on ? ColorScheme.MEDIUM_GRAY_COLOR : ColorScheme.DARKER_GRAY_COLOR);
+            g2.fillRect(0, 0, w, h);
+            g2.setColor(ColorScheme.BORDER_COLOR);
+            g2.drawRect(0, 0, w - 1, h - 1);
+
+            g2.setFont(getFont());
+            FontMetrics metrics = g2.getFontMetrics();
+            int left = (w - MARK - 5 - metrics.stringWidth(text)) / 2;
+            int top = (h - MARK) / 2;
+            if (on)
+            {
+                g2.setColor(ColorScheme.BRAND_ORANGE);
+                g2.fillRect(left, top, MARK, MARK);
+            }
+            else
+            {
+                g2.setColor(ColorScheme.LIGHT_GRAY_COLOR);
+                g2.drawRect(left, top, MARK - 1, MARK - 1);
+            }
+            int baseline = (h - metrics.getHeight()) / 2 + metrics.getAscent();
+            g2.setColor(on ? Color.WHITE : ColorScheme.LIGHT_GRAY_COLOR);
+            g2.drawString(text, left + MARK + 5, baseline);
+            g2.dispose();
+        }
+    }
+
     /** Two choices side by side, one of them picked: the game's colors or the print's. */
     private static final class Toggle extends JComponent
     {
@@ -471,7 +592,7 @@ final class FilamentControls extends JPanel
             setFont(FontManager.getRunescapeFont());
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             FontMetrics metrics = getFontMetrics(getFont());
-            int half = Math.max(metrics.stringWidth(left), metrics.stringWidth(right)) + 20;
+            int half = Math.max(metrics.stringWidth(left), metrics.stringWidth(right)) + 18;
             setPreferredSize(new Dimension(half * 2, CONTROL_HEIGHT));
             addMouseListener(new MouseAdapter()
             {

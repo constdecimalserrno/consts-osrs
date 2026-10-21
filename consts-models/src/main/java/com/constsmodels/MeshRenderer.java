@@ -127,6 +127,70 @@ final class MeshRenderer
         faceColors = colors == null ? mesh.color : colors;
     }
 
+    /**
+     * The triangle drawn at a point of a picture this size through the camera: the nearest one there, either side of
+     * it, or -1 for none. The point is in the picture's own units, as the mouse gives them, so its pixel's middle is
+     * half a unit on.
+     */
+    static int pick(Mesh mesh, OrbitCamera camera, int width, int height, double x, double y)
+    {
+        double[] eye = camera.eye();
+        double[] basis = camera.basis();
+        double focal = OrbitCamera.focal(height);
+        double right = (x + 0.5 - width * 0.5) / focal;
+        double up = (height * 0.5 - y - 0.5) / focal;
+        // Along the ray, as far ahead as it goes: the camera's axes are square to each other and of unit length
+        double dx = basis[6] + right * basis[0] + up * basis[3];
+        double dy = basis[7] + right * basis[1] + up * basis[4];
+        double dz = basis[8] + right * basis[2] + up * basis[5];
+        double nearest = Double.MAX_VALUE;
+        int found = -1;
+        for (int f = 0; f < mesh.faceCount(); f++)
+        {
+            int a = mesh.a[f];
+            int b = mesh.b[f];
+            int c = mesh.c[f];
+            // Moller and Trumbore
+            double e1x = mesh.x[b] - mesh.x[a];
+            double e1y = mesh.y[b] - mesh.y[a];
+            double e1z = mesh.z[b] - mesh.z[a];
+            double e2x = mesh.x[c] - mesh.x[a];
+            double e2y = mesh.y[c] - mesh.y[a];
+            double e2z = mesh.z[c] - mesh.z[a];
+            double hx = dy * e2z - dz * e2y;
+            double hy = dz * e2x - dx * e2z;
+            double hz = dx * e2y - dy * e2x;
+            double det = e1x * hx + e1y * hy + e1z * hz;
+            if (det == 0)
+            {
+                continue;
+            }
+            double sx = eye[0] - mesh.x[a];
+            double sy = eye[1] - mesh.y[a];
+            double sz = eye[2] - mesh.z[a];
+            double u = (sx * hx + sy * hy + sz * hz) / det;
+            if (u < 0 || u > 1)
+            {
+                continue;
+            }
+            double qx = sy * e1z - sz * e1y;
+            double qy = sz * e1x - sx * e1z;
+            double qz = sx * e1y - sy * e1x;
+            double v = (dx * qx + dy * qy + dz * qz) / det;
+            if (v < 0 || u + v > 1)
+            {
+                continue;
+            }
+            double t = (e2x * qx + e2y * qy + e2z * qz) / det;
+            if (t >= camera.near() && t < nearest)
+            {
+                nearest = t;
+                found = f;
+            }
+        }
+        return found;
+    }
+
     /** Sets the background, 0xRRGGBB at the top of the picture and at the bottom. */
     void setBackground(int top, int bottom)
     {

@@ -193,6 +193,20 @@ final class PrintColors
         return new PrintColors(changed, merged, faceIndex);
     }
 
+    /**
+     * The same filaments for a mesh of some of the triangles these were made for, by their numbers in order, as when
+     * pieces of the model are taken out.
+     */
+    PrintColors forFaces(int[] faces)
+    {
+        int[] index = new int[faces.length];
+        for (int i = 0; i < faces.length; i++)
+        {
+            index[i] = faceIndex[faces[i]];
+        }
+        return new PrintColors(palette, merged, index);
+    }
+
     /** The mesh as it will print: every triangle in its filament's color. For the viewer's preview. */
     Mesh applyTo(Mesh mesh)
     {

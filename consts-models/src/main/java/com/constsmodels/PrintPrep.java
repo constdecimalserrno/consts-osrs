@@ -149,6 +149,39 @@ final class PrintPrep
      */
     static Mesh weld(Mesh mesh)
     {
+        int[] same = welded(mesh);
+
+        int faces = mesh.faceCount();
+        int[] a = new int[faces];
+        int[] b = new int[faces];
+        int[] c = new int[faces];
+        int[] color = new int[faces];
+        int kept = 0;
+        for (int f = 0; f < faces; f++)
+        {
+            int va = same[mesh.a[f]];
+            int vb = same[mesh.b[f]];
+            int vc = same[mesh.c[f]];
+            if (va == NONE || vb == NONE || vc == NONE || va == vb || vb == vc || va == vc
+                || !(height(mesh, va, vb, vc) > MIN_HEIGHT))
+            {
+                continue;
+            }
+            a[kept] = va;
+            b[kept] = vb;
+            c[kept] = vc;
+            color[kept] = mesh.color[f];
+            kept++;
+        }
+        return compact(mesh.name, mesh.x, mesh.y, mesh.z, a, b, c, color, kept);
+    }
+
+    /**
+     * Each corner's stand-in once corners closer than {@link #WELD_DISTANCE} on every axis are welded: the first
+     * such corner, itself if none came before. -1 for a corner no triangle uses or that isn't a number.
+     */
+    static int[] welded(Mesh mesh)
+    {
         int vertices = mesh.vertexCount();
         boolean[] used = new boolean[vertices];
         for (int f = 0; f < mesh.faceCount(); f++)
@@ -208,30 +241,7 @@ final class PrintPrep
                 same[v] = found;
             }
         }
-
-        int faces = mesh.faceCount();
-        int[] a = new int[faces];
-        int[] b = new int[faces];
-        int[] c = new int[faces];
-        int[] color = new int[faces];
-        int kept = 0;
-        for (int f = 0; f < faces; f++)
-        {
-            int va = same[mesh.a[f]];
-            int vb = same[mesh.b[f]];
-            int vc = same[mesh.c[f]];
-            if (va == NONE || vb == NONE || vc == NONE || va == vb || vb == vc || va == vc
-                || !(height(mesh, va, vb, vc) > MIN_HEIGHT))
-            {
-                continue;
-            }
-            a[kept] = va;
-            b[kept] = vb;
-            c[kept] = vc;
-            color[kept] = mesh.color[f];
-            kept++;
-        }
-        return compact(mesh.name, mesh.x, mesh.y, mesh.z, a, b, c, color, kept);
+        return same;
     }
 
     /**

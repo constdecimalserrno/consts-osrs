@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -34,7 +35,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * The viewer's picture of a mesh, and the mouse on it: drag to turn it, scroll to zoom towards the cursor,
- * right-drag or Shift-drag to move it, double-click or R to see all of it again.
+ * right-drag or Shift-drag to move it, double-click or R to see all of it again, and click to pick what's under the
+ * cursor. A few controls can sit in the top right corner, over the picture.
  *
  * <p>Pictures are drawn on a thread of the view's own, never on the Swing thread, and only the newest one asked for
  * is drawn. While the mouse is moving the model the picture is drawn smaller, as small as it takes to keep up, and
@@ -45,8 +47,8 @@ final class ViewerCanvas extends JComponent
     private static final Logger log = LoggerFactory.getLogger(ViewerCanvas.class);
 
     /** The line of help along the bottom of the view. */
-    static final String HINT =
-        "Drag to turn  \u00b7  Scroll to zoom  \u00b7  Right-drag to move  \u00b7  Double-click to reset";
+    static final String HINT = "Drag to turn  \u00b7  Scroll to zoom  \u00b7  Right-drag to move"
+        + "  \u00b7  Click to pick a piece  \u00b7  Double-click to reset";
 
     /** The background that isn't one color: a dark fall from the top of the picture to the bottom. */
     static final int DEFAULT_BACKGROUND = -1;
@@ -60,6 +62,9 @@ final class ViewerCanvas extends JComponent
 
     // How long after the last scroll or resize the full picture is drawn
     private static final int SETTLE_MS = 160;
+
+    // How far the mouse can move, in points across and down, before a click becomes a drag
+    private static final int CLICK_SLOP = 4;
 
     private static final Color HINT_COLOR = new Color(
         ColorScheme.LIGHT_GRAY_COLOR.getRed(), ColorScheme.LIGHT_GRAY_COLOR.getGreen(),
@@ -100,6 +105,9 @@ final class ViewerCanvas extends JComponent
     private Point last;
     private boolean panning;
     private boolean dragged;
+    private IntConsumer picker;
+    // The controls in the top right corner, if any
+    private JComponent corner;
     private boolean touched;
     private boolean fitted;
 
@@ -136,11 +144,12 @@ final class ViewerCanvas extends JComponent
                 }
                 int dx = e.getX() - last.x;
                 int dy = e.getY() - last.y;
-                last = e.getPoint();
-                if (dx == 0 && dy == 0)
+                // A click that wobbles a little is still a click
+                if (dx == 0 && dy == 0 || !dragged && Math.abs(dx) + Math.abs(dy) < CLICK_SLOP)
                 {
                     return;
                 }
+                last = e.getPoint();
                 if (panning)
                 {
                     camera.pan(dx, dy, getHeight());
@@ -170,6 +179,11 @@ final class ViewerCanvas extends JComponent
                     dragged = false;
                     settle.stop();
                     draw(true);
+                }
+                else if (!panning && e.getClickCount() < 2 && picker != null && getWidth() > 0 && getHeight() > 0)
+                {
+                    // A click that didn't move the model: what's under it
+                    picker.accept(MeshRenderer.pick(shown, camera, getWidth(), getHeight(), e.getX(), e.getY()));
                 }
             }
 
@@ -280,6 +294,37 @@ final class ViewerCanvas extends JComponent
         this.shown = mesh;
         this.colors = colors;
         draw(true);
+    }
+
+    /**
+     * Says which triangle of the mesh shown a click lands on, -1 for none, each time a left click doesn't move the
+     * model. A double click resets the view and picks nothing more.
+     */
+    void onPick(IntConsumer picker)
+    {
+        this.picker = picker;
+    }
+
+    /** Puts controls in the top right corner, over the picture. */
+    void setCorner(JComponent corner)
+    {
+        if (this.corner != null)
+        {
+            remove(this.corner);
+        }
+        this.corner = corner;
+        add(corner);
+        revalidate();
+    }
+
+    @Override
+    public void doLayout()
+    {
+        if (corner != null)
+        {
+            Dimension size = corner.getPreferredSize();
+            corner.setBounds(getWidth() - size.width - 8, 8, size.width, size.height);
+        }
     }
 
     /** Draws the model on one color, or on {@link #DEFAULT_BACKGROUND}. */
