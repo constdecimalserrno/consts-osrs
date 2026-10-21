@@ -65,6 +65,12 @@ class ConstsAfkStatusOverlay extends OverlayPanel
     @Override
     public Dimension render(Graphics2D graphics)
     {
+        // Master Switch off: no status panel, as if the plugin were off.
+        if (!config.masterSwitch())
+        {
+            return null;
+        }
+
         panelComponent.getChildren().clear();
         List<HoverTarget> hoverTargets = new ArrayList<>();
 

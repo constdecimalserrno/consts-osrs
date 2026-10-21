@@ -14,6 +14,7 @@ import net.runelite.api.Tile;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.client.events.ConfigChanged;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,6 +56,19 @@ public class ConstsDestinationPluginTest
     {
         plugin.onMenuOptionClicked(click(MenuAction.WALK));
         plugin.onMenuOptionClicked(click(MenuAction.NPC_FIRST_OPTION));
+
+        assertNull(plugin.getClickedTile());
+    }
+
+    @Test
+    public void theMasterSwitchShouldClearIt()
+    {
+        plugin.onMenuOptionClicked(click(MenuAction.WALK));
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsDestinationConfig.GROUP);
+        changed.setKey(ConstsDestinationConfig.MASTER_KEY);
+        changed.setNewValue("false");
+        plugin.onConfigChanged(changed);
 
         assertNull(plugin.getClickedTile());
     }

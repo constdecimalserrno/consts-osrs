@@ -16,10 +16,16 @@ import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.PlayerDespawned;
 import net.runelite.api.events.PlayerSpawned;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 
 /**
  * Where you're about to act and where you acted: the tile under your cursor and anything there you can act on in the
@@ -48,6 +54,25 @@ public class ConstsDestinationPlugin extends Plugin
     @Inject
     private InteractTracker tracker;
 
+    @Inject
+    private ConstsDestinationConfig config;
+
+    @Inject
+    private ConfigManager configManager;
+
+    @Inject
+    private ClientToolbar clientToolbar;
+
+    @Inject
+    private ColorPickerManager colorPickerManager;
+
+    @Inject
+    private EventBus eventBus;
+
+    // The sidebar button: the plugin's settings in a panel of their own.
+    private ConfigSidePanel configPanel;
+    private NavigationButton navButton;
+
     private WorldPoint clickedTile;
 
     @Provides
@@ -63,6 +88,15 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.add(outlineOverlay);
         clickedTile = null;
         tracker.clear();
+        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsDestinationConfig.MASTER_KEY);
+        eventBus.register(configPanel);
+        navButton = NavigationButton.builder()
+            .tooltip("consts-Destination")
+            .icon(ImageUtil.loadImageResource(getClass(), "panel_icon.png"))
+            .priority(5)
+            .panel(configPanel)
+            .build();
+        clientToolbar.addNavigation(navButton);
     }
 
     @Override
@@ -72,6 +106,10 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.remove(outlineOverlay);
         clickedTile = null;
         tracker.clear();
+        clientToolbar.removeNavigation(navButton);
+        eventBus.unregister(configPanel);
+        navButton = null;
+        configPanel = null;
     }
 
     @Subscribe
@@ -172,6 +210,17 @@ public class ConstsDestinationPlugin extends Plugin
                 return config.outlineGroundItems();
             default:
                 return false;
+        }
+    }
+
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        // Master Switch off: forget what was clicked, so turning it back on doesn't light an old destination.
+        if (ConstsDestinationConfig.GROUP.equals(event.getGroup()) && ConstsDestinationConfig.MASTER_KEY.equals(event.getKey()))
+        {
+            clickedTile = null;
+            tracker.clear();
         }
     }
 

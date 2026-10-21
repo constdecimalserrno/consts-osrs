@@ -16,6 +16,18 @@ public interface ConstsDestinationConfig extends Config
 {
     // Not plain "destination": on the Plugin Hub a group name has to be ours alone.
     String GROUP = "constsdestination";
+    String MASTER_KEY = "masterSwitch";
+
+    @ConfigItem(
+        keyName = MASTER_KEY,
+        name = "Master Switch",
+        description = "Off hides every tile and outline consts-Destination draws. The plugin itself stays on, so its sidebar button stays.",
+        position = -1
+    )
+    default boolean masterSwitch()
+    {
+        return true;
+    }
 
     @ConfigSection(
         name = "Colors",
