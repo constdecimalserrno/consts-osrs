@@ -51,7 +51,8 @@ public class ExportMenuLookupTest
         plugin = mock(ConstsModelsPlugin.class);
         menu = new ExportMenuTest.FakeMenu();
         when(client.getMenu()).thenReturn(menu);
-        exportMenu = new ExportMenu(plugin, client, mock(ConstsModelsConfig.class), mock(MenuManager.class));
+        exportMenu = new ExportMenu(plugin, client, mock(ConstsModelsConfig.class), mock(MenuManager.class),
+            mock(net.runelite.client.game.ItemManager.class));
 
         view = mock(WorldView.class);
         when(view.getId()).thenReturn(WorldView.TOPLEVEL);

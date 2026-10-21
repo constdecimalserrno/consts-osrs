@@ -16,6 +16,7 @@ import javax.swing.SwingUtilities;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.Model;
 import net.runelite.api.Player;
 import net.runelite.api.Renderable;
 import net.runelite.client.RuneLite;
@@ -193,6 +194,12 @@ public class ConstsModelsPlugin extends Plugin
     Mesh capture(Renderable renderable, String name)
     {
         return ModelCapture.capture(ModelCapture.modelOf(renderable), name, textures);
+    }
+
+    /** A model loaded from the game's cache, like an item's, as a mesh. Call it on the client thread. */
+    Mesh captureModel(Model model, String name)
+    {
+        return ModelCapture.capture(model, name, textures);
     }
 
     /** Opens a capture in the viewer and lists it in the sidebar. Call it from any thread. */

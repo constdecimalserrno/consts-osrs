@@ -21,10 +21,13 @@ import java.util.stream.Collectors;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.IndexedObjectSet;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.KeyCode;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.Model;
+import net.runelite.api.ModelData;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
@@ -33,6 +36,7 @@ import net.runelite.api.WorldView;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.menus.WidgetMenuOption;
 import net.runelite.client.util.Text;
@@ -47,6 +51,7 @@ public class ExportMenuTest
     private ConstsModelsConfig config;
     private ConstsModelsPlugin plugin;
     private MenuManager menuManager;
+    private ItemManager itemManager;
     private FakeMenu menu;
     private ExportMenu exportMenu;
 
@@ -57,9 +62,10 @@ public class ExportMenuTest
         config = mock(ConstsModelsConfig.class);
         plugin = mock(ConstsModelsPlugin.class);
         menuManager = mock(MenuManager.class);
+        itemManager = mock(ItemManager.class);
         menu = new FakeMenu();
         when(client.getMenu()).thenReturn(menu);
-        exportMenu = new ExportMenu(plugin, client, config, menuManager);
+        exportMenu = new ExportMenu(plugin, client, config, menuManager, itemManager);
     }
 
     @Test
@@ -319,6 +325,71 @@ public class ExportMenuTest
 
         exportMenu.shutDown();
         verify(menuManager).removeManagedCustomMenu(option.getValue());
+    }
+
+    @Test
+    public void anItemInTheInventoryOrBankGetsExportModelBelowItsExamine()
+    {
+        game(MenuAction.CANCEL, "Cancel", "", 0);
+        Entry wield = entry(MenuAction.CC_OP, "Wield", "<col=ff9040>Bronze sword", 2, 5, 9764864);
+        wield.setItemId(1277);
+        menu.entries.add(wield);
+        exportMenu.onMenuEntryAdded(new MenuEntryAdded(wield));
+        Entry examine = entry(MenuAction.CC_OP_LOW_PRIORITY, "Examine", "<col=ff9040>Bronze sword", 10, 5, 9764864);
+        examine.setItemId(1277);
+        menu.entries.add(examine);
+        exportMenu.onMenuEntryAdded(new MenuEntryAdded(examine));
+        // Added again, as the game does for the same slot: still one
+        exportMenu.onMenuEntryAdded(new MenuEntryAdded(examine));
+
+        assertEquals(List.of("Wield Bronze sword", "Examine Bronze sword", "Export Model Bronze sword", "Cancel"), shown());
+        MenuEntry export = exports().get(0);
+        assertEquals(MenuAction.RUNELITE, export.getType());
+        assertEquals(1277, export.getIdentifier());
+        assertEquals(5, export.getParam0());
+        assertEquals(9764864, export.getParam1());
+        assertTrue(ExportMenu.isItemExamine(examine));
+    }
+
+    @Test
+    public void aClickExportsTheItemsOwnModelNotedOrNot()
+    {
+        // A noted bronze sword is the sword
+        when(itemManager.canonicalize(1278)).thenReturn(1277);
+        ItemComposition sword = mock(ItemComposition.class);
+        when(sword.getInventoryModel()).thenReturn(2601);
+        when(sword.getColorToReplace()).thenReturn(new short[]{10, 20});
+        when(sword.getColorToReplaceWith()).thenReturn(new short[]{11, 21});
+        when(client.getItemDefinition(1277)).thenReturn(sword);
+        ModelData cached = mock(ModelData.class);
+        ModelData copy = mock(ModelData.class);
+        when(cached.shallowCopy()).thenReturn(copy);
+        when(copy.cloneColors()).thenReturn(copy);
+        when(copy.cloneTextures()).thenReturn(copy);
+        Model lit = mock(Model.class);
+        when(copy.light()).thenReturn(lit);
+        when(client.loadModelData(2601)).thenReturn(cached);
+        Mesh mesh = CoreTest.triangle(0xFF0000);
+        when(plugin.captureModel(lit, "Item Bronze sword")).thenReturn(mesh);
+
+        exportMenu.exportItem(1278, "<col=ff9040>Bronze sword");
+
+        verify(copy).recolor((short) 10, (short) 11);
+        verify(copy).recolor((short) 20, (short) 21);
+        verify(plugin).show(mesh);
+    }
+
+    @Test
+    public void anItemWithoutAModelSaysSo()
+    {
+        when(itemManager.canonicalize(4151)).thenReturn(4151);
+        ItemComposition whip = mock(ItemComposition.class);
+        when(whip.getInventoryModel()).thenReturn(-1);
+        when(client.getItemDefinition(4151)).thenReturn(whip);
+
+        exportMenu.exportItem(4151, "<col=ff9040>Abyssal whip");
+
+        verify(plugin).chat("Couldn't find the model of Abyssal whip.");
     }
 
     @Test

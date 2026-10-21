@@ -4,10 +4,13 @@ import java.awt.Shape;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.IndexedObjectSet;
+import net.runelite.api.ItemComposition;
 import net.runelite.api.KeyCode;
 import net.runelite.api.Menu;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
+import net.runelite.api.Model;
+import net.runelite.api.ModelData;
 import net.runelite.api.NPC;
 import net.runelite.api.Point;
 import net.runelite.api.WorldView;
@@ -15,14 +18,17 @@ import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.menus.MenuManager;
 import net.runelite.client.menus.WidgetMenuOption;
 import org.slf4j.Logger;
+import net.runelite.client.util.Text;
 import org.slf4j.LoggerFactory;
 
 /**
  * The Export Model option on the right-click menu of anything with a model: players, NPCs, pets, objects (game, wall,
- * decorative and ground objects) and ground items, and your own player on the equipment and inventory tabs. Each
+ * decorative and ground objects), ground items, items in the inventory, bank, equipment or anywhere else an item has an
+ * Examine (its own model, without dropping it), and your own player on the equipment and inventory tabs. Each
  * target gets one, low in the menu: just below its Examine, or below a player's options, so it's never the left
  * click. A pet has no entries of its own, so a pet under the cursor gets one when the menu opens. With Only with Shift
  * on, it's there only while Shift is held. A click looks the target up again with {@link ExportTarget}, then, on the
@@ -42,6 +48,7 @@ class ExportMenu
     private final Client client;
     private final ConstsModelsConfig config;
     private final MenuManager menuManager;
+    private final ItemManager itemManager;
 
     /** Your own player: the equipment and inventory tabs, in the fixed, resizable and bottom-line layouts. */
     private final WidgetMenuOption yourself = new WidgetMenuOption(EXPORT_MODEL, "Yourself",
@@ -50,12 +57,14 @@ class ExportMenu
         InterfaceID.ToplevelPreEoc.STONE3, InterfaceID.ToplevelPreEoc.STONE4);
 
     @Inject
-    ExportMenu(ConstsModelsPlugin plugin, Client client, ConstsModelsConfig config, MenuManager menuManager)
+    ExportMenu(ConstsModelsPlugin plugin, Client client, ConstsModelsConfig config, MenuManager menuManager,
+        ItemManager itemManager)
     {
         this.plugin = plugin;
         this.client = client;
         this.config = config;
         this.menuManager = menuManager;
+        this.itemManager = itemManager;
     }
 
     void startUp()
@@ -116,6 +125,19 @@ class ExportMenu
     public void onMenuEntryAdded(MenuEntryAdded event)
     {
         MenuEntry added = event.getMenuEntry();
+        if (isItemExamine(added))
+        {
+            if (showing())
+            {
+                Menu menu = client.getMenu();
+                MenuEntry[] entries = menu.getMenuEntries();
+                if (!hasItemExport(entries, added))
+                {
+                    addItem(menu, indexOf(entries, added), added);
+                }
+            }
+            return;
+        }
         ExportTarget.Kind kind = kindOf(added.getType());
         if (kind == null || !showing())
         {
@@ -216,6 +238,94 @@ class ExportMenu
             .onClick(clicked -> export(kind, clicked));
     }
 
+    /**
+     * Whether an entry is the Examine of an item in an interface (the inventory, the bank, the equipment tab, a shop):
+     * those carry the item's id. A ground item's Examine is an anchor of its own, for the item where it lies.
+     */
+    static boolean isItemExamine(MenuEntry entry)
+    {
+        return entry.getItemId() > 0 && entry.getType() != MenuAction.EXAMINE_ITEM_GROUND
+            && "Examine".equals(Text.removeTags(entry.getOption()));
+    }
+
+    /** Puts an Export Model for an item in an interface just below its Examine. */
+    private void addItem(Menu menu, int index, MenuEntry examine)
+    {
+        MenuEntry entry;
+        try
+        {
+            entry = menu.createMenuEntry(index);
+        }
+        catch (IllegalStateException e)
+        {
+            return;
+        }
+        int itemId = examine.getItemId();
+        String target = examine.getTarget();
+        entry.setOption(EXPORT_MODEL)
+            .setTarget(target)
+            .setType(MenuAction.RUNELITE)
+            .setIdentifier(itemId)
+            .setParam0(examine.getParam0())
+            .setParam1(examine.getParam1())
+            .onClick(clicked -> exportItem(itemId, target));
+    }
+
+    /**
+     * A click on an item's Export Model, on the client thread: its model as the game draws it on the ground or in the
+     * inventory, from the game's cache, so it needn't be dropped first. A noted item or a bank placeholder is the
+     * item itself.
+     */
+    void exportItem(int itemId, String target)
+    {
+        String what = ExportTarget.clean(target);
+        if (what.isEmpty())
+        {
+            what = "that item";
+        }
+        try
+        {
+            ItemComposition item = client.getItemDefinition(itemManager.canonicalize(itemId));
+            ModelData data = item == null ? null : client.loadModelData(item.getInventoryModel());
+            if (data == null)
+            {
+                plugin.chat("Couldn't find the model of " + what + ".");
+                return;
+            }
+            plugin.show(plugin.captureModel(itemModel(item, data), ExportTarget.Kind.ITEM.prefix + " " + what));
+        }
+        catch (RuntimeException e)
+        {
+            log.warn("Couldn't export item {}", itemId, e);
+            plugin.chat("Couldn't export " + what + ": " + e.getMessage());
+        }
+    }
+
+    /** An item's model with its own recolors and retextures, lit as the game lights it; the cached model is untouched. */
+    static Model itemModel(ItemComposition item, ModelData data)
+    {
+        ModelData copy = data.shallowCopy().cloneColors().cloneTextures();
+        short[] from = item.getColorToReplace();
+        short[] to = item.getColorToReplaceWith();
+        if (from != null && to != null)
+        {
+            for (int i = 0; i < Math.min(from.length, to.length); i++)
+            {
+                copy.recolor(from[i], to[i]);
+            }
+        }
+        from = item.getTextureToReplace();
+        to = item.getTextureToReplaceWith();
+        if (from != null && to != null)
+        {
+            for (int i = 0; i < Math.min(from.length, to.length); i++)
+            {
+                copy.retexture(from[i], to[i]);
+            }
+        }
+        return copy.light();
+    }
+
     /** A click, on the client thread: finds what the entry points at, captures it and opens the capture. */
     void export(ExportTarget.Kind kind, MenuEntry entry)
     {
@@ -276,6 +386,22 @@ class ExportMenu
                 || below.getWorldViewId() != added.getWorldViewId();
         }
         return true;
+    }
+
+    /** Whether this item in this slot has its Export Model already. */
+    private static boolean hasItemExport(MenuEntry[] entries, MenuEntry examine)
+    {
+        for (MenuEntry entry : entries)
+        {
+            if (entry.getType() == MenuAction.RUNELITE && EXPORT_MODEL.equals(entry.getOption())
+                && entry.getIdentifier() == examine.getItemId()
+                && entry.getParam0() == examine.getParam0()
+                && entry.getParam1() == examine.getParam1())
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Whether there's an Export Model for the same thing in the same place already: stacks of an item share one. */
