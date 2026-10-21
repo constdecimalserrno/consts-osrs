@@ -1,7 +1,9 @@
 package com.constsmodels;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,67 +29,111 @@ public class ConstsModelsPanelTest
         when(config.captureRadius()).thenReturn(6);
     }
 
-    /** A mesh of one triangle, for the list. */
-    private static Mesh mesh(String name, int triangles)
+    private static long t = 1_700_000_000_000L;
+
+    /** A capture as the library keeps it, newer than the last one made here. */
+    private static ModelLibrary.Capture capture(String name, int triangles)
     {
-        MeshBuilder b = new MeshBuilder(name);
-        for (int i = 0; i < triangles; i++)
-        {
-            b.addTriangle(b.addVertex(0, 0, i), b.addVertex(100, 0, i), b.addVertex(0, 100, i), 0xFFFF00);
-        }
-        return b.build();
+        t += 60_000;
+        return new ModelLibrary.Capture("id" + t, name, t, triangles, new File("m" + t), new File("p" + t), null);
     }
 
-    @Test
-    public void theNewestCaptureComesFirst()
+    private static List<String> titles(ConstsModelsPanel panel)
     {
-        ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
-        Mesh goblin = mesh("NPC Goblin", 1);
-        Mesh cow = mesh("NPC Cow", 1);
-        Mesh area = mesh("Area around Lumbridge", 1);
-        panel.addRecent(goblin);
-        panel.addRecent(cow);
-        panel.addRecent(area);
-
-        assertEquals(List.of(area, cow, goblin), panel.recent());
         List<String> titles = new ArrayList<>();
-        panel.recentRows().forEach(row -> titles.add(row.getTitle()));
-        assertEquals(List.of("Area around Lumbridge", "NPC Cow", "NPC Goblin"), titles);
+        panel.rows().forEach(row -> titles.add(row.getTitle()));
+        return titles;
     }
 
     @Test
-    public void theListKeepsTheLatestTwenty()
+    public void theNewestCaptureComesFirstOnBothTabs()
     {
         ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
-        List<Mesh> meshes = new ArrayList<>();
-        for (int i = 1; i <= 25; i++)
-        {
-            Mesh m = mesh("Capture " + i, 1);
-            meshes.add(m);
-            panel.addRecent(m);
-        }
+        ModelLibrary.Capture goblin = capture("NPC Goblin", 1);
+        ModelLibrary.Capture cow = capture("NPC Cow", 1);
+        ModelLibrary.Capture area = capture("Area around Lumbridge", 1);
+        panel.added(goblin);
+        panel.added(cow);
+        panel.added(area);
 
-        List<Mesh> shown = panel.recent();
-        assertEquals(ConstsModelsPanel.MAX_RECENT, shown.size());
-        assertEquals(20, shown.size());
-        assertEquals(meshes.get(24), shown.get(0));
-        assertEquals(meshes.get(5), shown.get(19));
-        assertEquals(20, panel.recentRows().size());
-        assertEquals("Capture 6", panel.recentRows().get(19).getTitle());
+        assertEquals(List.of(area, cow, goblin), panel.session());
+        assertEquals(List.of("Area around Lumbridge", "NPC Cow", "NPC Goblin"), titles(panel));
+        panel.selectTab(true);
+        assertEquals(List.of("Area around Lumbridge", "NPC Cow", "NPC Goblin"), titles(panel));
+        assertEquals("Session (3)", panel.sessionTab().getText());
+        assertEquals("All models (3)", panel.allTab().getText());
     }
 
     @Test
-    public void aRowShowsTheNameAndTrianglesAndReopensTheCapture()
+    public void allModelsHoldsEarlierSessionsToo()
     {
         ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
-        Mesh goblin = mesh("<col=ffff00>NPC Goblin</col>", 3);
-        panel.addRecent(goblin);
+        ModelLibrary.Capture old = capture("NPC Hans", 2);
+        ModelLibrary.Capture older = capture("NPC Man", 2);
+        ModelLibrary.Capture mine = capture("Player Me", 5);
+        panel.added(mine);
+        // The library's own list arrives after this session's first capture, which it may or may not hold yet
+        panel.setLibrary(List.of(older, old));
 
-        ActionCard row = panel.recentRows().get(0);
+        assertEquals(List.of(mine), panel.session());
+        assertEquals(List.of(mine, older, old), panel.all());
+        assertEquals(List.of("Player Me"), titles(panel));
+        panel.selectTab(true);
+        assertEquals(List.of("Player Me", "NPC Man", "NPC Hans"), titles(panel));
+        assertEquals("Session (1)", panel.sessionTab().getText());
+        assertEquals("All models (3)", panel.allTab().getText());
+    }
+
+    @Test
+    public void aRowShowsTheNameWhenAndTrianglesAndOpensTheCapture()
+    {
+        ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
+        ModelLibrary.Capture goblin = capture("<col=ffff00>NPC Goblin</col>", 3);
+        panel.added(goblin);
+
+        ActionCard row = panel.rows().get(0);
         assertEquals("NPC Goblin", row.getTitle());
-        assertEquals("3 triangles", row.getDetail());
+        assertTrue(row.getDetail(), row.getDetail().endsWith("3 triangles"));
         row.click();
-        verify(plugin).reopen(goblin);
+        verify(plugin).open(goblin);
+    }
+
+    @Test
+    public void deletingAsksFirstThenTakesItOffBothTabs()
+    {
+        ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
+        ModelLibrary.Capture goblin = capture("NPC Goblin", 1);
+        ModelLibrary.Capture cow = capture("NPC Cow", 1);
+        panel.added(goblin);
+        panel.added(cow);
+
+        panel.setConfirmDelete(c -> false);
+        panel.askToDelete(cow);
+        verify(plugin, never()).delete(cow);
+
+        panel.setConfirmDelete(c -> true);
+        panel.askToDelete(cow);
+        verify(plugin).delete(cow);
+
+        // The plugin deletes the files, then tells the panel
+        panel.removed(cow);
+        assertEquals(List.of(goblin), panel.session());
+        assertEquals(List.of(goblin), panel.all());
+        assertEquals(List.of("NPC Goblin"), titles(panel));
+    }
+
+    @Test
+    public void whenSaysTheTimeTodayAndTheDayBefore()
+    {
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        now.set(2026, java.util.Calendar.OCTOBER, 21, 15, 30, 0);
+        long today = now.getTimeInMillis();
+        now.set(2026, java.util.Calendar.OCTOBER, 21, 9, 5, 0);
+        assertEquals("09:05", ConstsModelsPanel.whenText(now.getTimeInMillis(), today));
+        now.set(2026, java.util.Calendar.MARCH, 3, 9, 5, 0);
+        assertEquals("3 Mar", ConstsModelsPanel.whenText(now.getTimeInMillis(), today));
+        now.set(2025, java.util.Calendar.DECEMBER, 31, 9, 5, 0);
+        assertEquals("31 Dec 2025", ConstsModelsPanel.whenText(now.getTimeInMillis(), today));
     }
 
     @Test

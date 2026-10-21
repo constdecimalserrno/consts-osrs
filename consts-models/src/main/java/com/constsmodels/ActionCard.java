@@ -8,6 +8,7 @@ import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import javax.swing.Icon;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
@@ -133,6 +134,12 @@ class ActionCard extends JPanel
     String getDetail()
     {
         return detail.getText();
+    }
+
+    /** Puts a component at the card's right end, like a delete button; it takes its own clicks. */
+    void setTrailing(JComponent component)
+    {
+        add(component, BorderLayout.EAST);
     }
 
     /** Does what a click on the card does. */

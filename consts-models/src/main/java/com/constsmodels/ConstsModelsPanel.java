@@ -2,15 +2,24 @@ package com.constsmodels;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.image.BaseMultiResolutionImage;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -18,13 +27,17 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.View;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
+import net.runelite.client.ui.components.materialtabs.MaterialTab;
+import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.QuantityFormatter;
 import net.runelite.client.util.Text;
@@ -32,12 +45,13 @@ import net.runelite.client.util.Text;
 /**
  * The sidebar: its two main buttons, Capture area and Export yourself, with a hint that anything in the game can be
  * exported from its right-click menu; then the folder files are saved to, with a button to open it and one to choose
- * another; then the models captured this session, newest first. A click on one opens it in the viewer again.
+ * another; then the captures, newest first, on two tabs: this session's, and every one kept (see
+ * {@link ModelLibrary}). A click on one opens it in the viewer again; its × deletes it.
  */
 class ConstsModelsPanel extends PluginPanel
 {
-    /** The most captures the list keeps; older ones drop off the end. */
-    static final int MAX_RECENT = 20;
+    /** How big a capture's picture is in its row. */
+    static final int PICTURE = 32;
 
     /* The space around everything, and the width left inside it */
     private static final int MARGIN = 10;
@@ -57,13 +71,21 @@ class ConstsModelsPanel extends PluginPanel
     private final ActionCard areaCard;
     private final JLabel hint = new WrappingLabel("Or right-click anything in the game and pick "
         + "<font color='white'>Export Model</font>.", CONTENT_WIDTH);
-    private final JLabel recentOpenHint = new JLabel("Click one to open it");
-    private final JPanel recentList = new JPanel(new GridLayout(0, 1));
-    private final JComponent recentEmpty;
+    private final MaterialTabGroup tabs = new MaterialTabGroup();
+    private final MaterialTab sessionTab;
+    private final MaterialTab allTab;
+    private final JPanel list = new JPanel(new GridLayout(0, 1));
+    private final JComponent sessionEmpty;
+    private final JComponent allEmpty;
 
-    /* The captures listed, newest first */
-    private final List<Mesh> recent = new ArrayList<>();
-    private final List<ActionCard> recentRows = new ArrayList<>();
+    /* The captures, newest first: this session's, and every one kept, this session's included */
+    private final List<ModelLibrary.Capture> session = new ArrayList<>();
+    private final List<ModelLibrary.Capture> all = new ArrayList<>();
+    private final List<ActionCard> rows = new ArrayList<>();
+    private boolean showingAll;
+
+    /* Asks before a capture is deleted for good */
+    private Predicate<ModelLibrary.Capture> confirmDelete = this::confirmDelete;
 
     ConstsModelsPanel(ConstsModelsPlugin plugin, ConstsModelsConfig config)
     {
@@ -102,25 +124,29 @@ class ConstsModelsPanel extends PluginPanel
         addRow(buildFolderBar(), c, 16);
         addRow(buildFolderButtons(), c, 4);
 
-        // The captures so far, under a title that says what a click on one does
-        JLabel recentTitle = new JLabel("This session");
-        recentTitle.setFont(FontManager.getRunescapeBoldFont());
-        recentTitle.setForeground(Color.WHITE);
-        recentOpenHint.setFont(FontManager.getRunescapeSmallFont());
-        recentOpenHint.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        JPanel recentHeader = new JPanel(new BorderLayout());
-        recentHeader.setOpaque(false);
-        recentHeader.setBorder(new EmptyBorder(0, 2, 0, 2));
-        recentHeader.add(recentTitle, BorderLayout.WEST);
-        recentHeader.add(recentOpenHint, BorderLayout.EAST);
-        addRow(recentHeader, c, 16);
+        // The captures, on two tabs: this session's, and every one kept
+        sessionTab = new MaterialTab("", tabs, null);
+        sessionTab.setOnSelectEvent(() -> showTab(false));
+        allTab = new MaterialTab("", tabs, null);
+        allTab.setOnSelectEvent(() -> showTab(true));
+        tabs.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        // Side by side, half the width each: the group's own layout puts the second tab on a line it then cuts off
+        tabs.setLayout(new GridLayout(1, 2));
+        tabs.addTab(sessionTab);
+        tabs.addTab(allTab);
+        addRow(tabs, c, 14);
 
-        recentEmpty = buildEmptyNote();
-        recentList.setOpaque(false);
-        addRow(recentList, c, 6);
+        sessionEmpty = emptyNote("<font color='white'>Nothing captured yet</font><br>Right-click anything in the game "
+            + "and pick <font color='white'>Export Model</font>, or use a button above. Each capture shows up here to "
+            + "open again.");
+        allEmpty = emptyNote("<font color='white'>Nothing kept yet</font><br>Every capture is kept here, session after "
+            + "session, until you delete it with its <font color='white'>\u00d7</font>.");
+        list.setOpaque(false);
+        addRow(list, c, 6);
 
         refresh();
-        showRecent();
+        tabs.select(sessionTab);
+        showList();
     }
 
     /** Adds the next row of the panel, the given gap under the row before it. */
@@ -150,29 +176,78 @@ class ConstsModelsPanel extends PluginPanel
         areaCard.setDetail(areaText(config.captureRadius()));
     }
 
-    /** A capture to list, newest first. Call it on the Swing thread. */
-    void addRecent(Mesh mesh)
+    /** A capture just made and kept: first on both tabs. Call it on the Swing thread. */
+    void added(ModelLibrary.Capture capture)
     {
-        recent.add(0, mesh);
-        recentRows.add(0, buildRow(mesh));
-        while (recent.size() > MAX_RECENT)
+        session.add(0, capture);
+        all.removeIf(c -> c.id.equals(capture.id));
+        all.add(0, capture);
+        showList();
+    }
+
+    /** Every capture kept, as read from the library, newest first. Call it on the Swing thread. */
+    void setLibrary(List<ModelLibrary.Capture> kept)
+    {
+        List<ModelLibrary.Capture> merged = new ArrayList<>(kept);
+        for (ModelLibrary.Capture mine : session)
         {
-            recent.remove(recent.size() - 1);
-            recentRows.remove(recentRows.size() - 1);
+            if (merged.stream().noneMatch(c -> c.id.equals(mine.id)))
+            {
+                merged.add(mine);
+            }
         }
-        showRecent();
+        merged.sort((a, b) -> Long.compare(b.time, a.time));
+        all.clear();
+        all.addAll(merged);
+        showList();
     }
 
-    /** The captures listed, newest first. */
-    List<Mesh> recent()
+    /** A capture deleted: off both tabs. Call it on the Swing thread. */
+    void removed(ModelLibrary.Capture capture)
     {
-        return List.copyOf(recent);
+        session.removeIf(c -> c.id.equals(capture.id));
+        all.removeIf(c -> c.id.equals(capture.id));
+        showList();
     }
 
-    /** The rows that list them, in the same order. */
-    List<ActionCard> recentRows()
+    /** This session's captures, newest first. */
+    List<ModelLibrary.Capture> session()
     {
-        return List.copyOf(recentRows);
+        return List.copyOf(session);
+    }
+
+    /** Every capture kept, newest first. */
+    List<ModelLibrary.Capture> all()
+    {
+        return List.copyOf(all);
+    }
+
+    /** The rows on the tab showing, in order. */
+    List<ActionCard> rows()
+    {
+        return List.copyOf(rows);
+    }
+
+    /** Shows one tab or the other, as a click on it does. */
+    void selectTab(boolean everyOne)
+    {
+        tabs.select(everyOne ? allTab : sessionTab);
+    }
+
+    MaterialTab sessionTab()
+    {
+        return sessionTab;
+    }
+
+    MaterialTab allTab()
+    {
+        return allTab;
+    }
+
+    /** What asks before a delete; tests answer for the person. */
+    void setConfirmDelete(Predicate<ModelLibrary.Capture> confirm)
+    {
+        confirmDelete = confirm;
     }
 
     ActionCard areaCard()
@@ -185,36 +260,132 @@ class ConstsModelsPanel extends PluginPanel
         return folderPath;
     }
 
-    private void showRecent()
+    private boolean showTab(boolean everyOne)
     {
-        // Until the first capture the list's own note says how to capture, so the hint would say it twice
-        hint.setVisible(!recentRows.isEmpty());
-        recentOpenHint.setVisible(!recentRows.isEmpty());
-        recentList.removeAll();
-        if (recentRows.isEmpty())
-        {
-            recentList.add(recentEmpty);
-        }
-        // Striped like the lists in RuneLite's own sidebar
-        for (int i = 0; i < recentRows.size(); i++)
-        {
-            ActionCard row = recentRows.get(i);
-            Color stripe = i % 2 == 0 ? ODD_ROW : ColorScheme.DARK_GRAY_COLOR;
-            row.setColors(stripe, stripe.brighter());
-            recentList.add(row);
-        }
-        recentList.revalidate();
-        recentList.repaint();
+        showingAll = everyOne;
+        showList();
+        return true;
     }
 
-    private ActionCard buildRow(Mesh mesh)
+    private void showList()
     {
-        ActionCard row = new ActionCard(null, FontManager.getRunescapeSmallFont(), 5, () -> plugin.reopen(mesh));
-        String name = displayName(mesh.name);
+        sessionTab.setText(tabTitle("Session", session.size()));
+        allTab.setText(tabTitle("All models", all.size()));
+        // Until the first capture the list's own note says how to capture, so the hint would say it twice
+        hint.setVisible(!session.isEmpty());
+
+        List<ModelLibrary.Capture> shown = showingAll ? all : session;
+        long now = System.currentTimeMillis();
+        rows.clear();
+        list.removeAll();
+        if (shown.isEmpty())
+        {
+            list.add(showingAll ? allEmpty : sessionEmpty);
+        }
+        // Striped like the lists in RuneLite's own sidebar
+        for (int i = 0; i < shown.size(); i++)
+        {
+            ActionCard row = buildRow(shown.get(i), now);
+            Color stripe = i % 2 == 0 ? ODD_ROW : ColorScheme.DARK_GRAY_COLOR;
+            row.setColors(stripe, stripe.brighter());
+            rows.add(row);
+            list.add(row);
+        }
+        list.revalidate();
+        list.repaint();
+    }
+
+    private ActionCard buildRow(ModelLibrary.Capture capture, long now)
+    {
+        ActionCard row = new ActionCard(picture(capture.picture), FontManager.getRunescapeSmallFont(), 5,
+            () -> plugin.open(capture));
+        String name = displayName(capture.name);
         row.setTitle(name);
-        row.setDetail(trianglesText(mesh.faceCount()));
+        row.setDetail(whenText(capture.time, now) + "  \u00b7  " + trianglesText(capture.faces));
         row.setToolTipText("Open " + name + " in the viewer again");
+
+        // A label, not a button: a button this narrow cuts its × down to dots
+        JLabel delete = new JLabel("\u00d7", JLabel.CENTER);
+        delete.setFont(FontManager.getRunescapeBoldFont());
+        delete.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        delete.setToolTipText("Delete " + name);
+        delete.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        delete.setPreferredSize(new Dimension(delete.getFontMetrics(delete.getFont()).stringWidth("\u00d7") + 6, 16));
+        delete.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseEntered(MouseEvent e)
+            {
+                delete.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e)
+            {
+                delete.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e)
+            {
+                if (SwingUtilities.isLeftMouseButton(e) && delete.contains(e.getPoint()))
+                {
+                    askToDelete(capture);
+                }
+            }
+        });
+        row.setTrailing(delete);
         return row;
+    }
+
+    /** Deletes the capture once the person says so. */
+    void askToDelete(ModelLibrary.Capture capture)
+    {
+        if (confirmDelete.test(capture))
+        {
+            plugin.delete(capture);
+        }
+    }
+
+    private boolean confirmDelete(ModelLibrary.Capture capture)
+    {
+        return JOptionPane.showConfirmDialog(this,
+            "Delete " + displayName(capture.name) + "? You won't be able to open it again.\n"
+                + "Files you saved from the viewer stay where they are.",
+            "Delete capture", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION;
+    }
+
+    /** A capture's picture at its size in the row, drawn from the bigger one on sharp screens. */
+    private static ImageIcon picture(BufferedImage picture)
+    {
+        if (picture == null)
+        {
+            BufferedImage blank = new BufferedImage(PICTURE, PICTURE, BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics g = blank.getGraphics();
+            g.setColor(ColorScheme.DARKER_GRAY_COLOR);
+            g.fillRect(0, 0, PICTURE, PICTURE);
+            g.dispose();
+            return new ImageIcon(blank);
+        }
+        return new ImageIcon(new BaseMultiResolutionImage(ImageUtil.resizeImage(picture, PICTURE, PICTURE), picture));
+    }
+
+    /** "This session (3)". */
+    static String tabTitle(String name, int count)
+    {
+        return name + " (" + count + ")";
+    }
+
+    /** When a capture was made: its time today, its day this year, or its day and year before that. */
+    static String whenText(long time, long now)
+    {
+        Calendar then = Calendar.getInstance();
+        then.setTimeInMillis(time);
+        Calendar today = Calendar.getInstance();
+        today.setTimeInMillis(now);
+        String pattern = then.get(Calendar.YEAR) != today.get(Calendar.YEAR) ? "d MMM yyyy"
+            : then.get(Calendar.DAY_OF_YEAR) != today.get(Calendar.DAY_OF_YEAR) ? "d MMM" : "HH:mm";
+        return new SimpleDateFormat(pattern).format(new Date(time));
     }
 
     private JPanel buildFolderBar()
@@ -261,12 +432,10 @@ class ConstsModelsPanel extends PluginPanel
         return buttons;
     }
 
-    /** What the list shows before the first capture. */
-    private JComponent buildEmptyNote()
+    /** What a tab shows while it has no captures. */
+    private JComponent emptyNote(String html)
     {
-        JLabel note = new WrappingLabel("<font color='white'>Nothing captured yet</font><br>Right-click anything in "
-            + "the game and pick <font color='white'>Export Model</font>, or use a button above. Each capture shows up "
-            + "here to open again.", CONTENT_WIDTH);
+        JLabel note = new WrappingLabel(html, CONTENT_WIDTH);
         note.setFont(FontManager.getRunescapeSmallFont());
         note.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
         note.setBorder(BorderFactory.createCompoundBorder(

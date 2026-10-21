@@ -6,6 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
@@ -72,6 +75,10 @@ public class ConstsModelsPlugin extends Plugin
 
     @Inject
     private ConstsModelsConfig config;
+
+    // Every capture, kept to open again in any session; this session's meshes stay in memory too
+    private final ModelLibrary library = new ModelLibrary(new File(DEFAULT_FOLDER, "captures"));
+    private final Map<String, Mesh> sessionMeshes = new ConcurrentHashMap<>();
 
     private TextureColors textures;
     private ExportMenu exportMenu;
@@ -153,6 +160,13 @@ public class ConstsModelsPlugin extends Plugin
             .panel(panel)
             .build();
         clientToolbar.addNavigation(navButton);
+
+        // The captures kept from other sessions, for the All models tab
+        executor.execute(() ->
+        {
+            List<ModelLibrary.Capture> kept = library.list();
+            SwingUtilities.invokeLater(() -> panel.setLibrary(kept));
+        });
     }
 
     @Override
@@ -161,6 +175,7 @@ public class ConstsModelsPlugin extends Plugin
         exportMenu.shutDown();
         eventBus.unregister(exportMenu);
         clientToolbar.removeNavigation(navButton);
+        sessionMeshes.clear();
         SwingUtilities.invokeLater(ModelViewer::closeAll);
     }
 
@@ -188,17 +203,63 @@ public class ConstsModelsPlugin extends Plugin
             chat("There was no model to export.");
             return;
         }
-        SwingUtilities.invokeLater(() ->
+        long time = System.currentTimeMillis();
+        SwingUtilities.invokeLater(() -> ModelViewer.open(mesh, viewerActions));
+        executor.execute(() ->
         {
-            panel.addRecent(mesh);
-            ModelViewer.open(mesh, viewerActions);
+            try
+            {
+                ModelLibrary.Capture capture = library.keep(mesh, time);
+                sessionMeshes.put(capture.id, mesh);
+                SwingUtilities.invokeLater(() -> panel.added(capture));
+            }
+            catch (IOException | RuntimeException e)
+            {
+                log.warn("Couldn't keep {}", mesh.name, e);
+                chat("Couldn't keep " + ConstsModelsPanel.displayName(mesh.name) + " in the sidebar: " + e.getMessage());
+            }
         });
     }
 
-    /** Opens an earlier capture in a new viewer, from the sidebar's list. Call it on the Swing thread. */
-    void reopen(Mesh mesh)
+    /** Opens a capture from the sidebar in a new viewer. Call it on the Swing thread. */
+    void open(ModelLibrary.Capture capture)
     {
-        ModelViewer.open(mesh, viewerActions);
+        Mesh kept = sessionMeshes.get(capture.id);
+        if (kept != null)
+        {
+            ModelViewer.open(kept, viewerActions);
+            return;
+        }
+        executor.execute(() ->
+        {
+            try
+            {
+                Mesh mesh = library.load(capture);
+                SwingUtilities.invokeLater(() -> ModelViewer.open(mesh, viewerActions));
+            }
+            catch (IOException | RuntimeException e)
+            {
+                log.warn("Couldn't open {}", capture.meshFile, e);
+                chat("Couldn't open " + ConstsModelsPanel.displayName(capture.name) + ": " + e.getMessage());
+            }
+        });
+    }
+
+    /** Deletes a capture for good, once the sidebar has asked. Files saved from the viewer stay. */
+    void delete(ModelLibrary.Capture capture)
+    {
+        executor.execute(() ->
+        {
+            if (library.delete(capture))
+            {
+                sessionMeshes.remove(capture.id);
+                SwingUtilities.invokeLater(() -> panel.removed(capture));
+            }
+            else
+            {
+                chat("Couldn't delete " + ConstsModelsPanel.displayName(capture.name) + ".");
+            }
+        });
     }
 
     ViewerActions viewerActions()
