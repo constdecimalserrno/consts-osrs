@@ -76,6 +76,17 @@ public class ConstsDestinationPanelTest
         assertTrue(labels.contains("Draw Tiles on Minimap"));
     }
 
+    @Test
+    public void theClickTicksComeFirst()
+    {
+        tabs.select(tabs.getTab(1));
+
+        List<String> labels = labels(panel);
+        assertTrue(labels.contains("Ground Item Pickup"));
+        assertTrue(labels.contains("Minigame Focus"));
+        assertTrue(labels.indexOf("Clicks") >= 0 && labels.indexOf("Clicks") < labels.indexOf("Colors"));
+    }
+
     private static <T> T find(Container root, Class<T> type)
     {
         for (Component c : root.getComponents())
