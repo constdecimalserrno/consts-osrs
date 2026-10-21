@@ -14,6 +14,8 @@ RuneLite plugin for Old School RuneScape ( OSRS ): where you're about to act, an
 
 The tile in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. Right-click a setting's name to reset it.
 
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off hides every tile and outline without turning the plugin off, so the sidebar button stays.
+
 | Section | Setting | What it does | Default |
 |---|---|---|---|
 | Colors | Hover Color | The tile under your cursor, and anything you hover | Blue `#3EAAFF` |
