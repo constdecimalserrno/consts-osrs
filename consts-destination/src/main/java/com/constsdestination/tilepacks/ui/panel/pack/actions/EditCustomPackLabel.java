@@ -86,7 +86,7 @@ public class EditCustomPackLabel extends JLabel
         this.tilePacksList = tilePacksList;
 
         setIcon(EDIT_ICON);
-        setToolTipText("Edit this custom pack's name and tiles");
+        setToolTipText("Change this pack's name or tiles");
         addMouseListener(new EditCustomPackMouseAdapter(this));
     }
 

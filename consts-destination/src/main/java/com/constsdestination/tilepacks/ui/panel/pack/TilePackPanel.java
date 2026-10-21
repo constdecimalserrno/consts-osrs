@@ -2,7 +2,8 @@
  * Copyright (c) 2021, Adam <Adam@sigterm.info>
  * Copyright (c) 2022, Trevor <https://github.com/TrevorMDev>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; a custom pack has an
- *   edit control; the points are reloaded through consts-Destination; lombok written out)
+ *   edit control; the points are reloaded through consts-Destination; lombok written out; every pack is your own, so
+ *   each can be edited and deleted, and there's no control to hide it or to open a link)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,10 +35,7 @@ import com.constsdestination.tilepacks.ui.panel.TilePacksListPanel;
 import com.constsdestination.tilepacks.ui.panel.pack.actions.CopyToClipboardLabel;
 import com.constsdestination.tilepacks.ui.panel.pack.actions.DeleteCustomPackLabel;
 import com.constsdestination.tilepacks.ui.panel.pack.actions.EditCustomPackLabel;
-import com.constsdestination.tilepacks.ui.panel.pack.actions.HelpLinkLabel;
 import com.constsdestination.tilepacks.ui.panel.pack.actions.TogglePackLabel;
-import com.constsdestination.tilepacks.ui.panel.pack.actions.ToggleVisibleLabel;
-import com.google.common.base.Strings;
 import com.google.gson.Gson;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -81,9 +79,7 @@ public class TilePackPanel extends JPanel
     private final JLabel packName;
     private final JLabel deleteCustomPack;
     private final JLabel editCustomPack;
-    private final JLabel toggleVisible;
     private final JLabel copyToClipboard;
-    private final JLabel helpLink;
     private final JLabel togglePack;
 
     public TilePackPanel(TilePackManager tilePackManager,
@@ -124,40 +120,16 @@ public class TilePackPanel extends JPanel
         controlPanel.setBorder(new MatteBorder(1, 0, 0, 0, ColorScheme.DARK_GRAY_COLOR));
         add(controlPanel, BorderLayout.SOUTH);
 
-        //anything over 10k is a custom pack
-        if (tilePack.id >= 10000)
-        {
-            deleteCustomPack = new DeleteCustomPackLabel(tilePackManager, reloadPoints, tilePack, tilePacksList);
-            editCustomPack = new EditCustomPackLabel(tilePackManager, reloadPoints, gson, tilePack, tilePacksList);
-        }
-        else
-        {
-            deleteCustomPack = new JLabel();
-            editCustomPack = new JLabel();
-        }
+        deleteCustomPack = new DeleteCustomPackLabel(tilePackManager, reloadPoints, tilePack, tilePacksList);
         deleteCustomPack.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
         controlPanel.add(deleteCustomPack);
+        editCustomPack = new EditCustomPackLabel(tilePackManager, reloadPoints, gson, tilePack, tilePacksList);
         editCustomPack.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
         controlPanel.add(editCustomPack);
-
-        toggleVisible = new ToggleVisibleLabel(tilePackManager, tilePack, tilePacksList);
-        toggleVisible.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
-        controlPanel.add(toggleVisible);
 
         copyToClipboard = new CopyToClipboardLabel(chatMessageManager, gson, tilePack);
         copyToClipboard.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
         controlPanel.add(copyToClipboard);
-
-        if (!Strings.isNullOrEmpty(tilePack.link))
-        {
-            helpLink = new HelpLinkLabel(tilePack);
-        }
-        else
-        {
-            helpLink = new JLabel();
-        }
-        helpLink.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));
-        controlPanel.add(helpLink);
 
         togglePack = new TogglePackLabel(tilePackManager, reloadPoints, tilePack);
         togglePack.setPreferredSize(new Dimension(CONTROL_SIZE, CONTROL_SIZE));

@@ -305,14 +305,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
   src/main/java/com/constsdestination/tilepacks/TilePackManager.java
   src/main/java/com/constsdestination/tilepacks/PointManager.java
-  src/main/java/com/constsdestination/tilepacks/ui/panel/header/HeaderPanel.java
-  src/main/java/com/constsdestination/tilepacks/ui/panel/header/VisibleHeaderLabel.java
-  src/main/java/com/constsdestination/tilepacks/ui/panel/header/InvisibleHeaderLabel.java
   src/main/java/com/constsdestination/tilepacks/ui/panel/pack/actions/CopyToClipboardLabel.java
   src/main/java/com/constsdestination/tilepacks/ui/panel/pack/actions/DeleteCustomPackLabel.java
-  src/main/java/com/constsdestination/tilepacks/ui/panel/pack/actions/HelpLinkLabel.java
   src/main/java/com/constsdestination/tilepacks/ui/panel/pack/actions/TogglePackLabel.java
-  src/main/java/com/constsdestination/tilepacks/ui/panel/pack/actions/ToggleVisibleLabel.java
   src/main/java/com/constsdestination/tilepacks/ui/panel/pack/actions/EditCustomPackLabel.java
     (made from DeleteCustomPackLabel.java)
 
@@ -341,39 +336,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ---
 
-  src/main/java/com/constsdestination/tilepacks/ui/panel/header/GithubLinkLabel.java
-
-Copyright (c) 2025, Trevor <https://github.com/TrevorMDev>
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this
-   list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright notice,
-   this list of conditions and the following disclaimer in the documentation
-   and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
----
-
 These have no header in Tile Packs, so they carry the copyright notice and
 license from Tile Packs' LICENSE, which follows them:
 
   src/main/java/com/constsdestination/tilepacks/TilePackMigrations.java
-  src/main/java/com/constsdestination/tilepacks/FilterManager.java
-  src/main/java/com/constsdestination/tilepacks/ui/panel/custom/DiscordLinkLabel.java
   src/test/java/com/constsdestination/tilepacks/TilePacksTest.java
   src/test/java/com/constsdestination/tilepacks/PointManagerTest.java
   src/test/java/com/constsdestination/tilepacks/TilePackManagerTest.java
@@ -387,7 +353,9 @@ license from Tile Packs' LICENSE, which follows them:
     Packs' built-in packs, gathered by TrevorMDev with packs and fixes from
     Tile Packs' contributors (David Lord, Matthew Johnson, Blackberry0Pie, Vic
     Segers) and community. Each pack's link is where its tiles came from, most
-    often the video that shows them.
+    often the video that shows them. consts-Destination has no list of
+    built-in packs to pick from: it reads this only to make the built-in packs
+    you had on into packs of your own.
 
   src/main/resources/com/constsdestination/tilepacks/*.png: Tile Packs'
     icons. Tile Packs credits them to their makers on flaticon.com
@@ -398,29 +366,17 @@ license from Tile Packs' LICENSE, which follows them:
       copy_icon.png           by Pixel perfect
       delete_icon.png         "close" by Pixel perfect
                               https://www.flaticon.com/free-icon/close_1828665
-      help_icon.png           "resize" by Pixel perfect
-                              https://www.flaticon.com/free-icon/resize_3388930
       remove_icon.png         "minus" by Utari Nuraeni
                               https://www.flaticon.com/free-icon/minus_11433623
-      visible_icon.png        "visibility" by Andrean Prabowo
-                              https://www.flaticon.com/free-icon/visibility_3395544
-      invisible_icon.png      "visible" by uicon
-                              https://www.flaticon.com/free-icon/visible_4175339
-      question_mark_icon.png  "help web button" by Freepik
-                              https://www.flaticon.com/free-icon/help-web-button_18436
-      youtube.png             the YouTube logo, as Tile Packs has it
-      discord.png             the Discord logo, as Tile Packs has it
 
     Pixel perfect: https://www.flaticon.com/authors/pixel-perfect
     Utari Nuraeni: https://www.flaticon.com/authors/utari-nuraeni
-    Andrean Prabowo: https://www.flaticon.com/authors/andrean-prabowo
-    uicon: https://www.flaticon.com/authors/uicon
-    Freepik: https://www.flaticon.com/authors/freepik
 
-    Tile Packs' README credits them as: "Icons made by Freepik, Utari Nuraeni,
-    Andrean Prabowo, and uicon from flaticon.com", its Freepik link going to
-    Pixel perfect's page. The pencil on a custom pack's edit control is drawn
-    in code by consts-Destination (EditCustomPackLabel.java).
+    Tile Packs' README credits its icons as: "Icons made by Freepik, Utari
+    Nuraeni, Andrean Prabowo, and uicon from flaticon.com", its Freepik link
+    going to Pixel perfect's page; consts-Destination keeps the four above.
+    The pencil on a pack's edit control is drawn in code by consts-Destination
+    (EditCustomPackLabel.java).
 
 Copyright (c) 2022, TrevorMDev
 All rights reserved.

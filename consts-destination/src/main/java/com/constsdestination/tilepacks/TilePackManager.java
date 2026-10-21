@@ -2,7 +2,8 @@
  * Copyright (c) 2024, Trevor <https://github.com/TrevorMDev>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination, which saves the packs
  *   in its own config group; lombok written out; a custom pack can be edited; the packs can be read again after a
- *   profile change)
+ *   profile change; only your own packs, without the built-in ones, which TilePackMigrations makes yours if they
+ *   were on)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,14 +33,10 @@ import com.constsdestination.tilepacks.data.TilePack;
 import com.google.common.base.Strings;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import javax.inject.Inject;
 import net.runelite.client.config.ConfigManager;
 import org.slf4j.Logger;
@@ -47,6 +44,10 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class is responsible for all functions that interface with or modify tile packs
+ *
+ * <p>The packs are your own: made in the Tile packs tab from tiles you marked, pasted from someone else's, or made
+ * from the built-in packs you had on before there were only your own (see {@link TilePackMigrations}). Each is a name
+ * and its tiles, on or off, numbered from 10000 in the order they were made.
  *
  * <p>The packs are saved in consts-Destination's config group, under Tile Packs' own key names with "tilePacks_" in
  * front: raw values, not settings.
@@ -61,7 +62,10 @@ public class TilePackManager
     static final String PACK_PREFIX = KEY_PREFIX + "pack_";
     static final String PACKS_PREFIX = KEY_PREFIX + "packs";
 
-    private Map<Integer, TilePack> tilePacks = new HashMap<Integer, TilePack>();
+    /** The first pack's number: Tile Packs numbered its built-in packs below it, and custom packs from it. */
+    public static final int FIRST_ID = 10000;
+
+    private Map<Integer, TilePack> tilePacks = new TreeMap<Integer, TilePack>();
     private List<Integer> enabledPacks = new ArrayList<Integer>();
 
     private final Gson gson;
@@ -77,6 +81,7 @@ public class TilePackManager
         this.loadPacks();
     }
 
+    /** Your packs, by number, so in the order they were made. */
     public Map<Integer, TilePack> getTilePacks()
     {
         return tilePacks;
@@ -95,40 +100,10 @@ public class TilePackManager
         loadPacks();
     }
 
-    //loads the packs from the json file
+    //loads your packs, each from its own key
     private void loadPacks()
     {
-        try (InputStream in = getClass().getResourceAsStream("tilePacks.jsonc"))
-        {
-            final InputStreamReader data = new InputStreamReader(in, StandardCharsets.UTF_8);
-            final Type type = new TypeToken<Map<Integer, TilePack>>()
-            {
-            }.getType();
-            Map<Integer, TilePack> parsed = gson.fromJson(data, type);
-            for (TilePack savedPack : loadSavedPacks().values())
-            {
-                TilePack resourcePack = parsed.get(savedPack.id);
-                if (savedPack.packTiles != null)
-                {
-                    parsed.put(savedPack.id, savedPack);
-                }
-                else if (resourcePack != null)
-                {
-                    resourcePack.visible = savedPack.visible;
-                }
-            }
-
-            tilePacks = parsed;
-        }
-        catch (Exception e)
-        {
-            log.error("error loading packs from json, this is likely due to a bad json file.", e);
-        }
-    }
-
-    private Map<Integer, TilePack> loadSavedPacks()
-    {
-        Map<Integer, TilePack> savedPacks = new HashMap<Integer, TilePack>();
+        Map<Integer, TilePack> packs = new TreeMap<Integer, TilePack>();
         String wholePrefix = ConfigManager.getWholeKey(CONFIG_GROUP, null, PACK_PREFIX);
         for (String key : configManager.getConfigurationKeys(wholePrefix))
         {
@@ -138,9 +113,10 @@ public class TilePackManager
                 Integer id = Integer.valueOf(packId);
                 String json = configManager.getConfiguration(CONFIG_GROUP, PACK_PREFIX + id);
                 TilePack pack = gson.fromJson(json, TilePack.class);
-                if (pack != null)
+                if (pack != null && id >= FIRST_ID && pack.packTiles != null)
                 {
-                    savedPacks.put(id, pack);
+                    pack.id = id;
+                    packs.put(id, pack);
                 }
             }
             catch (RuntimeException e)
@@ -148,7 +124,7 @@ public class TilePackManager
                 log.warn("Unable to load tile pack config {}", key, e);
             }
         }
-        return savedPacks;
+        tilePacks = packs;
     }
 
     private void savePack(TilePack pack)
@@ -203,14 +179,14 @@ public class TilePackManager
         if (Strings.isNullOrEmpty(json))
         {
             //default to 9999 because we add 1, and I want it to start at an even 10k.
-            return 9999;
+            return FIRST_ID - 1;
         }
         return gson.fromJson(json, new TypeToken<Integer>()
         {
         }.getType());
     }
 
-    //saves a custom pack to the users config
+    //saves a new pack to the users config, turned on
     public void addCustomPack(String name, String tiles)
     {
         Integer customId = loadCustomId() + 1;
@@ -222,7 +198,7 @@ public class TilePackManager
         tilePacks.put(pack.id, pack);
     }
 
-    /** Renames a custom pack or changes its tiles, and saves it. */
+    /** Renames a pack or changes its tiles, and saves it. */
     public void editCustomPack(TilePack pack, String name, String tiles)
     {
         pack.packName = name;
@@ -230,25 +206,13 @@ public class TilePackManager
         savePack(pack);
     }
 
-    //removes a custom pack from the users config
+    //removes a pack from the users config
     public void removeCustomPack(Integer packId)
     {
         //unsubscribe the pack before removing it.
         removeEnabledPack(packId);
         configManager.unsetConfiguration(CONFIG_GROUP, PACK_PREFIX + packId);
         tilePacks.remove(packId);
-    }
-
-    public void updatePack(TilePack pack)
-    {
-        if (pack.id >= 10000)
-        {
-            savePack(pack);
-        }
-        else
-        {
-            savePack(new TilePack(pack.id, pack.visible));
-        }
     }
 
     public boolean isPackEnabled(Integer packId)

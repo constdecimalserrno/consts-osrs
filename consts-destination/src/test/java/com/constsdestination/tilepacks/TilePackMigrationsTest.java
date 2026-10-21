@@ -2,7 +2,8 @@
  * Copyright (c) 2022, TrevorMDev
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination, where the migration
  *   brings Tile Packs' saved data over instead of migrating it in place; tests for each kind of data brought over,
- *   for data consts-Destination already has, and that Tile Packs' data is only read)
+ *   for data consts-Destination already has, that Tile Packs' data is only read, and for the built-in packs that are
+ *   on becoming your own)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +30,6 @@
 package com.constsdestination.tilepacks;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -43,8 +43,13 @@ import static org.mockito.Mockito.verify;
 
 import com.constsdestination.ConstsDestinationConfig;
 import com.constsdestination.tilepacks.data.TilePack;
+import com.google.common.reflect.TypeToken;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import net.runelite.client.config.ConfigItem;
 import org.junit.Test;
@@ -56,22 +61,17 @@ public class TilePackMigrationsTest extends TilePacksTest
     private static final String THEIR_SETTINGS = TilePackMigrations.TILE_PACKS_CONFIG_GROUP;
 
     @Test
-    public void migratesCustomPacksAndBuiltInConfigs()
+    public void bringsOverTheCustomPacksTilePacksSavedBeforeItsVersion2()
     {
-        // Tile Packs' saved data from before its version 2
         SavedConfig saved = new SavedConfig();
         saved.put(THEIRS, "customPacks", "{\"10000\":{\"id\":10000,\"packName\":\"Custom\",\"packTiles\":\"[]\"}}");
         saved.put(THEIRS, "tilePackConfigs", "{\"10000\":{\"packId\":10000,\"visible\":false},\"42\":{\"packId\":42,\"visible\":false}}");
 
         new TilePackMigrations(gson, saved.configManager).migrateToLatest();
 
-        TilePack customPack = gson.fromJson(saved.get(OURS, "tilePacks_pack_10000"), TilePack.class);
-        TilePack builtInConfig = gson.fromJson(saved.get(OURS, "tilePacks_pack_42"), TilePack.class);
-        assertEquals("Custom", customPack.packName);
-        assertFalse(customPack.visible);
-        assertEquals(Integer.valueOf(42), builtInConfig.id);
-        assertFalse(builtInConfig.visible);
-        assertEquals("1", saved.get(OURS, "tilePacks_version"));
+        assertEquals("Custom", pack(saved, 10000).packName);
+        assertNull("whether a built-in pack was hidden doesn't come over", saved.get(OURS, "tilePacks_pack_42"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
         // Tile Packs' own data stays as it was.
         assertNotNull(saved.get(THEIRS, "customPacks"));
         assertNotNull(saved.get(THEIRS, "tilePackConfigs"));
@@ -79,34 +79,25 @@ public class TilePackMigrationsTest extends TilePacksTest
     }
 
     @Test
-    public void missingLegacyVisibilityDefaultsToVisible()
-    {
-        SavedConfig saved = new SavedConfig();
-        saved.put(THEIRS, "customPacks", "{\"10000\":{\"id\":10000,\"packName\":\"Custom\",\"packTiles\":\"[]\"}}");
-
-        new TilePackMigrations(gson, saved.configManager).migrateToLatest();
-
-        TilePack pack = gson.fromJson(saved.get(OURS, "tilePacks_pack_10000"), TilePack.class);
-        assertTrue(pack.visible);
-    }
-
-    @Test
-    public void bringsOverEverythingTilePacksSavesNow()
+    public void bringsOverWhatTilePacksSavesNowAndTheBuiltInPacksThatAreOnBecomeYours()
     {
         SavedConfig saved = tilePacksVersion2();
 
         new TilePackMigrations(gson, saved.configManager).migrateToLatest();
 
-        assertEquals("Custom", gson.fromJson(saved.get(OURS, "tilePacks_pack_10000"), TilePack.class).packName);
-        assertFalse(gson.fromJson(saved.get(OURS, "tilePacks_pack_42"), TilePack.class).visible);
-        assertEquals("[1,10000]", saved.get(OURS, "tilePacks_packs"));
-        assertEquals("10000", saved.get(OURS, "tilePacks_customId"));
-        assertEquals("false", saved.get(OURS, "tilePacks_showVisible"));
-        assertEquals("true", saved.get(OURS, "tilePacks_showInvisible"));
+        assertEquals("Custom", pack(saved, 10000).packName);
+        // Abyssal Sire was on first, so it's still first, as a pack of your own
+        assertEquals("Abyssal Sire", pack(saved, 10001).packName);
+        assertEquals(builtIn(1).packTiles, pack(saved, 10001).packTiles);
+        assertEquals("[10001,10000]", saved.get(OURS, "tilePacks_packs"));
+        assertEquals("10001", saved.get(OURS, "tilePacks_customId"));
+        assertNull(saved.get(OURS, "tilePacks_pack_42"));
+        assertNull(saved.get(OURS, "tilePacks_showVisible"));
+        assertNull(saved.get(OURS, "tilePacks_showInvisible"));
         assertEquals("true", saved.get(OURS, "tilePacksDrawOnMinimap"));
         assertEquals("-16711936", saved.get(OURS, "tilePacksOverrideColor"));
         assertEquals("3.5", saved.get(OURS, "tilePacksBorderWidth"));
-        assertEquals("1", saved.get(OURS, "tilePacks_version"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
     }
 
     @Test
@@ -116,18 +107,66 @@ public class TilePackMigrationsTest extends TilePacksTest
 
         new TilePackMigrations(gson, saved.configManager).migrateToLatest();
         TilePackManager manager = new TilePackManager(gson, saved.configManager);
-        FilterManager filters = new FilterManager(saved.configManager);
 
-        assertTrue(manager.isPackEnabled(1));
+        assertEquals(List.of(10000, 10001), new ArrayList<>(manager.getTilePacks().keySet()));
         assertTrue(manager.isPackEnabled(10000));
-        assertFalse(manager.isPackEnabled(42));
+        assertTrue(manager.isPackEnabled(10001));
         assertEquals("Custom", manager.getTilePacks().get(10000).packName);
-        assertFalse(manager.getTilePacks().get(42).visible);
-        assertFalse(filters.getShowVisible());
-        assertTrue(filters.getShowInvisible());
-        // The next custom pack doesn't take an id Tile Packs used.
+        // The next pack doesn't take a number already used
         manager.addCustomPack("Next", "[]");
-        assertEquals("Next", manager.getTilePacks().get(10001).packName);
+        assertEquals("Next", manager.getTilePacks().get(10002).packName);
+    }
+
+    @Test
+    public void theBuiltInPacksYouHadOnBecomeYoursInTheOrderTheyWereOn()
+    {
+        // Tile Packs' data was brought over before there were only your own packs
+        SavedConfig saved = new SavedConfig();
+        saved.put(OURS, "tilePacks_version", "1");
+        saved.put(OURS, "tilePacks_packs", "[84,21]");
+        saved.put(OURS, "tilePacks_pack_42", "{\"id\":42,\"visible\":false}");
+        saved.put(OURS, "tilePacks_showInvisible", "true");
+
+        new TilePackMigrations(gson, saved.configManager).migrateToLatest();
+
+        assertEquals("Tithe farm", pack(saved, 10000).packName);
+        assertEquals(builtIn(84).packTiles, pack(saved, 10000).packTiles);
+        assertEquals("Hallowed Sepulchre", pack(saved, 10001).packName);
+        assertEquals("[10000,10001]", saved.get(OURS, "tilePacks_packs"));
+        assertEquals("10001", saved.get(OURS, "tilePacks_customId"));
+        assertNull(saved.get(OURS, "tilePacks_pack_42"));
+        assertNull(saved.get(OURS, "tilePacks_showInvisible"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
+    }
+
+    @Test
+    public void aPackThatIsntInTheBuiltInListIsLeftOut()
+    {
+        SavedConfig saved = new SavedConfig();
+        saved.put(OURS, "tilePacks_version", "1");
+        saved.put(OURS, "tilePacks_packs", "[999]");
+
+        new TilePackMigrations(gson, saved.configManager).migrateToLatest();
+
+        assertNull(saved.get(OURS, "tilePacks_packs"));
+        assertNull(saved.get(OURS, "tilePacks_pack_10000"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
+    }
+
+    @Test
+    public void startingOverAfterAStopMakesNothingTwice()
+    {
+        // A pack made, but the run stopped before the packs that are on were saved
+        SavedConfig saved = new SavedConfig();
+        saved.put(OURS, "tilePacks_version", "1");
+        saved.put(OURS, "tilePacks_packs", "[84]");
+        saved.put(OURS, "tilePacks_pack_10000", "{\"id\":10000,\"packName\":\"Tithe farm\",\"packTiles\":\"[]\"}");
+
+        new TilePackMigrations(gson, saved.configManager).migrateToLatest();
+
+        assertEquals(builtIn(84).packTiles, pack(saved, 10000).packTiles);
+        assertNull(saved.get(OURS, "tilePacks_pack_10001"));
+        assertEquals("[10000]", saved.get(OURS, "tilePacks_packs"));
     }
 
     @Test
@@ -154,12 +193,12 @@ public class TilePackMigrationsTest extends TilePacksTest
     public void alreadyMigratedConfigurationIsNotChanged()
     {
         SavedConfig saved = tilePacksVersion2();
-        saved.put(OURS, "tilePacks_version", "1");
+        saved.put(OURS, "tilePacks_version", "2");
 
         new TilePackMigrations(gson, saved.configManager).migrateToLatest();
 
         assertNull(saved.get(OURS, "tilePacks_pack_10000"));
-        assertEquals("1", saved.get(OURS, "tilePacks_version"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
         verify(saved.configManager, never()).setConfiguration(anyString(), anyString(), anyString());
         verify(saved.configManager, never()).setConfiguration(anyString(), anyString(), (Object) any());
     }
@@ -172,24 +211,24 @@ public class TilePackMigrationsTest extends TilePacksTest
         new TilePackMigrations(gson, saved.configManager).migrateToLatest();
 
         assertEquals(1, saved.values.size());
-        assertEquals("1", saved.get(OURS, "tilePacks_version"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
     }
 
     @Test
     public void packsConstsDestinationAlreadyHasAreKept()
     {
         SavedConfig saved = tilePacksVersion2();
-        saved.put(OURS, "tilePacks_pack_10000", "{\"id\":10000,\"packName\":\"Mine\",\"packTiles\":\"[]\",\"visible\":true}");
+        saved.put(OURS, "tilePacks_pack_10000", "{\"id\":10000,\"packName\":\"Mine\",\"packTiles\":\"[]\"}");
         saved.put(OURS, "tilePacks_packs", "[3,1]");
         saved.put(OURS, "tilePacks_customId", "10004");
-        saved.put(OURS, "tilePacks_showVisible", "true");
 
         new TilePackMigrations(gson, saved.configManager).migrateToLatest();
 
-        assertEquals("Mine", gson.fromJson(saved.get(OURS, "tilePacks_pack_10000"), TilePack.class).packName);
-        assertEquals("[3,1,10000]", saved.get(OURS, "tilePacks_packs"));
-        assertEquals("10004", saved.get(OURS, "tilePacks_customId"));
-        assertEquals("true", saved.get(OURS, "tilePacks_showVisible"));
+        assertEquals("Mine", pack(saved, 10000).packName);
+        assertEquals("Alchemical Hydra (range)", pack(saved, 10005).packName);
+        assertEquals("Abyssal Sire", pack(saved, 10006).packName);
+        assertEquals("[10005,10006,10000]", saved.get(OURS, "tilePacks_packs"));
+        assertEquals("10006", saved.get(OURS, "tilePacks_customId"));
     }
 
     @Test
@@ -202,7 +241,7 @@ public class TilePackMigrationsTest extends TilePacksTest
 
         assertNull(saved.get(OURS, "tilePacks_pack_7"));
         assertNotNull(saved.get(OURS, "tilePacks_pack_10000"));
-        assertEquals("1", saved.get(OURS, "tilePacks_version"));
+        assertEquals("2", saved.get(OURS, "tilePacks_version"));
     }
 
     @Test(expected = RuntimeException.class)
@@ -258,6 +297,24 @@ public class TilePackMigrationsTest extends TilePacksTest
             }
             assertTrue(setting.getValue(), found);
         }
+    }
+
+    private TilePack pack(SavedConfig saved, int id)
+    {
+        String json = saved.get(OURS, "tilePacks_pack_" + id);
+        assertNotNull("no pack " + id, json);
+        return gson.fromJson(json, TilePack.class);
+    }
+
+    /** A pack from Tile Packs' built-in list. */
+    private TilePack builtIn(int id)
+    {
+        Map<Integer, TilePack> packs = gson.fromJson(new InputStreamReader(
+            TilePackMigrations.class.getResourceAsStream("tilePacks.jsonc"), StandardCharsets.UTF_8),
+            new TypeToken<Map<Integer, TilePack>>()
+            {
+            }.getType());
+        return packs.get(id);
     }
 
     /** Tile Packs' data as it saves it since version 2: a key per pack, which are on, the filters, the settings. */

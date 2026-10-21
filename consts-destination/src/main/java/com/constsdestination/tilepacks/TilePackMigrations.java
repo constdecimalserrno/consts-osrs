@@ -2,7 +2,8 @@
  * Copyright (c) 2022, TrevorMDev
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; instead of migrating
  *   Tile Packs' saved data in place, it brings it over into consts-Destination's once, from either of the formats
- *   Tile Packs has saved, and leaves Tile Packs' own data as it was; lombok written out)
+ *   Tile Packs has saved, and leaves Tile Packs' own data as it was; lombok written out; a second step makes the
+ *   built-in packs that are on your own, as consts-Destination has no built-in packs to pick from)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +34,11 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -48,9 +53,13 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Brings Tile Packs' saved data over into consts-Destination's, the first time consts-Destination starts with tile
- * packs: the packs that were on, the custom packs, which packs were hidden from the list, the list's filters and Tile
- * Packs' settings. Tile Packs' data is only read: nothing of it is changed or deleted, so Tile Packs works as before
- * for as long as it's installed.
+ * packs: the packs that were on, the custom packs and Tile Packs' settings. Tile Packs' data is only read: nothing of
+ * it is changed or deleted, so Tile Packs works as before for as long as it's installed.
+ *
+ * <p>Then, once, the built-in packs that are on become your own (version 2): consts-Destination has no list of
+ * built-in packs to pick from, only yours. Each keeps its name and tiles and stays on, in the order they were turned
+ * on; the built-in packs that were off, and what was saved about them, go. Their tiles come from Tile Packs' list in
+ * tilePacks.jsonc, which is read for nothing else.
  *
  * <p>Tile Packs has saved its packs in two formats. Before its version 2, the custom packs were in one key and the
  * built-in packs' visibility in another; since, each pack has a key of its own. Its own migration from the first to the
@@ -71,10 +80,7 @@ public class TilePackMigrations
     private static final String PACK_PREFIX = "pack_";
     private static final String PACKS = "packs";
     private static final String CUSTOM_ID = "customId";
-    private static final String SHOW_VISIBLE = "showVisible";
-    private static final String SHOW_INVISIBLE = "showInvisible";
     private static final String CUSTOM_PACKS = "customPacks";
-    private static final String TILE_PACK_CONFIGS = "tilePackConfigs";
 
     /** Tile Packs' settings, by its key, and the consts-Destination settings that take their place. */
     static final Map<String, String> SETTINGS = ImmutableMap.<String, String>builder()
@@ -86,10 +92,18 @@ public class TilePackMigrations
         .put("fillOpacity", "tilePacksFillOpacity")
         .build();
 
-    /** The version of consts-Destination's tile pack data: 1 once Tile Packs' has been brought over. */
+    /**
+     * The version of consts-Destination's tile pack data: 1 once Tile Packs' has been brought over, 2 once the
+     * built-in packs that were on are your own.
+     */
     static final String TILE_PACKS_VERSION = TilePackManager.KEY_PREFIX + "version";
     // More for reference than actual use.
-    private static final int CURRENT_VERSION = 1;
+    private static final int CURRENT_VERSION = 2;
+
+    /** Where the list of built-in packs filtered by on or off was kept, before there were only your own packs. */
+    private static final String[] OLD_FILTERS = {
+        TilePackManager.KEY_PREFIX + "showVisible", TilePackManager.KEY_PREFIX + "showInvisible"
+    };
 
     private static final String GROUP = TilePackManager.CONFIG_GROUP;
 
@@ -111,6 +125,11 @@ public class TilePackMigrations
         {
             importFromTilePacks();
             saveVersion(1);
+        }
+        if (version < 2)
+        {
+            ownBuiltInPacks();
+            saveVersion(2);
         }
     }
 
@@ -142,8 +161,6 @@ public class TilePackMigrations
 
         importEnabledPacks();
         importCustomId();
-        importIfUnset(SHOW_VISIBLE, FilterManager.SHOW_VISIBLE);
-        importIfUnset(SHOW_INVISIBLE, FilterManager.SHOW_INVISIBLE);
 
         // consts-Destination's own tile pack settings are new, so Tile Packs' replace them.
         for (Map.Entry<String, String> setting : SETTINGS.entrySet())
@@ -156,7 +173,10 @@ public class TilePackMigrations
         }
     }
 
-    /** Tile Packs' saved packs, from a key per pack, or else from its keys from before version 2. */
+    /**
+     * Tile Packs' custom packs, from a key per pack, or else from its keys from before version 2. What it saved about
+     * its built-in packs, hidden from its list or not, doesn't matter here: there's no such list.
+     */
     private Map<Integer, TilePack> loadTilePacksPacks()
     {
         Map<Integer, TilePack> packs = migrateV1ToV2();
@@ -170,7 +190,7 @@ public class TilePackMigrations
                 Integer id = Integer.valueOf(key.substring(wholePrefix.length()));
                 String json = configManager.getConfiguration(TILE_PACKS_GROUP, PACK_PREFIX + id);
                 TilePack pack = gson.fromJson(json, TilePack.class);
-                if (pack != null && id.equals(pack.id))
+                if (pack != null && id.equals(pack.id) && pack.packTiles != null)
                 {
                     packs.put(id, pack);
                 }
@@ -183,14 +203,12 @@ public class TilePackMigrations
         return packs;
     }
 
-    /** Tile Packs' packs as its version 2 saves them, from what it saved before. */
+    /** Tile Packs' custom packs as its version 2 saves them, from what it saved before. */
     private Map<Integer, TilePack> migrateV1ToV2()
     {
         Map<Integer, TilePack> packs = new HashMap<>();
         String customPacksJson = configManager.getConfiguration(TILE_PACKS_GROUP, CUSTOM_PACKS);
-        String tilePackConfigsJson = configManager.getConfiguration(TILE_PACKS_GROUP, TILE_PACK_CONFIGS);
-
-        if (Strings.isNullOrEmpty(customPacksJson) && Strings.isNullOrEmpty(tilePackConfigsJson))
+        if (Strings.isNullOrEmpty(customPacksJson))
         {
             return packs;
         }
@@ -199,33 +217,13 @@ public class TilePackMigrations
             new TypeToken<Map<Integer, LegacyTilePack>>()
             {
             }.getType());
-        Map<Integer, LegacyTilePackConfig> tilePackConfigs = parseMap(tilePackConfigsJson,
-            new TypeToken<Map<Integer, LegacyTilePackConfig>>()
-            {
-            }.getType());
-
-        Set<Integer> ids = new HashSet<>();
-        ids.addAll(customPacks.keySet());
-        ids.addAll(tilePackConfigs.keySet());
-
-        for (Integer id : ids)
+        for (Map.Entry<Integer, LegacyTilePack> customPack : customPacks.entrySet())
         {
-            LegacyTilePack customPack = customPacks.get(id);
-            LegacyTilePackConfig config = tilePackConfigs.get(id);
-            boolean visible = config == null || config.visible;
-
-            TilePack pack;
-            if (customPack == null)
+            LegacyTilePack legacy = customPack.getValue();
+            if (legacy != null && legacy.packTiles != null)
             {
-                pack = new TilePack(id, visible);
+                packs.put(customPack.getKey(), new TilePack(customPack.getKey(), legacy.packName, legacy.packTiles));
             }
-            else
-            {
-                pack = new TilePack(id, customPack.packName, customPack.link, customPack.packTiles);
-                pack.visible = visible;
-            }
-
-            packs.put(id, pack);
         }
         return packs;
     }
@@ -260,12 +258,103 @@ public class TilePackMigrations
         configManager.setConfiguration(GROUP, TilePackManager.CUSTOM_ID, customId);
     }
 
-    private void importIfUnset(String theirKey, String ourKey)
+    /**
+     * Version 2: each built-in pack that's on becomes a pack of your own, with the next free number, its name and its
+     * tiles, and stays on where it was among the packs that are on. If this stops part way, it's done again from the
+     * start at the next start, with the same numbers, so nothing is made twice.
+     */
+    private void ownBuiltInPacks()
     {
-        String value = configManager.getConfiguration(TILE_PACKS_GROUP, theirKey);
-        if (!Strings.isNullOrEmpty(value) && Strings.isNullOrEmpty(configManager.getConfiguration(GROUP, ourKey)))
+        List<Integer> enabled = parseList(configManager.getConfiguration(GROUP, TilePackManager.PACKS_PREFIX));
+        Map<Integer, TilePack> builtIn = null;
+        String savedId = configManager.getConfiguration(GROUP, TilePackManager.CUSTOM_ID);
+        int customId = Strings.isNullOrEmpty(savedId) ? TilePackManager.FIRST_ID - 1 : Integer.parseInt(savedId);
+
+        Set<Integer> made = new HashSet<>();
+        Set<Integer> stillOn = new LinkedHashSet<>();
+        for (Integer id : enabled)
         {
-            configManager.setConfiguration(GROUP, ourKey, value);
+            if (id == null)
+            {
+                continue;
+            }
+            if (id >= TilePackManager.FIRST_ID)
+            {
+                stillOn.add(id);
+                continue;
+            }
+            if (builtIn == null)
+            {
+                builtIn = loadBuiltInPacks();
+            }
+            TilePack pack = builtIn.get(id);
+            if (pack == null || Strings.isNullOrEmpty(pack.packTiles))
+            {
+                log.warn("Tile pack {} was on but isn't a built-in pack; it's left out", id);
+                continue;
+            }
+            customId++;
+            configManager.setConfiguration(GROUP, TilePackManager.PACK_PREFIX + customId,
+                gson.toJson(new TilePack(customId, pack.packName, pack.packTiles)));
+            made.add(customId);
+            stillOn.add(customId);
+        }
+        verifySavedPacks(made);
+
+        if (!made.isEmpty())
+        {
+            configManager.setConfiguration(GROUP, TilePackManager.CUSTOM_ID, customId);
+        }
+        if (stillOn.isEmpty())
+        {
+            configManager.unsetConfiguration(GROUP, TilePackManager.PACKS_PREFIX);
+        }
+        else
+        {
+            configManager.setConfiguration(GROUP, TilePackManager.PACKS_PREFIX, gson.toJson(new ArrayList<>(stillOn)));
+        }
+
+        // What was saved about the built-in packs, hidden or not, and how their list was filtered, is let go
+        String wholePrefix = ConfigManager.getWholeKey(GROUP, null, TilePackManager.PACK_PREFIX);
+        for (String key : new ArrayList<>(configManager.getConfigurationKeys(wholePrefix)))
+        {
+            String id = key.substring(wholePrefix.length());
+            try
+            {
+                if (Integer.parseInt(id) < TilePackManager.FIRST_ID)
+                {
+                    configManager.unsetConfiguration(GROUP, TilePackManager.PACK_PREFIX + id);
+                }
+            }
+            catch (NumberFormatException e)
+            {
+                log.warn("Unable to read tile pack config {}", key);
+            }
+        }
+        for (String filter : OLD_FILTERS)
+        {
+            configManager.unsetConfiguration(GROUP, filter);
+        }
+    }
+
+    /** Tile Packs' built-in packs, by number, from its list. */
+    private Map<Integer, TilePack> loadBuiltInPacks()
+    {
+        try (InputStream in = TilePackMigrations.class.getResourceAsStream("tilePacks.jsonc"))
+        {
+            if (in == null)
+            {
+                throw new IllegalStateException("tilePacks.jsonc is missing");
+            }
+            Map<Integer, TilePack> packs = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8),
+                new TypeToken<Map<Integer, TilePack>>()
+                {
+                }.getType());
+            return packs == null ? new HashMap<>() : packs;
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException("Unable to read tilePacks.jsonc", e);
         }
     }
 
@@ -313,13 +402,6 @@ public class TilePackMigrations
     {
         private Integer id;
         private String packName;
-        private String link;
         private String packTiles;
-    }
-
-    private static class LegacyTilePackConfig
-    {
-        private Integer packId;
-        private boolean visible;
     }
 }

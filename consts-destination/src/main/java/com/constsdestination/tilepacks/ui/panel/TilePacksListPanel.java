@@ -2,7 +2,7 @@
  * Copyright (c) 2022, Trevor <https://github.com/TrevorMDev>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination, where it's the Tile
  *   packs tab of its panel; the points are reloaded through consts-Destination; the list can be read again after a
- *   profile change)
+ *   profile change; only your own packs, without the search and filters, and a note while there are none)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,41 +28,41 @@
 
 package com.constsdestination.tilepacks.ui.panel;
 
-import com.constsdestination.tilepacks.FilterManager;
 import com.constsdestination.tilepacks.TilePackManager;
 import com.constsdestination.tilepacks.data.TilePack;
 import com.constsdestination.tilepacks.ui.panel.custom.CustomPackManagerPanel;
-import com.constsdestination.tilepacks.ui.panel.header.HeaderPanel;
 import com.constsdestination.tilepacks.ui.panel.pack.TilePackPanel;
-import com.google.common.base.Strings;
 import com.google.gson.Gson;
+import java.awt.Color;
 import java.awt.GridLayout;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.stream.Collectors;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
 import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 
 /**
- * UI panel parent, contains all content for the panel.
+ * UI panel parent, contains all content for the panel: your packs, in the order they were made, then the form to add
+ * one.
  */
 public class TilePacksListPanel extends PluginPanel
 {
+    /** What the list says while there are no packs. */
+    public static final String NO_PACKS = "No packs yet. Add one below, from tiles you marked or a pack someone shared.";
 
     private final TilePackManager tilePackManager;
     private final Runnable reloadPoints;
-    private final FilterManager filterManager;
     private final ChatMessageManager chatMessageManager;
     private final Gson gson;
 
-    private final HeaderPanel headerPanel;
     private final JPanel listContainer = new JPanel();
+    private final JLabel noPacks = new JLabel(wrapped(NO_PACKS));
 
     /** reloadPoints: puts the tiles of the packs that are on in the world again, after one is turned on or off. */
     public TilePacksListPanel(TilePackManager tilePackManager,
         Runnable reloadPoints,
-        FilterManager filterManager,
         ChatMessageManager chatMessageManager,
         Gson gson
     )
@@ -70,12 +70,18 @@ public class TilePacksListPanel extends PluginPanel
         super();
         this.tilePackManager = tilePackManager;
         this.reloadPoints = reloadPoints;
-        this.filterManager = filterManager;
         this.chatMessageManager = chatMessageManager;
         this.gson = gson;
 
-        headerPanel = new HeaderPanel(filterManager, this);
-        add(headerPanel);
+        JLabel title = new JLabel("Your packs");
+        title.setFont(FontManager.getRunescapeBoldFont());
+        title.setForeground(Color.WHITE);
+        title.setBorder(new EmptyBorder(2, 2, 2, 0));
+        add(title);
+
+        noPacks.setFont(FontManager.getRunescapeSmallFont());
+        noPacks.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        noPacks.setBorder(new EmptyBorder(2, 2, 8, 2));
 
         add(listContainer);
         listContainer.setLayout(new GridLayout(0, 1, 0, 0));
@@ -90,30 +96,29 @@ public class TilePacksListPanel extends PluginPanel
     public void createTilePackPanels()
     {
         listContainer.removeAll();
-        String search = headerPanel.getSearchText();
-        for (Map.Entry<Integer, TilePack> pack : tilePackManager.getTilePacks().entrySet().stream()
-            .sorted(Map.Entry.comparingByKey(Comparator.naturalOrder()))
-            .collect(Collectors.toList()))
+        if (tilePackManager.getTilePacks().isEmpty())
         {
-            TilePack tilePack = pack.getValue();
-            boolean matchesSearch = Strings.isNullOrEmpty(search) || tilePack.packName.toLowerCase().contains(search.toLowerCase());
-            boolean matchesFilters = (filterManager.getShowVisible() && tilePack.visible) || (filterManager.getShowInvisible() && !tilePack.visible);
-
-            if (matchesSearch && matchesFilters)
-            {
-                JPanel tile = new TilePackPanel(tilePackManager, reloadPoints, chatMessageManager,
-                    gson, this, tilePack);
-                listContainer.add(tile);
-            }
+            listContainer.add(noPacks);
+        }
+        for (TilePack tilePack : tilePackManager.getTilePacks().values())
+        {
+            JPanel tile = new TilePackPanel(tilePackManager, reloadPoints, chatMessageManager,
+                gson, this, tilePack);
+            listContainer.add(tile);
         }
         listContainer.revalidate();
         listContainer.repaint();
     }
 
-    /** Shows the packs and filters as they're saved now, as after a profile change. */
+    /** Text for a label that wraps within the panel's width, as a note under a list or form does. */
+    public static String wrapped(String text)
+    {
+        return "<html><body style='width: 150px'>" + text + "</body></html>";
+    }
+
+    /** Shows the packs as they're saved now, as after a profile change. */
     public void reload()
     {
-        headerPanel.showFilters();
         createTilePackPanels();
     }
 }
