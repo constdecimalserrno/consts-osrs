@@ -15,7 +15,7 @@ And where to stand: [tile packs](#tile-packs), marked tiles for bosses, raids, m
 
 ## Tile packs
 
-The tile in RuneLite's sidebar opens on the **Tile packs** tab: a list of packs of marked tiles for content all over the game, from Abyssal Sire to Zulrah, with raids, minigames, clues and sailing between. Turn a pack on and its tiles show in the world, colored and labelled as the pack has them. They're kept apart from RuneLite's Ground Markers, so they don't touch your own markers.
+The sidebar panel's **Tile packs** tab, beside Settings, is a list of packs of marked tiles for content all over the game, from Abyssal Sire to Zulrah, with raids, minigames, clues and sailing between. Turn a pack on and its tiles show in the world, colored and labelled as the pack has them. They're kept apart from RuneLite's Ground Markers, so they don't touch your own markers.
 
 Each pack is a row with its controls:
 
@@ -40,7 +40,7 @@ The first time consts-Destination starts with tile packs (1.3.0), it brings over
 
 ## Settings
 
-The tile in RuneLite's sidebar opens a panel with two tabs, **Tile packs** and **Settings**. The Settings tab is the same as the plugin's page in the Configuration panel, so it's one click away while you play. Right-click a setting's name to reset it.
+The tile in RuneLite's sidebar opens a panel with two tabs, **Settings** and **Tile packs**, on Settings. The Settings tab is the same as the plugin's page in the Configuration panel, so it's one click away while you play. Right-click a setting's name to reset it.
 
 The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off hides every tile and outline, the tile packs' too, without turning the plugin off, so the sidebar button stays.
 

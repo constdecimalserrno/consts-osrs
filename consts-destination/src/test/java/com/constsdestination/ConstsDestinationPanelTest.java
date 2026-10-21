@@ -44,7 +44,7 @@ public class ConstsDestinationPanelTest
     }
 
     @Test
-    public void theTitleAndMasterSwitchSitOverTheTilePacksAndTheSettingsTabs()
+    public void theTitleAndMasterSwitchSitOverTheSettingsAndTheTilePacksTabs()
     {
         assertTrue(labels(panel).contains("consts-Destination"));
         JToggleButton masterSwitch = find(panel, JToggleButton.class);
@@ -52,13 +52,22 @@ public class ConstsDestinationPanelTest
         assertTrue(masterSwitch.isSelected());
 
         assertNotNull(tabs);
-        assertEquals("Tile packs", tabs.getTab(0).getText());
-        assertEquals("Settings", tabs.getTab(1).getText());
+        assertEquals("Settings", tabs.getTab(0).getText());
+        assertEquals("Tile packs", tabs.getTab(1).getText());
     }
 
     @Test
-    public void itOpensOnTheTilePacks()
+    public void itOpensOnTheSettings()
     {
+        assertTrue(labels(panel).contains("Hover Color"));
+        assertFalse(labels(panel).contains("Abyssal Sire"));
+    }
+
+    @Test
+    public void theTilePacksTabHasThePacks()
+    {
+        tabs.select(tabs.getTab(1));
+
         assertTrue(labels(panel).contains("Abyssal Sire"));
         assertFalse(labels(panel).contains("Hover Color"));
     }
@@ -66,8 +75,6 @@ public class ConstsDestinationPanelTest
     @Test
     public void theSettingsTabHasTheTilePacksSettingsToo()
     {
-        tabs.select(tabs.getTab(1));
-
         List<String> labels = labels(panel);
         assertFalse(labels.contains("Abyssal Sire"));
         assertTrue(labels.contains("Hover Color"));

@@ -190,7 +190,7 @@ public class ConfigSidePanelTest
     }
 
     @Test
-    public void itsOwnTabsComeFirstAndTheSettingsLast()
+    public void theSettingsComeFirstThenItsOwnTabs()
     {
         saved.put(ConstsAfkConfig.MASTER_KEY, "true");
         ConfigSidePanel tabbed = withMasterSwitch();
@@ -199,9 +199,9 @@ public class ConfigSidePanelTest
 
         MaterialTabGroup tabs = find(tabbed, MaterialTabGroup.class, g -> true);
         assertNotNull(tabs);
-        assertEquals("Packs", tabs.getTab(0).getText());
-        assertEquals("More", tabs.getTab(1).getText());
-        assertEquals(ConfigSidePanel.SETTINGS_TAB, tabs.getTab(2).getText());
+        assertEquals(ConfigSidePanel.SETTINGS_TAB, tabs.getTab(0).getText());
+        assertEquals("Packs", tabs.getTab(1).getText());
+        assertEquals("More", tabs.getTab(2).getText());
         assertEquals(1, count(tabbed, MaterialTabGroup.class));
 
         // The title and the master switch stay on top of the tabs.
@@ -210,21 +210,22 @@ public class ConfigSidePanelTest
     }
 
     @Test
-    public void theFirstTabShowsAndTheSettingsTabShowsTheSettings()
+    public void itOpensOnTheSettingsAndItsOwnTabShowsItsOwn()
     {
         ConfigItemDescriptor flag = first(boolean.class);
         panel.addTab("Packs", new JLabel("pack list"));
         MaterialTabGroup tabs = find(panel, MaterialTabGroup.class, g -> true);
 
-        assertTrue(labels(panel).contains("pack list"));
-        assertNull(find(panel, JPanel.class, p -> flag.getItem().keyName().equals(p.getName())));
-
-        tabs.select(tabs.getTab(1));
         assertFalse(labels(panel).contains("pack list"));
         assertNotNull(control(flag, JCheckBox.class));
 
-        tabs.select(tabs.getTab(0));
+        tabs.select(tabs.getTab(1));
         assertTrue(labels(panel).contains("pack list"));
+        assertNull(find(panel, JPanel.class, p -> flag.getItem().keyName().equals(p.getName())));
+
+        tabs.select(tabs.getTab(0));
+        assertFalse(labels(panel).contains("pack list"));
+        assertNotNull(control(flag, JCheckBox.class));
     }
 
     @Test

@@ -34,7 +34,7 @@ import net.runelite.client.util.ImageUtil;
  * hover color, the tile you're walking to and whatever you're interacting with in the clicked color. The entity
  * outlines are RuneLite's Interact Highlight by Adam, folded in (InteractTracker, ConstsDestinationOutlineOverlay).
  * And where to stand: Tile Packs by TrevorMDev, folded in (the tilepacks package), its packs in the sidebar panel's
- * first tab.
+ * second tab.
  */
 @PluginDescriptor(
     name = "consts-Destination",
@@ -110,7 +110,7 @@ public class ConstsDestinationPlugin extends Plugin
         clientToolbar.addNavigation(navButton);
     }
 
-    /** The sidebar panel: the title and Master Switch, then two tabs, the tile packs first and the settings second. */
+    /** The sidebar panel: the title and Master Switch over two tabs, Settings, which it opens on, then Tile packs. */
     static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
         ConstsDestinationConfig config, Plugin plugin, JComponent tilePacksPanel)
     {
