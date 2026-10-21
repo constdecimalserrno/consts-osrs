@@ -12,6 +12,8 @@ RuneLite plugin for Old School RuneScape ( OSRS ): where you're about to act, an
 
 ## Settings
 
+The tile in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. Right-click a setting's name to reset it.
+
 | Section | Setting | What it does | Default |
 |---|---|---|---|
 | Colors | Hover Color | The tile under your cursor, and anything you hover | Blue `#3EAAFF` |
@@ -26,7 +28,7 @@ RuneLite plugin for Old School RuneScape ( OSRS ): where you're about to act, an
 
 ## Credits
 
-The outlines are RuneLite's [Interact Highlight](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/interacthighlight) by Adam (BSD 2-Clause, Copyright (c) 2021, Adam), folded into consts-Destination: you can turn that plugin off and run this one alone. The ported files, `InteractTracker.java` and `ConstsDestinationOutlineOverlay.java`, keep its license header and license, reproduced in [NOTICE](NOTICE); the rest of consts-Destination is [MIT](LICENSE).
+The outlines are RuneLite's [Interact Highlight](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/interacthighlight) by Adam (BSD 2-Clause, Copyright (c) 2021, Adam), folded into consts-Destination: you can turn that plugin off and run this one alone. The ported files, `InteractTracker.java` and `ConstsDestinationOutlineOverlay.java`, keep its license header and license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-Destination's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The rest of consts-Destination is [MIT](LICENSE).
 
 ## Running it
 

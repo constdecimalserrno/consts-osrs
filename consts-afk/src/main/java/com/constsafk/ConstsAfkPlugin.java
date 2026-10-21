@@ -39,6 +39,7 @@ import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.input.MouseAdapter;
@@ -46,7 +47,11 @@ import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 
 @PluginDescriptor(
@@ -124,6 +129,19 @@ public class ConstsAfkPlugin extends Plugin
     @Inject
     private ConstsAfkAggroAreaOverlay aggroAreaOverlay;
 
+    @Inject
+    private ClientToolbar clientToolbar;
+
+    @Inject
+    private ColorPickerManager colorPickerManager;
+
+    @Inject
+    private EventBus eventBus;
+
+    // The sidebar button: the plugin's settings in a panel of their own.
+    private ConfigSidePanel configPanel;
+    private NavigationButton navButton;
+
     private final Map<AlertType, LoopAlert> loops = new EnumMap<>(AlertType.class);
     private final Map<AlertType, BurstAlert> bursts = new EnumMap<>(AlertType.class);
     private final Map<Skill, Integer> skillXpCache = new EnumMap<>(Skill.class);
@@ -181,6 +199,15 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
+        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this);
+        eventBus.register(configPanel);
+        navButton = NavigationButton.builder()
+            .tooltip("consts-AFK")
+            .icon(ImageUtil.loadImageResource(getClass(), "panel_icon.png"))
+            .priority(4)
+            .panel(configPanel)
+            .build();
+        clientToolbar.addNavigation(navButton);
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
@@ -201,6 +228,10 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
         overlayManager.remove(aggroAreaOverlay);
+        clientToolbar.removeNavigation(navButton);
+        eventBus.unregister(configPanel);
+        navButton = null;
+        configPanel = null;
         shutdownScheduler();
         aggroArea.clear();
     }
