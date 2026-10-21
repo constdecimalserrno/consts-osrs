@@ -1,6 +1,7 @@
 package com.constsdestination;
 
 import java.awt.Color;
+import net.runelite.client.config.Alpha;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -9,7 +10,7 @@ import net.runelite.client.config.Range;
 
 /**
  * One idea in two forms: the hover color for what you're about to act on, the clicked color for what you acted on.
- * Tiles show it on the ground, outlines on NPCs, players, objects and ground items.
+ * Tiles show it on the ground, outlines on NPCs, players, objects and ground items. Then how tile packs are drawn.
  */
 @ConfigGroup(ConstsDestinationConfig.GROUP)
 public interface ConstsDestinationConfig extends Config
@@ -21,7 +22,7 @@ public interface ConstsDestinationConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off hides every tile and outline consts-Destination draws. The plugin itself stays on, so its sidebar button stays.",
+        description = "Off hides every tile and outline consts-Destination draws, tile packs too. The plugin itself stays on, so its sidebar button stays.",
         position = -1
     )
     default boolean masterSwitch()
@@ -49,6 +50,13 @@ public interface ConstsDestinationConfig extends Config
         position = 2
     )
     String outlinesSection = "outlines";
+
+    @ConfigSection(
+        name = "Tile packs",
+        description = "How the tiles of the packs you turn on in the Tile packs tab are drawn",
+        position = 3
+    )
+    String tilePacksSection = "tilePacks";
 
     // Colors
 
@@ -238,5 +246,83 @@ public interface ConstsDestinationConfig extends Config
     default int outlineFeather()
     {
         return 4;
+    }
+
+    // Tile packs. These are Tile Packs' own settings, from its TilePacksConfig.java: Copyright (c) 2022, TrevorMDev,
+    // BSD 2-Clause License, reproduced in NOTICE. Changed: the keys start with "tilePacks"; its Hide on toolbar is left
+    // out, since tile packs have no sidebar button of their own; Fill Opacity is kept within 0 to 255.
+
+    @ConfigItem(
+        keyName = "tilePacksShowLabels",
+        name = "Show Labels",
+        description = "When checked, labels will render as defined in each pack",
+        section = tilePacksSection,
+        position = 0
+    )
+    default boolean tilePacksShowLabels()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "tilePacksOverrideColorActive",
+        name = "Override Color Active",
+        description = "When checked, all tiles will render as the selected color",
+        section = tilePacksSection,
+        position = 1
+    )
+    default boolean tilePacksOverrideColorActive()
+    {
+        return false;
+    }
+
+    @Alpha
+    @ConfigItem(
+        keyName = "tilePacksOverrideColor",
+        name = "Override Color",
+        description = "If Use Override Color is checked, all tiles will be this color.",
+        section = tilePacksSection,
+        position = 2
+    )
+    default Color tilePacksOverrideColor()
+    {
+        return Color.YELLOW;
+    }
+
+    @ConfigItem(
+        keyName = "tilePacksDrawOnMinimap",
+        name = "Draw Tiles on Minimap",
+        description = "Configures whether tile packs tiles should be drawn on minimap",
+        section = tilePacksSection,
+        position = 3
+    )
+    default boolean tilePacksDrawOnMinimap()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "tilePacksBorderWidth",
+        name = "Border Width",
+        description = "Width of the marked tile border",
+        section = tilePacksSection,
+        position = 4
+    )
+    default double tilePacksBorderWidth()
+    {
+        return 2;
+    }
+
+    @Range(min = 0, max = 255)
+    @ConfigItem(
+        keyName = "tilePacksFillOpacity",
+        name = "Fill Opacity",
+        description = "Opacity of the tile fill color",
+        section = tilePacksSection,
+        position = 5
+    )
+    default int tilePacksFillOpacity()
+    {
+        return 50;
     }
 }

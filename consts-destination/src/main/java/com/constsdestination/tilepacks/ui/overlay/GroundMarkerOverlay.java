@@ -1,0 +1,167 @@
+/*
+ * Copyright (c) 2018, TheLonelyDev <https://github.com/TheLonelyDev>
+ * Copyright (c) 2018, Adam <Adam@sigterm.info>
+ * Copyright (c) 2022, Trevor <https://github.com/TrevorMDev>
+ * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; drawn only while
+ *   consts-Destination's Master Switch is on, with its Tile packs settings; nothing drawn without a local player;
+ *   the fill opacity kept within 0 to 255)
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package com.constsdestination.tilepacks.ui.overlay;
+
+import com.constsdestination.ConstsDestinationConfig;
+import com.constsdestination.tilepacks.PointManager;
+import com.constsdestination.tilepacks.data.ColorTileMarker;
+import com.google.common.base.Strings;
+import com.google.common.collect.Multimap;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Polygon;
+import java.awt.Stroke;
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import net.runelite.api.Client;
+import net.runelite.api.Perspective;
+import net.runelite.api.Player;
+import net.runelite.api.Point;
+import net.runelite.api.WorldView;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayLayer;
+import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.OverlayUtil;
+
+/**
+ * Manages the drawing of the markers on ground
+ */
+public class GroundMarkerOverlay extends Overlay
+{
+    private static final int MAX_DRAW_DISTANCE = 32;
+
+    private final PointManager pointManager;
+    private final Client client;
+    private final ConstsDestinationConfig config;
+
+    @Inject
+    public GroundMarkerOverlay(PointManager pointManager, Client client, ConstsDestinationConfig config)
+    {
+        this.pointManager = pointManager;
+        this.client = client;
+        this.config = config;
+        setPosition(OverlayPosition.DYNAMIC);
+        setPriority(PRIORITY_LOW);
+        setLayer(OverlayLayer.ABOVE_SCENE);
+    }
+
+    @Override
+    public Dimension render(Graphics2D graphics)
+    {
+        if (!config.masterSwitch())
+        {
+            return null;
+        }
+
+        final Multimap<WorldView, ColorTileMarker> points = pointManager.getPoints();
+        if (points.isEmpty())
+        {
+            return null;
+        }
+
+        Stroke stroke = new BasicStroke((float) config.tilePacksBorderWidth());
+        for (WorldView worldView : points.keySet())
+        {
+            for (final ColorTileMarker point : points.get(worldView))
+            {
+                WorldPoint worldPoint = point.getWorldPoint();
+                if (worldPoint.getPlane() != worldView.getPlane())
+                {
+                    continue;
+                }
+
+                Color tileColor;
+                if (config.tilePacksOverrideColorActive())
+                {
+                    tileColor = config.tilePacksOverrideColor();
+                }
+                else
+                {
+                    tileColor = point.getColor();
+                }
+
+                String label = null;
+                if (config.tilePacksShowLabels())
+                {
+                    label = point.getLabel();
+                }
+
+                drawTile(graphics, worldView, worldPoint, tileColor, label, stroke);
+            }
+        }
+
+        return null;
+    }
+
+    private void drawTile(Graphics2D graphics, WorldView worldView, WorldPoint point, Color color, @Nullable String label, Stroke borderStroke)
+    {
+        Player player = client.getLocalPlayer();
+        if (player == null)
+        {
+            return;
+        }
+
+        if (player.getWorldView().isTopLevel())
+        {
+            WorldPoint playerLocation = player.getWorldLocation();
+
+            if (point.distanceTo(playerLocation) >= MAX_DRAW_DISTANCE)
+            {
+                return;
+            }
+        }
+
+        LocalPoint lp = LocalPoint.fromWorld(worldView, point);
+        if (lp == null)
+        {
+            return;
+        }
+
+        Polygon poly = Perspective.getCanvasTilePoly(client, lp);
+        if (poly != null)
+        {
+            int fillOpacity = Math.max(0, Math.min(255, config.tilePacksFillOpacity()));
+            OverlayUtil.renderPolygon(graphics, poly, color, new Color(0, 0, 0, fillOpacity), borderStroke);
+        }
+
+        if (!Strings.isNullOrEmpty(label))
+        {
+            Point canvasTextLocation = Perspective.getCanvasTextLocation(client, graphics, lp, label, 0);
+            if (canvasTextLocation != null)
+            {
+                OverlayUtil.renderTextLocation(graphics, canvasTextLocation, label, color);
+            }
+        }
+    }
+}
