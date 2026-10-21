@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2017, Adam <Adam@sigterm.info>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: cut down to one plugin's settings in its own sidebar
- * panel, kept up to date while it's open)
+ * panel, kept up to date while it's open, with a master switch and optional tabs of the plugin's own)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -52,6 +53,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -94,6 +96,8 @@ import net.runelite.client.ui.components.ColorJButton;
 import net.runelite.client.ui.components.TitleCaseListCellRenderer;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
+import net.runelite.client.ui.components.materialtabs.MaterialTab;
+import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.SwingUtil;
@@ -111,6 +115,9 @@ import org.slf4j.LoggerFactory;
  * <p>A plugin can name one of its boolean settings as its master switch: it's drawn beside the title, like RuneLite's
  * own on/off switch, instead of as a row. Off quiets the plugin without turning it off, so this panel stays put.
  *
+ * <p>A plugin can also add tabs of its own (addTab). Then the title and switch sit over a row of tabs: the plugin's,
+ * then Settings. Without one there are no tabs, only the settings.
+ *
  * <p>Each consts-osrs plugin keeps its own copy, since each one is built alone for the Plugin Hub. The copies differ
  * only in their package line.
  */
@@ -119,6 +126,7 @@ class ConfigSidePanel extends PluginPanel
     private static final Logger log = LoggerFactory.getLogger(ConfigSidePanel.class);
 
     private static final int SPINNER_FIELD_WIDTH = 6;
+    static final String SETTINGS_TAB = "Settings";
     private static final ImageIcon SECTION_EXPAND_ICON;
     private static final ImageIcon SECTION_RETRACT_ICON;
     private static final ImageIcon SWITCH_ON;
@@ -153,6 +161,15 @@ class ConfigSidePanel extends PluginPanel
     private final String group;
     private final String switchKey;
     private final JToggleButton masterSwitch;
+    /** The title and master switch, and the tabs under them once there are any. */
+    private final JPanel header;
+    /** The settings, scrolling: the whole panel below the title, or the Settings tab. */
+    private final JScrollPane settingsView;
+    /** The plugin's own tabs, title to contents, in the order they were added. */
+    private final Map<String, JComponent> tabs = new LinkedHashMap<>();
+    /** Shows the chosen tab's contents; null until the first tab is added. */
+    private JPanel tabDisplay;
+    private MaterialTabGroup tabGroup;
 
     private final TitleCaseListCellRenderer listCellRenderer = new TitleCaseListCellRenderer();
     private final JPanel mainPanel;
@@ -196,7 +213,9 @@ class ConfigSidePanel extends PluginPanel
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
         topPanel.add(title);
-        add(topPanel, BorderLayout.NORTH);
+        header = new JPanel(new BorderLayout());
+        header.add(topPanel, BorderLayout.NORTH);
+        add(header, BorderLayout.NORTH);
 
         ConfigItemDescriptor switchItem = switchKey == null ? null : descriptor.getItems().stream()
             .filter(i -> switchKey.equals(i.getItem().keyName()) && i.getType() == boolean.class)
@@ -234,11 +253,46 @@ class ConfigSidePanel extends PluginPanel
         northPanel.setLayout(new BorderLayout());
         northPanel.add(mainPanel, BorderLayout.NORTH);
 
-        JScrollPane scrollPane = new JScrollPane(northPanel);
-        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        add(scrollPane, BorderLayout.CENTER);
+        settingsView = new JScrollPane(northPanel);
+        settingsView.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        add(settingsView, BorderLayout.CENTER);
 
         rebuild();
+    }
+
+    /**
+     * Adds a tab of the plugin's own. The first one puts the panel in tabs under the title: the plugin's tabs in the
+     * order they were added, then Settings. The panel shows the first tab.
+     */
+    void addTab(String title, JComponent content)
+    {
+        tabs.put(title, content);
+
+        if (tabGroup == null)
+        {
+            tabDisplay = new JPanel(new BorderLayout());
+            tabDisplay.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            remove(settingsView);
+            add(tabDisplay, BorderLayout.CENTER);
+        }
+        else
+        {
+            header.remove(tabGroup);
+        }
+
+        // MaterialTabGroup can't put a tab before another, so it's built again with every tab in its place.
+        tabGroup = new MaterialTabGroup(tabDisplay);
+        tabGroup.setBorder(new EmptyBorder(0, 0, 6, 0));
+        for (Map.Entry<String, JComponent> tab : tabs.entrySet())
+        {
+            tabGroup.addTab(new MaterialTab(tab.getKey(), tabGroup, tab.getValue()));
+        }
+        tabGroup.addTab(new MaterialTab(SETTINGS_TAB, tabGroup, settingsView));
+        header.add(tabGroup, BorderLayout.SOUTH);
+        tabGroup.select(tabGroup.getTab(0));
+
+        revalidate();
+        repaint();
     }
 
     /** Opens or closes a section, and remembers it while the plugin runs. */

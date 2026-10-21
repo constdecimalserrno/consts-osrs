@@ -1,7 +1,9 @@
 package com.constsdestination;
 
+import com.constsdestination.tilepacks.TilePacks;
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import javax.swing.JComponent;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
@@ -31,14 +33,18 @@ import net.runelite.client.util.ImageUtil;
  * Where you're about to act and where you acted: the tile under your cursor and anything there you can act on in the
  * hover color, the tile you're walking to and whatever you're interacting with in the clicked color. The entity
  * outlines are RuneLite's Interact Highlight by Adam, folded in (InteractTracker, ConstsDestinationOutlineOverlay).
+ * And where to stand: Tile Packs by TrevorMDev, folded in (the tilepacks package), its packs in the sidebar panel's
+ * first tab.
  */
 @PluginDescriptor(
     name = "consts-Destination",
-    description = "Highlights the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done",
-    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object"}
+    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, and draws tile packs: marked tiles for content all over the game",
+    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object", "pack", "ground", "marker"}
 )
 public class ConstsDestinationPlugin extends Plugin
 {
+    static final String TILE_PACKS_TAB = "Tile packs";
+
     @Inject
     private Client client;
 
@@ -69,6 +75,9 @@ public class ConstsDestinationPlugin extends Plugin
     @Inject
     private EventBus eventBus;
 
+    @Inject
+    private TilePacks tilePacks;
+
     // The sidebar button: the plugin's settings in a panel of their own.
     private ConfigSidePanel configPanel;
     private NavigationButton navButton;
@@ -88,7 +97,9 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.add(outlineOverlay);
         clickedTile = null;
         tracker.clear();
-        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsDestinationConfig.MASTER_KEY);
+        tilePacks.startUp();
+        eventBus.register(tilePacks);
+        configPanel = sidePanel(configManager, colorPickerManager, config, this, tilePacks.getPanel());
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
             .tooltip("consts-Destination")
@@ -99,6 +110,15 @@ public class ConstsDestinationPlugin extends Plugin
         clientToolbar.addNavigation(navButton);
     }
 
+    /** The sidebar panel: the title and Master Switch, then two tabs, the tile packs first and the settings second. */
+    static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
+        ConstsDestinationConfig config, Plugin plugin, JComponent tilePacksPanel)
+    {
+        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin, ConstsDestinationConfig.MASTER_KEY);
+        panel.addTab(TILE_PACKS_TAB, tilePacksPanel);
+        return panel;
+    }
+
     @Override
     protected void shutDown()
     {
@@ -106,6 +126,8 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.remove(outlineOverlay);
         clickedTile = null;
         tracker.clear();
+        eventBus.unregister(tilePacks);
+        tilePacks.shutDown();
         clientToolbar.removeNavigation(navButton);
         eventBus.unregister(configPanel);
         navButton = null;
