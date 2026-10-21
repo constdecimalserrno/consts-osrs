@@ -4,8 +4,10 @@ import java.awt.BorderLayout;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.GraphicsEnvironment;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import javax.swing.AbstractAction;
@@ -68,7 +70,9 @@ final class ViewerPanel extends JPanel
         add(bar(), BorderLayout.SOUTH);
         refresh();
 
-        int menuKey = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        // Cmd on a Mac, Ctrl elsewhere; a headless JVM (tests over SSH) has no menu key to ask for, so Ctrl
+        int menuKey = GraphicsEnvironment.isHeadless() ? InputEvent.CTRL_DOWN_MASK
+            : Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
         getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, menuKey), "save");
         getActionMap().put("save", new AbstractAction()
         {
