@@ -214,6 +214,57 @@ public class PrintViewTest
     }
 
     @Test
+    public void makingAPrintTellsHowFarItsGot()
+    {
+        java.util.List<Double> told = new java.util.ArrayList<>();
+        Printable.of(openBox(), new PrintSettings(40, false, 2), told::add);
+
+        assertEquals(0, told.get(0), 0);
+        assertEquals(1, told.get(told.size() - 1), 0);
+        for (double share : told)
+        {
+            assertTrue(share >= 0 && share <= 1);
+        }
+    }
+
+    @Test
+    public void theBarFillsWithoutGoingBack()
+    {
+        ViewerCanvas canvas = new ViewerCanvas(openBox());
+        assertTrue("no bar until a print is made", canvas.progress() < 0);
+        canvas.setProgress(0.4);
+        canvas.setProgress(0.2);
+        assertEquals(0.4, canvas.progress(), 0);
+        canvas.setProgress(1.5);
+        assertEquals(1, canvas.progress(), 0);
+        canvas.setProgress(-1);
+        assertTrue(canvas.progress() < 0);
+        canvas.stop();
+
+        assertEquals("Making it printable  \u00b7  42%", ViewerCanvas.progressText(0.429));
+    }
+
+    @Test
+    public void theBarShowsWhileThePrintIsMadeAndGoesOnceItsDone() throws Exception
+    {
+        ViewerPanel panel = new ViewerPanel(openBox(), actions(new PrintSettings[]{new PrintSettings(40, true, 2)}));
+        FilamentControls.Switch base = find(panel, FilamentControls.Switch.class);
+        double[] progress = new double[1];
+        // On the Swing thread, so the print can't be done before the bar is looked at
+        SwingUtilities.invokeAndWait(() ->
+        {
+            press(base);
+            progress[0] = panel.canvas().progress();
+        });
+        assertEquals(0, progress[0], 0);
+
+        waitForPrint(panel);
+        SwingUtilities.invokeAndWait(() -> progress[0] = panel.canvas().progress());
+        assertTrue(progress[0] < 0);
+        panel.canvas().stop();
+    }
+
+    @Test
     public void theLineAboutThePrintSaysWhatsHappening()
     {
         assertTrue(ViewerPanel.printText(null, true, null).startsWith("Making it printable"));

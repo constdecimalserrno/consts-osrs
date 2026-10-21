@@ -56,8 +56,9 @@ final class ViewerPanel extends JPanel
     private PrintSettings tried;
     private boolean making;
     private String problem;
-    // Which print was asked for last, so an older one finishing late is let go
+    // Which print was asked for last, so an older one finishing late is let go; how far the one being made has got
     private int asked;
+    private double madeShare;
     // The Add a base setting as last seen, so the Base switch follows it when it changes but is the viewer's own
     // otherwise
     private boolean baseSetting;
@@ -392,15 +393,26 @@ final class ViewerPanel extends JPanel
         triedModel = model;
         Mesh target = model;
         making = true;
+        madeShare = 0;
         printable = null;
         problem = null;
         Thread thread = new Thread(() ->
         {
+            // A hundred steps at most reach the Swing thread
+            double[] told = {0};
+            PrintProgress progress = share ->
+            {
+                if (share >= told[0] + 0.01 || share >= 1 && told[0] < 1)
+                {
+                    told[0] = share;
+                    SwingUtilities.invokeLater(() -> madeSoFar(ticket, share));
+                }
+            };
             Printable made = null;
             String failed = null;
             try
             {
-                made = Printable.of(target, settings);
+                made = Printable.of(target, settings, progress);
                 if (made.isEmpty())
                 {
                     failed = "it's too thin to hold a wall";
@@ -430,7 +442,24 @@ final class ViewerPanel extends JPanel
         thread.start();
     }
 
-    /** Puts what the view is on into the picture, the line about it in the corner, and Save in step with it. */
+    /** How far the print asked for last has got, for the bar that fills while it's made. */
+    private void madeSoFar(int ticket, double share)
+    {
+        if (ticket != asked || !making)
+        {
+            return;
+        }
+        madeShare = Math.max(madeShare, share);
+        if (filaments.showsPrint())
+        {
+            canvas.setProgress(madeShare);
+        }
+    }
+
+    /**
+     * Puts what the view is on into the picture, the line about it in the corner, the bar while a print is made, and
+     * Save in step with it.
+     */
     private void showView()
     {
         boolean print = filaments.showsPrint();
@@ -467,7 +496,10 @@ final class ViewerPanel extends JPanel
         {
             show(model, lightPicked(null));
         }
-        canvas.setInfo(print ? printText(printable, making, problem) : sizeText(model, actions.printSettings()));
+        // While the print is made, the bar says so and the corner what it will be
+        canvas.setInfo(print && !making ? printText(printable, false, problem)
+            : sizeText(model, actions.printSettings()));
+        canvas.setProgress(print && making ? madeShare : -1);
 
         boolean ready = !print || printable != null && colors != null;
         save.setEnabled(ready);
@@ -565,7 +597,7 @@ final class ViewerPanel extends JPanel
     {
         if (making)
         {
-            return "Making it printable\u2026 this takes a few seconds";
+            return "Making it printable\u2026";
         }
         if (problem != null)
         {
