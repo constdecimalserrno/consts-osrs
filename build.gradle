@@ -80,3 +80,35 @@ tasks.register('runClient', JavaExec) {
         executable = "${runeliteJavaHome}/bin/java"
     }
 }
+
+// The play kit, for a machine that plays without building: one jar that starts RuneLite with every plugin, as
+// runClient does, and play.sh, which starts it on Java 11. The jar is made like RuneLite's example-plugin shadowJar.
+// It holds the RuneLite of the day it's built, so build it again after a RuneLite update, with --refresh-dependencies.
+def playKitJar = tasks.register('playKitJar', Jar) {
+    group = 'runelite'
+    description = 'One jar that starts RuneLite with every plugin'
+    dependsOn configurations.testRuntimeClasspath
+    manifest {
+        attributes('Main-Class': 'com.osrs.PluginLauncher', 'Multi-Release': true)
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from sourceSets.main.output
+    from sourceSets.test.output
+    from {
+        configurations.testRuntimeClasspath.collect { file -> file.isDirectory() ? file : zipTree(file) }
+    }
+    exclude 'META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', '**/module-info.class'
+    archiveFileName = 'consts-osrs.jar'
+}
+
+tasks.register('playKit', Sync) {
+    group = 'runelite'
+    description = 'The play kit in build/play-kit: consts-osrs.jar, and play.sh to start it on Java 11'
+    from playKitJar
+    from('scripts/play.sh') {
+        filePermissions {
+            unix('rwxr-xr-x')
+        }
+    }
+    into layout.buildDirectory.dir('play-kit')
+}

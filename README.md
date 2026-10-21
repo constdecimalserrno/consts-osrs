@@ -52,6 +52,10 @@ The plugin shows up in RuneLite's plugin list. Its settings live under the wrenc
 
 ## Releases
 
+### Play kit
+
+For a machine that plays without building: `./gradlew playKit` writes `build/play-kit/`, with `consts-osrs.jar`, RuneLite and every plugin in one jar, and `play.sh`, which starts it on Java 11 (Temurin 11's macOS path, or `RUNELITE_JAVA_HOME`). Copy the folder over and run `play.sh`; the Jagex account step above is needed there too. The jar holds the RuneLite of the day it was built, so after a RuneLite update build it again with `./gradlew playKit --refresh-dependencies`.
+
 Each [release](https://github.com/constdecimalserrno/consts-osrs/releases) attaches a compiled plugin jar. Plugins are versioned and tagged on their own: `consts-destination-v1.0.0`, and consts-AFK from `consts-afk-v1.8.0` on (its earlier releases are tagged `v1.0.0` to `v1.7.0`). Build them yourself with `./gradlew jar`; they land in `<plugin>/build/libs/`.
 
 ## Project structure
@@ -62,6 +66,7 @@ consts-osrs/
 ├── settings.gradle               # One include per plugin
 ├── run.sh                        # Build and launch
 ├── scripts/publish-hub-branch.sh # Cut a plugin's Plugin Hub branch
+├── scripts/play.sh               # Starts the play kit's jar
 ├── src/test/java/com/osrs/
 │   └── PluginLauncher.java       # Loads every plugin into one RuneLite client
 ├── consts-afk/
