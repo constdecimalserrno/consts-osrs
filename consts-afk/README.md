@@ -1,5 +1,7 @@
 # consts-AFK
 
+<img src="icon.png" alt="" width="48" height="72" align="right">
+
 RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: Idle fills and flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
