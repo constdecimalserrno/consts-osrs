@@ -17,6 +17,9 @@ import com.constsdestination.tilepacks.ui.panel.pack.actions.TogglePackLabel;
 import com.google.gson.Gson;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JButton;
@@ -87,6 +90,27 @@ public class TilePacksPanelTest extends TilePacksTest
             assertEquals(5, labels(row).size());
         }
         assertEquals("Tithe farm", labels(rows().get(0)).get(0));
+    }
+
+    @Test
+    public void aPacksCrossDeletesItAtOnce()
+    {
+        manager.addCustomPack("Tithe farm", TILES);
+        manager.addCustomPack("Hallowed Sepulchre", TILES);
+        panel.createTilePackPanels();
+
+        // No "Are you sure?" first: a dialog would stop the test here, or throw headless
+        DeleteCustomPackLabel cross = find(rows().get(0), DeleteCustomPackLabel.class);
+        MouseEvent click = new MouseEvent(cross, MouseEvent.MOUSE_PRESSED, 0, InputEvent.BUTTON1_DOWN_MASK, 1, 1, 1,
+            false, MouseEvent.BUTTON1);
+        for (MouseListener listener : cross.getMouseListeners())
+        {
+            listener.mousePressed(click);
+        }
+
+        assertFalse(manager.getTilePacks().containsKey(10000));
+        assertEquals(1, rows().size());
+        assertEquals("Hallowed Sepulchre", labels(rows().get(0)).get(0));
     }
 
     @Test

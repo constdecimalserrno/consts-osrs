@@ -1,7 +1,8 @@
 /*
  * Copyright (c) 2024, Trevor <https://github.com/TrevorMDev>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: moved into consts-Destination; the points are
- *   reloaded through consts-Destination; every pack is yours, so the words say pack, not custom pack)
+ *   reloaded through consts-Destination; every pack is yours, so the words say pack, not custom pack; a click
+ *   deletes the pack at once, without asking)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,7 +36,6 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import net.runelite.client.util.ImageUtil;
 
@@ -71,34 +71,19 @@ public class DeleteCustomPackLabel extends JLabel
 
         setIcon(DELETE_ICON);
         setToolTipText("Delete this pack, for good");
-        addMouseListener(new DeleteCustomPackMouseAdapter(this));
+        addMouseListener(new DeleteCustomPackMouseAdapter());
     }
 
     class DeleteCustomPackMouseAdapter extends MouseAdapter
     {
-        private final DeleteCustomPackLabel deleteCustomPackLabel;
-
-        DeleteCustomPackMouseAdapter(DeleteCustomPackLabel deleteCustomPackLabel)
-        {
-            this.deleteCustomPackLabel = deleteCustomPackLabel;
-        }
-
         @Override
         public void mousePressed(MouseEvent e)
         {
             if (SwingUtilities.isLeftMouseButton(e))
             {
-                final int result = JOptionPane.showOptionDialog(deleteCustomPackLabel,
-                    "Are you sure you want to delete this pack?",
-                    "Delete Pack?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
-                    null, new String[]{"Yes", "No"}, "No");
-
-                if (result == JOptionPane.YES_OPTION)
-                {
-                    tilePackManager.removeCustomPack(tilePack.id);
-                    reloadPoints.run();
-                    tilePacksList.createTilePackPanels();
-                }
+                tilePackManager.removeCustomPack(tilePack.id);
+                reloadPoints.run();
+                tilePacksList.createTilePackPanels();
             }
         }
 

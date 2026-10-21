@@ -25,7 +25,7 @@ Each pack is a row with its controls:
 | Green plus / red minus | Turns the pack on or off |
 | Copy | Copies the pack's tiles to the clipboard, in Ground Markers' format, to share |
 | Pencil | Changes the pack's name or tiles |
-| Cross | Deletes the pack, for good |
+| Cross | Deletes the pack at once, without asking, for good |
 
 ### Adding a pack
 
