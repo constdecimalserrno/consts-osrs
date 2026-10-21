@@ -24,12 +24,16 @@ final class PrintColors
     /** Each filament's color, 0xRRGGBB, the most-used first. */
     private final int[] palette;
 
+    /** Each filament's color as the merge made it, before any was changed: what other meshes are matched against. */
+    private final int[] merged;
+
     /** Each triangle's filament: an index into the palette. */
     private final int[] faceIndex;
 
-    private PrintColors(int[] palette, int[] faceIndex)
+    private PrintColors(int[] palette, int[] merged, int[] faceIndex)
     {
         this.palette = palette;
+        this.merged = merged;
         this.faceIndex = faceIndex;
     }
 
@@ -47,7 +51,7 @@ final class PrintColors
         int n = areas.size();
         if (n == 0)
         {
-            return new PrintColors(new int[]{0xFFFFFF}, new int[0]);
+            return new PrintColors(new int[]{0xFFFFFF}, new int[]{0xFFFFFF}, new int[0]);
         }
 
         int[] colors = new int[n];
@@ -148,7 +152,7 @@ final class PrintColors
         {
             faceIndex[f] = filamentOf.get(mesh.color[f]);
         }
-        return new PrintColors(palette, faceIndex);
+        return new PrintColors(palette, palette.clone(), faceIndex);
     }
 
     /** How many filaments. */
@@ -169,6 +173,12 @@ final class PrintColors
         return palette.clone();
     }
 
+    /** How many triangles the colors were made for: the mesh's face count. */
+    int faceCount()
+    {
+        return faceIndex.length;
+    }
+
     /** The filament triangle f prints in. */
     int filament(int f)
     {
@@ -180,7 +190,7 @@ final class PrintColors
     {
         int[] changed = palette.clone();
         changed[i] = rgb & 0xFFFFFF;
-        return new PrintColors(changed, faceIndex);
+        return new PrintColors(changed, merged, faceIndex);
     }
 
     /** The mesh as it will print: every triangle in its filament's color. For the viewer's preview. */
@@ -196,14 +206,15 @@ final class PrintColors
 
     /**
      * Puts another mesh's triangles on these filaments, each on the one nearest its own color: for a mesh made from
-     * this one, like a solid remesh, whose triangles don't line up with these.
+     * this one, like a solid remesh, whose triangles don't line up with these. It matches against the colors as
+     * merged, so a filament changed to another color still takes the triangles it took before.
      */
     int[] filamentsFor(Mesh other)
     {
-        double[][] centers = new double[palette.length][];
-        for (int i = 0; i < palette.length; i++)
+        double[][] centers = new double[merged.length][];
+        for (int i = 0; i < merged.length; i++)
         {
-            centers[i] = toOklab(palette[i]);
+            centers[i] = toOklab(merged[i]);
         }
         Map<Integer, Integer> cache = new HashMap<>();
         int[] filaments = new int[other.faceCount()];

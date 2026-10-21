@@ -69,19 +69,15 @@ final class MeshExporter
                     PrintColors filaments = colors != null ? colors : PrintColors.of(mesh, settings.maxColors);
                     int[] palette = filaments.palette();
                     int base = PrintPrep.darkest(palette);
-                    int[] onFilament = new int[print.mesh.faceCount()];
-                    try
+                    if (filaments.faceCount() != mesh.faceCount())
                     {
-                        for (int f = 0; f < onFilament.length; f++)
-                        {
-                            int source = print.source[f];
-                            onFilament[f] = source < 0 ? base : filaments.filament(source);
-                        }
+                        throw new IOException("its colors were picked for a different model");
                     }
-                    catch (IndexOutOfBoundsException e)
+                    int[] onFilament = new int[print.mesh.faceCount()];
+                    for (int f = 0; f < onFilament.length; f++)
                     {
-                        // Colors know their triangles only by number, so the only sign of the wrong ones is this
-                        throw new IOException("its colors were picked for a different model", e);
+                        int source = print.source[f];
+                        onFilament[f] = source < 0 ? base : filaments.filament(source);
                     }
                     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(file), 1 << 16))
                     {

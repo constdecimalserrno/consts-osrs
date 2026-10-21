@@ -82,6 +82,17 @@ public class PrintColorsTest
     }
 
     @Test
+    public void aChangedFilamentStillTakesTheTrianglesItTookBefore()
+    {
+        PrintColors colors = PrintColors.of(squares(new int[]{RED, BLUE}, new int[]{5, 9}), 2);
+        int red = colors.filament(0);
+        // Red changed to green: a mesh made from the model still puts its red on that filament
+        PrintColors changed = colors.withColor(red, 0x20C020);
+        assertEquals(red, changed.filamentsFor(squares(new int[]{DARK_RED}, new int[]{1}))[0]);
+        assertEquals(4, changed.faceCount());
+    }
+
+    @Test
     public void colorsSurviveTheTripThroughOklab()
     {
         for (int rgb : new int[]{0x000000, 0xFFFFFF, RED, BLUE, YELLOW, 0x7F7F7F})

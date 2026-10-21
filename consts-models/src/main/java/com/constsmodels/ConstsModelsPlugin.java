@@ -257,7 +257,7 @@ public class ConstsModelsPlugin extends Plugin
                 {
                     throw new IOException("couldn't make " + folder);
                 }
-                File file = MeshExporter.export(mesh, format, folder, settings);
+                File file = MeshExporter.export(mesh, format, folder, settings, colors);
                 chat("Saved " + file.getName() + " in " + folder + ".");
             }
             catch (IOException | RuntimeException e)
