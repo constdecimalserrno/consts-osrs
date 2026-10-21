@@ -465,6 +465,8 @@ class ConstsModelsPanel extends PluginPanel
         {
             button.setFont(FontManager.getRunescapeSmallFont());
             button.setFocusPainted(false);
+            // Narrow sides, or half the sidebar cuts "Choose folder" short
+            button.setMargin(new Insets(2, 4, 2, 4));
             button.setPreferredSize(new Dimension(0, 26));
             buttons.add(button);
         }

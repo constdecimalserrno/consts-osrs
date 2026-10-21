@@ -4,6 +4,10 @@
 
 RuneLite plugin for Old School RuneScape ( OSRS ): export any model in the game, or the area around you. Right-click anything and pick **Export Model**, turn it in a viewer, and save it as OBJ or PLY for Blender and other 3D software.
 
+![The consts-Models viewer: the Kraken pet, its 797 triangles named in the corner, and Open folder, Background, Save image, the format and Save along the bottom](screenshots/viewer.png)
+
+![The consts-Models sidebar: Capture area and Export yourself, the folder files go to, this session's three captures (Soup, Ironwood logs, Kraken), and the Settings section open: Save as, Area radius and Only with Shift](screenshots/panel.png)
+
 ## What it does
 
 - **Export Model**: on the right-click menu of players, NPCs, pets, objects (walls and decorations included) and items on the ground. It sits low in the menu, below Examine or a player's options, so it's never the left click.
