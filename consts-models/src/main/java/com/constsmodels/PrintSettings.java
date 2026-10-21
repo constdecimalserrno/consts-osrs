@@ -5,7 +5,8 @@ package com.constsmodels;
  *
  * @param sizeMm the longest side of the print, in millimetres; STL and 3MF are scaled to it
  * @param base whether to stand the print on a solid base
- * @param maxColors the most filament colors a 3MF uses
+ * @param maxColors how many filament colors a 3MF starts with, 1 to {@link PrintColors#MAX}, when the viewer hasn't
+ *     chosen them
  */
 final class PrintSettings
 {

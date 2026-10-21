@@ -46,11 +46,11 @@ public interface ConstsModelsConfig extends Config
 
     @ConfigItem(
         keyName = "colors",
-        name = "3MF colors",
-        description = "The most filament colors a 3MF uses; the model's colors are merged down to this many",
+        name = "Print colors",
+        description = "How many filament colors a print starts with, 1 to 9; the viewer can change it and pick each color",
         position = 4
     )
-    @Range(min = 1, max = 16)
+    @Range(min = 1, max = PrintColors.MAX)
     default int maxColors()
     {
         return 4;
