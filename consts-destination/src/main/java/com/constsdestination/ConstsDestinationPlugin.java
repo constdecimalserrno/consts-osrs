@@ -18,6 +18,7 @@ import net.runelite.api.events.PlayerSpawned;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -87,7 +88,7 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.add(outlineOverlay);
         clickedTile = null;
         tracker.clear();
-        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this);
+        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsDestinationConfig.MASTER_KEY);
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
             .tooltip("consts-Destination")
@@ -209,6 +210,17 @@ public class ConstsDestinationPlugin extends Plugin
                 return config.outlineGroundItems();
             default:
                 return false;
+        }
+    }
+
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        // Master Switch off: forget what was clicked, so turning it back on doesn't light an old destination.
+        if (ConstsDestinationConfig.GROUP.equals(event.getGroup()) && ConstsDestinationConfig.MASTER_KEY.equals(event.getKey()))
+        {
+            clickedTile = null;
+            tracker.clear();
         }
     }
 

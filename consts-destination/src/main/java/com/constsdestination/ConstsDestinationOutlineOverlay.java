@@ -75,6 +75,11 @@ class ConstsDestinationOutlineOverlay extends Overlay
     @Override
     public Dimension render(Graphics2D graphics)
     {
+        if (!config.masterSwitch())
+        {
+            return null;
+        }
+
         if (config.outlineOnHover())
         {
             renderMouseover();

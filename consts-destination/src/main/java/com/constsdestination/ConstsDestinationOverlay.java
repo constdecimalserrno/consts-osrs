@@ -42,6 +42,11 @@ class ConstsDestinationOverlay extends Overlay
     @Override
     public Dimension render(Graphics2D graphics)
     {
+        if (!config.masterSwitch())
+        {
+            return null;
+        }
+
         // Clicked tile (orange, persists until next click)
         if (config.showClickedTile())
         {
