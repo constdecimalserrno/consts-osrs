@@ -143,6 +143,77 @@ public class PrintViewTest
     }
 
     @Test
+    public void thePrintStandsOnAFlatBottomWithOrWithoutABase()
+    {
+        Mesh ball = SolidRemeshTest.ball(50, 50, 60, 50, RED);
+        Printable bare = Printable.of(ball, new PrintSettings(40, false, 1));
+        Printable onBase = bare.placed(new PrintSettings(40, true, 1));
+        for (Printable printable : new Printable[]{bare, onBase})
+        {
+            PrintPrep.Print print = printable.print;
+            Mesh mesh = print.mesh;
+            assertTrue(TestMeshes.closed(mesh, 0, print.modelFaces));
+
+            // The model's lowest corners are all on one plane, and a disc of it lies flat there
+            float low = Float.MAX_VALUE;
+            for (int f = 0; f < print.modelFaces; f++)
+            {
+                low = Math.min(low, Math.min(mesh.z[mesh.a[f]], Math.min(mesh.z[mesh.b[f]], mesh.z[mesh.c[f]])));
+            }
+            double flat = 0;
+            float[] footprint = {Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+            for (int f = 0; f < print.modelFaces; f++)
+            {
+                int[] corners = {mesh.a[f], mesh.b[f], mesh.c[f]};
+                int on = 0;
+                for (int v : corners)
+                {
+                    assertTrue(mesh.z[v] == low || mesh.z[v] > low + 0.02);
+                    on += mesh.z[v] == low ? 1 : 0;
+                }
+                if (on == 3)
+                {
+                    flat += PrintPrep.area(mesh, f);
+                    for (int v : corners)
+                    {
+                        footprint[0] = Math.min(footprint[0], mesh.x[v]);
+                        footprint[1] = Math.min(footprint[1], mesh.y[v]);
+                        footprint[2] = Math.max(footprint[2], mesh.x[v]);
+                        footprint[3] = Math.max(footprint[3], mesh.y[v]);
+                    }
+                }
+            }
+            assertTrue("flat " + flat + " mm2", flat > Math.PI * 2 * 2);
+
+            if (printable == bare)
+            {
+                // On the plate itself
+                assertEquals(0, low, 1e-5);
+            }
+            else
+            {
+                // On the base: sunk into it a little, all of the flat bottom over it
+                float[] base = {Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                for (int f = print.modelFaces; f < mesh.faceCount(); f++)
+                {
+                    for (int v : new int[]{mesh.a[f], mesh.b[f], mesh.c[f]})
+                    {
+                        base[0] = Math.min(base[0], mesh.x[v]);
+                        base[1] = Math.min(base[1], mesh.y[v]);
+                        base[2] = Math.max(base[2], mesh.x[v]);
+                        base[3] = Math.max(base[3], mesh.y[v]);
+                        base[4] = Math.max(base[4], mesh.z[v]);
+                    }
+                }
+                assertEquals(print.lift, low, 1e-4);
+                assertTrue(low < base[4] && base[4] - low <= PrintPrep.BASE_SINK_MM + 1e-4);
+                assertTrue(footprint[0] > base[0] && footprint[1] > base[1]);
+                assertTrue(footprint[2] < base[2] && footprint[3] < base[3]);
+            }
+        }
+    }
+
+    @Test
     public void theLineAboutThePrintSaysWhatsHappening()
     {
         assertTrue(ViewerPanel.printText(null, true, null).startsWith("Making it printable"));

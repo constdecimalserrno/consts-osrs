@@ -21,6 +21,11 @@ import java.util.BitSet;
  *     a thin part's shell, the exact distance to the model places it between voxels, so flat faces come out flat
  *     rather than in steps. Quadric decimation then thins out the triangles, moving the surface no more than half a
  *     voxel.</li>
+ * <li>Asked for a flat bottom, the lowest slice of the solid is cut off first, and what's left at the cut lies flat on
+ *     one plane: where the print meets the plate, so it stands without rocking and needs nothing holding up its feet.
+ *     The slice is thin, a voxel or so, unless the solid would then stand on too little to hold it up, as a figure
+ *     with one foot a little higher than the other does: then it's as thick as it takes for the middle of the solid
+ *     to be over what it stands on, up to {@link #MAX_FLAT_SHARE} of the print.</li>
  * <li>Each triangle takes the color of the model's triangle nearest to it.</li>
  * </ol>
  *
@@ -34,6 +39,15 @@ final class SolidRemesh
 {
     /** The thinnest wall, in millimetres at print scale, by default. */
     static final double MIN_WALL_MM = 1.0;
+
+    /**
+     * How much is cut off the bottom for a flat one by default, in millimetres: at least this and a voxel, and up to a
+     * voxel more, as the bottom falls between voxels.
+     */
+    static final double FLAT_MM = 0.25;
+
+    /** The most cut off the bottom so the print stands, as a share of the print's longest side. */
+    static final double MAX_FLAT_SHARE = 0.02;
 
     /** Gaps up to the wall plus this, in millimetres at print scale, are sealed. */
     static final double SEAL_MM = 1.0;
@@ -63,14 +77,20 @@ final class SolidRemesh
     /** Half a wall is never less than this, in voxels, so the thinnest wall survives the smoothing. */
     private static final double MIN_HALF_WALL = 1.5;
 
+    /**
+     * How near the flat bottom's plane a vertex must be, in voxels, to be put on it: a thin part's bottom, rounded by
+     * the smoothing, comes this close.
+     */
+    private static final double ONTO_FLOOR = 0.25;
+
     private SolidRemesh()
     {
     }
 
-    /** The mesh as one closed solid at the default voxel size and wall. */
+    /** The mesh as one closed solid at the default voxel size and wall, with a flat bottom. */
     static Mesh makeSolid(Mesh mesh, double sizeMm)
     {
-        return makeSolid(mesh, sizeMm, defaultVoxelMm(sizeMm), MIN_WALL_MM);
+        return makeSolid(mesh, sizeMm, defaultVoxelMm(sizeMm), MIN_WALL_MM, FLAT_MM);
     }
 
     /** The voxel size used by default for a print sizeMm long: fine enough for a wall three voxels thick. */
@@ -84,11 +104,13 @@ final class SolidRemesh
      * small fraction of a voxel apart, so it wants scaling and placing on the plate but no welding. Parts of the
      * model that float free of the rest, further apart than the seal, stay separate pieces.
      *
-     * @param sizeMm the longest side of the print, in millimetres, which sets the scale the next two are at
+     * @param sizeMm the longest side of the print, in millimetres, which sets the scale the rest are at
      * @param voxelMm the voxel size, in millimetres: the detail kept
      * @param minWallMm the thinnest a part may be, in millimetres
+     * @param flatMm how much to cut off the bottom at least to make it flat, in millimetres, never less than a voxel;
+     *     0 for none. More goes, up to {@link #MAX_FLAT_SHARE} of sizeMm, if the solid needs it to stand
      */
-    static Mesh makeSolid(Mesh mesh, double sizeMm, double voxelMm, double minWallMm)
+    static Mesh makeSolid(Mesh mesh, double sizeMm, double voxelMm, double minWallMm, double flatMm)
     {
         float[] box = mesh.bounds();
         double longest = Math.max(box[3] - box[0], Math.max(box[4] - box[1], box[5] - box[2]));
@@ -106,23 +128,37 @@ final class SolidRemesh
                 return empty(mesh.name);
             }
             Nearest nearest = new Nearest(triangles, plan);
-            MarchingCubes.Surface surface = voxelSurface(triangles, plan, nearest);
+            MarchingCubes.Surface surface = voxelSurface(triangles, plan, nearest, flatMm,
+                Math.max(flatMm, MAX_FLAT_SHARE * sizeMm));
             if (surface == null)
             {
                 // Too much surface to thin out in bounded memory: coarser voxels, a bit over half the triangles
                 plan = Plan.of(box, sizeMm / longest, plan.voxelMm * 1.3, wallMm);
                 continue;
             }
-            surface = QuadricDecimator.decimate(surface, MAX_ERROR);
+            if (flatMm > 0 && surface.vertices > 0)
+            {
+                // Step 6: the bottom on one plane, before decimation so it keeps it, and again after
+                double floor = lowest(surface);
+                ontoFloor(surface, floor);
+                surface = QuadricDecimator.decimate(surface, MAX_ERROR);
+                ontoFloor(surface, floor);
+            }
+            else
+            {
+                surface = QuadricDecimator.decimate(surface, MAX_ERROR);
+            }
             return toMesh(mesh.name, plan, surface, nearest, mesh.color);
         }
     }
 
     /**
-     * Steps 1 to 5 up to decimation: the surface of the solid, in voxel coordinates, or null as soon as it has more
-     * than {@link #MAX_EXTRACTED} triangles. The voxels are let go when it returns.
+     * Steps 1 to 5 up to decimation: the surface of the solid, in voxel coordinates, with its bottom cut off if a flat
+     * one is asked for (from flatMm to deepestMm thick), or null as soon as it has more than {@link #MAX_EXTRACTED}
+     * triangles. The voxels are let go when it returns.
      */
-    private static MarchingCubes.Surface voxelSurface(double[] triangles, Plan plan, Nearest nearest)
+    private static MarchingCubes.Surface voxelSurface(double[] triangles, Plan plan, Nearest nearest, double flatMm,
+        double deepestMm)
     {
         VoxelGrid grid = new VoxelGrid(plan.nx, plan.ny, plan.nz);
 
@@ -160,7 +196,200 @@ final class SolidRemesh
                 distance[index] = (byte) q;
             }
         });
-        return MarchingCubes.extract(grid, solid.occupancy(grid, distance, step, plan.shell), MAX_EXTRACTED);
+        MarchingCubes.Occupancy occupancy = solid.occupancy(grid, distance, step, plan.shell);
+        if (flatMm > 0 && !solid.all.isEmpty())
+        {
+            // Step 6: nothing below the cut, so the surface crosses it half a voxel down, level wherever the solid
+            // goes on above it. The lowest slice of the solid holds the bottom, give or take half a voxel
+            int lowest = solid.all.nextSetBit(0) / grid.slice;
+            int cut = standingCut(grid, solid.all,
+                lowest + 1 + Math.max(1, (int) Math.round(flatMm / plan.voxelMm)),
+                lowest + 1 + Math.max(1, (int) Math.round(deepestMm / plan.voxelMm)));
+            MarchingCubes.Occupancy whole = occupancy;
+            occupancy = (z, out) ->
+            {
+                if (z < cut)
+                {
+                    Arrays.fill(out, 0);
+                }
+                else
+                {
+                    whole.slice(z, out);
+                }
+            };
+        }
+        return MarchingCubes.extract(grid, occupancy, MAX_EXTRACTED);
+    }
+
+    /**
+     * The slice to cut the solid's bottom off at, from first to last: the first where what lies flat on the plate
+     * stands under the middle of the solid above it, so it won't tip over, or first if none does. What lies flat at a
+     * cut is where the slice below it is solid five voxels across each way, as far as the smoothing reaches: the cut
+     * goes through it, so it comes out level.
+     */
+    private static int standingCut(VoxelGrid grid, BitSet solid, int first, int last)
+    {
+        last = Math.min(last, grid.nz - 1);
+        if (first >= last)
+        {
+            return first;
+        }
+        // The middle of the solid above the thinnest cut, seen from above
+        double sumX = 0;
+        double sumY = 0;
+        long count = 0;
+        for (int i = solid.nextSetBit(first * grid.slice); i >= 0; i = solid.nextSetBit(i + 1))
+        {
+            sumX += i % grid.nx;
+            sumY += i / grid.nx % grid.ny;
+            count++;
+        }
+        if (count == 0)
+        {
+            return first;
+        }
+        double middleX = sumX / count;
+        double middleY = sumY / count;
+
+        int[] xs = new int[2 * grid.ny];
+        int[] ys = new int[2 * grid.ny];
+        int[] across = new int[grid.slice];
+        int[] down = new int[grid.slice];
+        for (int cut = first; cut <= last; cut++)
+        {
+            // How many voxels in a row are solid up to each, along x and then, of those with five, along y
+            int base = (cut - 1) * grid.slice;
+            for (int y = 0; y < grid.ny; y++)
+            {
+                int run = 0;
+                for (int x = 0; x < grid.nx; x++)
+                {
+                    run = solid.get(base + y * grid.nx + x) ? run + 1 : 0;
+                    across[y * grid.nx + x] = run;
+                }
+            }
+            for (int x = 0; x < grid.nx; x++)
+            {
+                int run = 0;
+                for (int y = 0; y < grid.ny; y++)
+                {
+                    // Solid from x - 2 to x + 2
+                    boolean wide = x + 2 < grid.nx && across[y * grid.nx + x + 2] >= 5;
+                    run = wide ? run + 1 : 0;
+                    down[y * grid.nx + x] = run;
+                }
+            }
+
+            // The ends of each row of what lies flat are enough for the hull around it
+            int n = 0;
+            for (int y = 2; y + 2 < grid.ny; y++)
+            {
+                int left = -1;
+                int right = -1;
+                for (int x = 0; x < grid.nx; x++)
+                {
+                    if (down[(y + 2) * grid.nx + x] >= 5)
+                    {
+                        left = left < 0 ? x : left;
+                        right = x;
+                    }
+                }
+                if (left >= 0)
+                {
+                    xs[n] = left;
+                    ys[n++] = y;
+                    xs[n] = right;
+                    ys[n++] = y;
+                }
+            }
+            if (inHull(xs, ys, n, middleX, middleY))
+            {
+                return cut;
+            }
+        }
+        return first;
+    }
+
+    /** Whether the point is inside the convex hull of the first n points (Andrew's monotone chain). */
+    private static boolean inHull(int[] xs, int[] ys, int n, double px, double py)
+    {
+        if (n < 3)
+        {
+            return false;
+        }
+        Integer[] order = new Integer[n];
+        for (int i = 0; i < n; i++)
+        {
+            order[i] = i;
+        }
+        Arrays.sort(order, (p, q) -> xs[p] != xs[q] ? Integer.compare(xs[p], xs[q]) : Integer.compare(ys[p], ys[q]));
+        // The lower hull left to right, then the upper right to left; the last point is the first again
+        int[] hull = new int[2 * n];
+        int k = 0;
+        for (int j = 0; j < n; j++)
+        {
+            int i = order[j];
+            while (k >= 2 && turn(xs, ys, hull[k - 2], hull[k - 1], i) <= 0)
+            {
+                k--;
+            }
+            hull[k++] = i;
+        }
+        int lower = k + 1;
+        for (int j = n - 2; j >= 0; j--)
+        {
+            int i = order[j];
+            while (k >= lower && turn(xs, ys, hull[k - 2], hull[k - 1], i) <= 0)
+            {
+                k--;
+            }
+            hull[k++] = i;
+        }
+        k--;
+        if (k < 3)
+        {
+            return false;
+        }
+        // Counterclockwise: the point is inside if it's left of, or on, every edge
+        for (int j = 0; j < k; j++)
+        {
+            int a = hull[j];
+            int b = hull[(j + 1) % k];
+            if ((xs[b] - xs[a]) * (py - ys[a]) - (ys[b] - ys[a]) * (px - xs[a]) < 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Twice the signed area of the triangle a, b, c: positive when it turns left. */
+    private static long turn(int[] xs, int[] ys, int a, int b, int c)
+    {
+        return (long) (xs[b] - xs[a]) * (ys[c] - ys[a]) - (long) (ys[b] - ys[a]) * (xs[c] - xs[a]);
+    }
+
+    /** The lowest a surface goes. */
+    private static double lowest(MarchingCubes.Surface surface)
+    {
+        double low = Double.MAX_VALUE;
+        for (int i = 0; i < surface.vertices; i++)
+        {
+            low = Math.min(low, surface.xyz[3 * i + 2]);
+        }
+        return low;
+    }
+
+    /** Puts every vertex below the floor, or less than {@link #ONTO_FLOOR} above it, onto it. */
+    private static void ontoFloor(MarchingCubes.Surface surface, double floor)
+    {
+        for (int i = 0; i < surface.vertices; i++)
+        {
+            if (surface.xyz[3 * i + 2] < floor + ONTO_FLOOR)
+            {
+                surface.xyz[3 * i + 2] = floor;
+            }
+        }
     }
 
     private static Mesh empty(String name)
@@ -307,7 +536,7 @@ final class SolidRemesh
         }
     }
 
-    /** Step 6 and back to game units: each triangle colored like the model's triangle nearest its middle. */
+    /** Step 7 and back to game units: each triangle colored like the model's triangle nearest its middle. */
     private static Mesh toMesh(String name, Plan plan, MarchingCubes.Surface s, Nearest nearest, int[] colors)
     {
         float[] x = new float[s.vertices];

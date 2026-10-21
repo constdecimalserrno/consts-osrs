@@ -2,7 +2,7 @@ package com.constsmodels;
 
 /**
  * A model as it prints, what the viewer's Print view shows and saves: rebuilt as one closed solid by
- * {@link SolidRemesh}, scaled to the print size, stood on the plate, on a base if asked. Its triangles take the
+ * {@link SolidRemesh}, scaled to the print size, stood flat on the plate, on a base if asked. Its triangles take the
  * filaments the viewer chose, each the one nearest its color. Making one takes a few seconds, so it's made once and
  * kept for as long as the print size stays the same; standing it on a base or taking the base away is quick.
  */

@@ -22,7 +22,7 @@ public class SolidRemeshTest
     public void aLoneTriangleBecomesAClosedSlabAWallThick()
     {
         Mesh triangle = CoreTest.triangle(RED);
-        Mesh solid = SolidRemesh.makeSolid(triangle, 40, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(triangle, 40, 0.25, 1.0, 0);
         assertClosedManifold(solid);
         assertEquals("Triangle", solid.name);
 
@@ -44,7 +44,7 @@ public class SolidRemeshTest
     {
         MeshBuilder b = new MeshBuilder("Open box");
         box(b, 0, 0, 0, 100, 100, 100, BLUE, BLUE, false);
-        Mesh solid = SolidRemesh.makeSolid(b.build(), 30, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(b.build(), 30, 0.25, 1.0, 0);
         assertClosedManifold(solid);
         assertEquals(1, components(solid));
 
@@ -65,7 +65,7 @@ public class SolidRemeshTest
     {
         MeshBuilder b = new MeshBuilder("Cube");
         box(b, 0, 0, 0, 100, 100, 100, BLUE, BLUE, true);
-        Mesh solid = SolidRemesh.makeSolid(b.build(), 30, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(b.build(), 30, 0.25, 1.0, 0);
         assertClosedManifold(solid);
         double v = volume(solid);
         assertEquals(1e6, v, 1e6 * 0.01);
@@ -77,7 +77,7 @@ public class SolidRemeshTest
         // A tenth of a millimetre thick at print scale
         MeshBuilder b = new MeshBuilder("Blade");
         box(b, 0, 0, 0, 100, 40, 0.3f, BLUE, BLUE, true);
-        Mesh solid = SolidRemesh.makeSolid(b.build(), 30, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(b.build(), 30, 0.25, 1.0, 0);
         assertClosedManifold(solid);
         List<Double> hits = hits(solid, new double[]{50, 20, -10}, new double[]{0, 0, 1});
         assertEquals(hits.toString(), 2, hits.size());
@@ -98,7 +98,7 @@ public class SolidRemeshTest
         int p3 = b.addVertex(-20, 75, 80);
         b.addTriangle(p0, p1, p2, RED);
         b.addTriangle(p0, p2, p3, RED);
-        Mesh solid = SolidRemesh.makeSolid(b.build(), 40, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(b.build(), 40, 0.25, 1.0, 0);
         assertClosedManifold(solid);
         assertEquals(1, components(solid));
         assertNoSelfIntersections(solid);
@@ -112,7 +112,7 @@ public class SolidRemeshTest
         MeshBuilder b = new MeshBuilder("Two colors");
         box(b, 0, 0, 0, 100, 100, 100, BLUE, RED, true);
         Mesh input = b.build();
-        Mesh solid = SolidRemesh.makeSolid(input, 30, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(input, 30, 0.25, 1.0, 0);
         int top = 0;
         int sides = 0;
         for (int f = 0; f < solid.faceCount(); f++)
@@ -153,7 +153,7 @@ public class SolidRemeshTest
         int p3 = b.addVertex(10, 5, 65);
         b.addTriangle(p0, p1, p2, RED);
         b.addTriangle(p0, p2, p3, RED);
-        Mesh solid = SolidRemesh.makeSolid(b.build(), 40, 0.25, 1.0);
+        Mesh solid = SolidRemesh.makeSolid(b.build(), 40, 0.25, 1.0, 0);
         assertClosedManifold(solid);
         assertEquals(1, components(solid));
         assertNoSelfIntersections(solid);
@@ -161,6 +161,96 @@ public class SolidRemeshTest
         List<Double> hits = hits(solid, new double[]{12, -10, 80}, new double[]{0, 1, 0});
         assertEquals(hits.toString(), 2, hits.size());
         assertTrue((hits.get(1) - hits.get(0)) * 40 / 100 >= 0.98);
+    }
+
+    @Test
+    public void aRoundBottomIsCutFlatOnOnePlane()
+    {
+        // A ball 30 mm across, its bottom at z = 10
+        Mesh ball = ball(50, 50, 60, 50, RED);
+        Mesh solid = SolidRemesh.makeSolid(ball, 30, 0.25, 1.0, 0.25);
+        assertClosedManifold(solid);
+        assertNoSelfIntersections(solid);
+
+        // A thin slice is gone: at least the quarter millimetre asked for, and no more than a voxel past that
+        double unitsPerMm = 100 / 30.0;
+        float low = solid.bounds()[2];
+        assertTrue("bottom at " + low, low >= 10 + 0.25 * unitsPerMm - 0.05 && low <= 10 + 0.5 * unitsPerMm + 0.05);
+
+        // Everything near the bottom is on it, and it's a disc facing down, a few millimetres across
+        boolean[] used = new boolean[solid.vertexCount()];
+        for (int f = 0; f < solid.faceCount(); f++)
+        {
+            used[solid.a[f]] = used[solid.b[f]] = used[solid.c[f]] = true;
+        }
+        for (int v = 0; v < used.length; v++)
+        {
+            if (used[v] && solid.z[v] < low + 0.05 * unitsPerMm)
+            {
+                assertEquals(low, solid.z[v], 0f);
+            }
+        }
+        double flat = 0;
+        for (int f = 0; f < solid.faceCount(); f++)
+        {
+            if (solid.z[solid.a[f]] == low && solid.z[solid.b[f]] == low && solid.z[solid.c[f]] == low)
+            {
+                assertTrue(normal(solid, f)[2] < -0.999);
+                flat += PrintPrep.area(solid, f);
+            }
+        }
+        double radius = Math.sqrt(flat / Math.PI) / unitsPerMm;
+        assertTrue("flat bottom " + radius + " mm across", radius > 2 && radius < 5);
+    }
+
+    @Test
+    public void aFigureWithOneFootHigherIsCutUntilItStandsOnBoth()
+    {
+        // A body on two feet, the right one's sole half a millimetre higher than the left's
+        MeshBuilder b = new MeshBuilder("Figure");
+        box(b, 0, 0, 0, 20, 30, 20, BLUE, BLUE, true);
+        box(b, 40, 0, 1, 60, 30, 20, BLUE, BLUE, true);
+        box(b, -5, -5, 20, 65, 35, 100, RED, RED, true);
+        Mesh solid = SolidRemesh.makeSolid(b.build(), 50, 0.25, 1.0, 0.25);
+        assertClosedManifold(solid);
+
+        // Both feet lie flat on the plane the solid stands on
+        float low = solid.bounds()[2];
+        double left = 0;
+        double right = 0;
+        for (int f = 0; f < solid.faceCount(); f++)
+        {
+            if (solid.z[solid.a[f]] == low && solid.z[solid.b[f]] == low && solid.z[solid.c[f]] == low)
+            {
+                double x = (solid.x[solid.a[f]] + solid.x[solid.b[f]] + solid.x[solid.c[f]]) / 3;
+                if (x < 30)
+                {
+                    left += PrintPrep.area(solid, f);
+                }
+                else
+                {
+                    right += PrintPrep.area(solid, f);
+                }
+            }
+        }
+        assertTrue("left " + left + ", right " + right, left > 100 && right > 50);
+
+        // A thin slice alone leaves it on one foot
+        assertTrue(low > 1);
+    }
+
+    @Test
+    public void withoutAFlatBottomTheBallStaysRound()
+    {
+        Mesh solid = SolidRemesh.makeSolid(ball(50, 50, 60, 50, RED), 30, 0.25, 1.0, 0);
+        float low = solid.bounds()[2];
+        assertEquals(10, low, 0.5);
+        int onBottom = 0;
+        for (int v = 0; v < solid.vertexCount(); v++)
+        {
+            onBottom += solid.z[v] == low ? 1 : 0;
+        }
+        assertTrue(onBottom < 4);
     }
 
     @Test
@@ -203,6 +293,39 @@ public class SolidRemeshTest
     }
 
     // Shared checks, for the other remesh tests too
+
+    /** A ball of 16 rings of 32, wound outward. */
+    static Mesh ball(float cx, float cy, float cz, float radius, int rgb)
+    {
+        MeshBuilder b = new MeshBuilder("Ball");
+        int rings = 16;
+        int around = 32;
+        int bottom = b.addVertex(cx, cy, cz - radius);
+        int[][] ring = new int[rings - 1][around];
+        for (int r = 1; r < rings; r++)
+        {
+            double down = Math.PI * r / rings;
+            for (int i = 0; i < around; i++)
+            {
+                double angle = 2 * Math.PI * i / around;
+                ring[r - 1][i] = b.addVertex((float) (cx + radius * Math.sin(down) * Math.cos(angle)),
+                    (float) (cy + radius * Math.sin(down) * Math.sin(angle)), (float) (cz - radius * Math.cos(down)));
+            }
+        }
+        int top = b.addVertex(cx, cy, cz + radius);
+        for (int i = 0; i < around; i++)
+        {
+            int j = (i + 1) % around;
+            b.addTriangle(bottom, ring[0][j], ring[0][i], rgb);
+            for (int r = 0; r + 1 < rings - 1; r++)
+            {
+                b.addTriangle(ring[r][i], ring[r][j], ring[r + 1][j], rgb);
+                b.addTriangle(ring[r][i], ring[r + 1][j], ring[r + 1][i], rgb);
+            }
+            b.addTriangle(ring[rings - 2][i], ring[rings - 2][j], top, rgb);
+        }
+        return b.build();
+    }
 
     /** A box of 12 triangles, wound outward; the top only when withTop. */
     static void box(MeshBuilder b, float x0, float y0, float z0, float x1, float y1, float z1, int side, int top, boolean withTop)
