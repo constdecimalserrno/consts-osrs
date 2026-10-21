@@ -1,6 +1,7 @@
 package com.constsdestination;
 
 import java.awt.Color;
+import net.runelite.client.config.Alpha;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -9,34 +10,87 @@ import net.runelite.client.config.Range;
 
 /**
  * One idea in two forms: the hover color for what you're about to act on, the clicked color for what you acted on.
- * Tiles show it on the ground, outlines on NPCs, players, objects and ground items.
+ * Tiles show it on the ground, outlines on NPCs, players, objects and ground items. First, what a left-click goes
+ * past; last, how tile packs are drawn.
  */
 @ConfigGroup(ConstsDestinationConfig.GROUP)
 public interface ConstsDestinationConfig extends Config
 {
     // Not plain "destination": on the Plugin Hub a group name has to be ours alone.
     String GROUP = "constsdestination";
+    String MASTER_KEY = "masterSwitch";
+
+    @ConfigItem(
+        keyName = MASTER_KEY,
+        name = "Master Switch",
+        description = "Off hides every tile and outline consts-Destination draws, tile packs too, and leaves left-clicks as the game has them. The plugin itself stays on, so its sidebar button stays.",
+        position = -1
+    )
+    default boolean masterSwitch()
+    {
+        return true;
+    }
+
+    @ConfigSection(
+        name = "Clicks",
+        description = "What a left-click goes past. A right-click still has every option",
+        position = 0
+    )
+    String clicksSection = "clicks";
 
     @ConfigSection(
         name = "Colors",
         description = "The hover color, the clicked color, and the color for a fight",
-        position = 0
+        position = 1
     )
     String colorsSection = "colors";
 
     @ConfigSection(
         name = "Tiles",
         description = "The tile under your cursor, and the tile you clicked to walk to",
-        position = 1
+        position = 2
     )
     String tilesSection = "tiles";
 
     @ConfigSection(
         name = "Outlines",
         description = "NPCs, players, objects and ground items you hover or interact with",
-        position = 2
+        position = 3
     )
     String outlinesSection = "outlines";
+
+    @ConfigSection(
+        name = "Tile packs",
+        description = "How the tiles of the packs you turn on in the Tile packs tab are drawn",
+        position = 4
+    )
+    String tilePacksSection = "tilePacks";
+
+    // Clicks
+
+    @ConfigItem(
+        keyName = "groundItemPickup",
+        name = "Ground Item Pickup",
+        description = "Left-click takes ground items. Off: taking one needs a right-click and it isn't outlined, so a left-click goes to the tree, NPC or tile behind it - for Forestry",
+        section = clicksSection,
+        position = 0
+    )
+    default boolean groundItemPickup()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "minigameFocus",
+        name = "Minigame Focus",
+        description = "Loot and campfires need a right-click, so a left-click stays on the minigame. Items you can't trade stay one click: what minigames have you pick up, like eggs, soul fragments and bruma roots, and clue scrolls",
+        section = clicksSection,
+        position = 1
+    )
+    default boolean minigameFocus()
+    {
+        return false;
+    }
 
     // Colors
 
@@ -226,5 +280,83 @@ public interface ConstsDestinationConfig extends Config
     default int outlineFeather()
     {
         return 4;
+    }
+
+    // Tile packs. These are Tile Packs' own settings, from its TilePacksConfig.java: Copyright (c) 2022, TrevorMDev,
+    // BSD 2-Clause License, reproduced in NOTICE. Changed: the keys start with "tilePacks"; its Hide on toolbar is left
+    // out, since tile packs have no sidebar button of their own; Fill Opacity is kept within 0 to 255.
+
+    @ConfigItem(
+        keyName = "tilePacksShowLabels",
+        name = "Show Labels",
+        description = "When checked, labels will render as defined in each pack",
+        section = tilePacksSection,
+        position = 0
+    )
+    default boolean tilePacksShowLabels()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "tilePacksOverrideColorActive",
+        name = "Override Color Active",
+        description = "When checked, all tiles will render as the selected color",
+        section = tilePacksSection,
+        position = 1
+    )
+    default boolean tilePacksOverrideColorActive()
+    {
+        return false;
+    }
+
+    @Alpha
+    @ConfigItem(
+        keyName = "tilePacksOverrideColor",
+        name = "Override Color",
+        description = "If Use Override Color is checked, all tiles will be this color.",
+        section = tilePacksSection,
+        position = 2
+    )
+    default Color tilePacksOverrideColor()
+    {
+        return Color.YELLOW;
+    }
+
+    @ConfigItem(
+        keyName = "tilePacksDrawOnMinimap",
+        name = "Draw Tiles on Minimap",
+        description = "Configures whether tile packs tiles should be drawn on minimap",
+        section = tilePacksSection,
+        position = 3
+    )
+    default boolean tilePacksDrawOnMinimap()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "tilePacksBorderWidth",
+        name = "Border Width",
+        description = "Width of the marked tile border",
+        section = tilePacksSection,
+        position = 4
+    )
+    default double tilePacksBorderWidth()
+    {
+        return 2;
+    }
+
+    @Range(min = 0, max = 255)
+    @ConfigItem(
+        keyName = "tilePacksFillOpacity",
+        name = "Fill Opacity",
+        description = "Opacity of the tile fill color",
+        section = tilePacksSection,
+        position = 5
+    )
+    default int tilePacksFillOpacity()
+    {
+        return 50;
     }
 }

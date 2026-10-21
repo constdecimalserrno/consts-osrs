@@ -3,6 +3,7 @@ package com.constsdestination;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
@@ -13,7 +14,10 @@ import net.runelite.api.MenuEntry;
 import net.runelite.api.Tile;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.ItemManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -43,6 +47,23 @@ public class ConstsDestinationPluginTest
     }
 
     @Test
+    public void groundItemPickupOffShouldSinkTake() throws Exception
+    {
+        ConstsDestinationConfig config = mock(ConstsDestinationConfig.class);
+        when(config.masterSwitch()).thenReturn(true);
+        when(config.groundItemPickup()).thenReturn(false);
+        Field clickThrough = ConstsDestinationPlugin.class.getDeclaredField("clickThrough");
+        clickThrough.setAccessible(true);
+        clickThrough.set(plugin, new ClickThrough(config, mock(ItemManager.class)));
+        MenuEntry take = mock(MenuEntry.class);
+        when(take.getType()).thenReturn(MenuAction.GROUND_ITEM_THIRD_OPTION);
+
+        plugin.onMenuEntryAdded(new MenuEntryAdded(take));
+
+        verify(take).setDeprioritized(true);
+    }
+
+    @Test
     public void walkingToATileShouldKeepItLit()
     {
         plugin.onMenuOptionClicked(click(MenuAction.WALK));
@@ -55,6 +76,19 @@ public class ConstsDestinationPluginTest
     {
         plugin.onMenuOptionClicked(click(MenuAction.WALK));
         plugin.onMenuOptionClicked(click(MenuAction.NPC_FIRST_OPTION));
+
+        assertNull(plugin.getClickedTile());
+    }
+
+    @Test
+    public void theMasterSwitchShouldClearIt()
+    {
+        plugin.onMenuOptionClicked(click(MenuAction.WALK));
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsDestinationConfig.GROUP);
+        changed.setKey(ConstsDestinationConfig.MASTER_KEY);
+        changed.setNewValue("false");
+        plugin.onConfigChanged(changed);
 
         assertNull(plugin.getClickedTile());
     }

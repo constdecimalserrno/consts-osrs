@@ -23,12 +23,24 @@ public interface ConstsAfkConfig extends Config
 {
     // Group name from before the consts-AFK rename, kept so saved settings carry over.
     String GROUP = "afkcombatalerts";
+    String MASTER_KEY = "masterSwitch";
     String PRESET_KEY = "preset";
     // Not a setting: Custom's on/off set, saved when you leave Custom for a preset.
     String CUSTOM_SNAPSHOT_KEY = "customSnapshot";
     String ALERT_SOUND_KEY = "alertSound";
     String CUSTOM_SOUND_KEY = "customSoundId";
     String SOUND_VOLUME_KEY = "soundVolume";
+
+    @ConfigItem(
+        keyName = MASTER_KEY,
+        name = "Master Switch",
+        description = "Off silences consts-AFK: no alerts, no status panel, no area lines. The plugin itself stays on, so its bell stays in the sidebar.",
+        position = -1
+    )
+    default boolean masterSwitch()
+    {
+        return true;
+    }
 
     @ConfigItem(
         keyName = PRESET_KEY,

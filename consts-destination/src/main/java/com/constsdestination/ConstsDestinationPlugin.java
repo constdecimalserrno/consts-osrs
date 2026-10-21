@@ -1,7 +1,9 @@
 package com.constsdestination;
 
+import com.constsdestination.tilepacks.TilePacks;
 import com.google.inject.Provides;
 import javax.inject.Inject;
+import javax.swing.JComponent;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
@@ -10,29 +12,40 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.ItemDespawned;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.PlayerDespawned;
 import net.runelite.api.events.PlayerSpawned;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ImageUtil;
 
 /**
  * Where you're about to act and where you acted: the tile under your cursor and anything there you can act on in the
  * hover color, the tile you're walking to and whatever you're interacting with in the clicked color. The entity
  * outlines are RuneLite's Interact Highlight by Adam, folded in (InteractTracker, ConstsDestinationOutlineOverlay).
+ * And where to stand: Tile Packs by TrevorMDev, folded in (the tilepacks package), its packs in the sidebar panel's
+ * second tab. And what a left-click goes past: ground items, or loot and campfires (ClickThrough).
  */
 @PluginDescriptor(
     name = "consts-Destination",
-    description = "Highlights the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done",
-    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object"}
+    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, lets a left-click go past loot, and draws your tile packs: sets of marked tiles you make or paste in",
+    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object", "pack", "ground", "marker", "loot", "pickup", "forestry", "minigame"}
 )
 public class ConstsDestinationPlugin extends Plugin
 {
+    static final String TILE_PACKS_TAB = "Tile packs";
+
     @Inject
     private Client client;
 
@@ -47,6 +60,31 @@ public class ConstsDestinationPlugin extends Plugin
 
     @Inject
     private InteractTracker tracker;
+
+    @Inject
+    private ConstsDestinationConfig config;
+
+    @Inject
+    private ConfigManager configManager;
+
+    @Inject
+    private ClientToolbar clientToolbar;
+
+    @Inject
+    private ColorPickerManager colorPickerManager;
+
+    @Inject
+    private EventBus eventBus;
+
+    @Inject
+    private TilePacks tilePacks;
+
+    @Inject
+    private ClickThrough clickThrough;
+
+    // The sidebar button: the plugin's settings in a panel of their own.
+    private ConfigSidePanel configPanel;
+    private NavigationButton navButton;
 
     private WorldPoint clickedTile;
 
@@ -63,6 +101,26 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.add(outlineOverlay);
         clickedTile = null;
         tracker.clear();
+        tilePacks.startUp();
+        eventBus.register(tilePacks);
+        configPanel = sidePanel(configManager, colorPickerManager, config, this, tilePacks.getPanel());
+        eventBus.register(configPanel);
+        navButton = NavigationButton.builder()
+            .tooltip("consts-Destination")
+            .icon(ImageUtil.loadImageResource(getClass(), "panel_icon.png"))
+            .priority(5)
+            .panel(configPanel)
+            .build();
+        clientToolbar.addNavigation(navButton);
+    }
+
+    /** The sidebar panel: the title and Master Switch over two tabs, Settings, which it opens on, then Tile packs. */
+    static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
+        ConstsDestinationConfig config, Plugin plugin, JComponent tilePacksPanel)
+    {
+        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin, ConstsDestinationConfig.MASTER_KEY);
+        panel.addTab(TILE_PACKS_TAB, tilePacksPanel);
+        return panel;
     }
 
     @Override
@@ -72,6 +130,12 @@ public class ConstsDestinationPlugin extends Plugin
         overlayManager.remove(outlineOverlay);
         clickedTile = null;
         tracker.clear();
+        eventBus.unregister(tilePacks);
+        tilePacks.shutDown();
+        clientToolbar.removeNavigation(navButton);
+        eventBus.unregister(configPanel);
+        navButton = null;
+        configPanel = null;
     }
 
     @Subscribe
@@ -99,6 +163,12 @@ public class ConstsDestinationPlugin extends Plugin
             // Any other click clears the locked tile
             clickedTile = null;
         }
+    }
+
+    @Subscribe
+    public void onMenuEntryAdded(MenuEntryAdded event)
+    {
+        clickThrough.onMenuEntryAdded(event.getMenuEntry());
     }
 
     @Subscribe
@@ -172,6 +242,17 @@ public class ConstsDestinationPlugin extends Plugin
                 return config.outlineGroundItems();
             default:
                 return false;
+        }
+    }
+
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        // Master Switch off: forget what was clicked, so turning it back on doesn't light an old destination.
+        if (ConstsDestinationConfig.GROUP.equals(event.getGroup()) && ConstsDestinationConfig.MASTER_KEY.equals(event.getKey()))
+        {
+            clickedTile = null;
+            tracker.clear();
         }
     }
 

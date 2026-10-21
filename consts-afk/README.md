@@ -1,5 +1,7 @@
 # consts-AFK
 
+<img src="icon.png" alt="" width="48" height="72" align="right">
+
 RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: Idle fills and flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
@@ -14,7 +16,7 @@ Formerly **AFK Alerts**. Saved settings carry over: the config group is still `a
 
 ## Presets
 
-The **Preset** dropdown sits at the very top of the plugin config. You can also right-click the status panel and choose `Preset: …`.
+The **Preset** dropdown sits at the top of the plugin config, and of the bell's sidebar panel, under the Master Switch. You can also right-click the status panel and choose `Preset: …`.
 
 | Preset | Alerts on |
 |---|---|
@@ -34,6 +36,10 @@ Every preset holds Idle while your character is animating, so a long chop or a s
 Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click always come from your settings. A preset overrides each alert's Enabled; switch back to **Custom** and your own set comes back, as you last left it.
 
 ## Settings
+
+The bell in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset and its alerts tick on in front of you. Right-click a setting's name to reset it.
+
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-AFK, with no alerts, no status panel and no area lines, without turning the plugin off, so the bell stays in the sidebar. Turning it back on starts fresh, as logging in does.
 
 Three General sections first, then one section per alert, each named for its group and kept in group order. Every section is open to start; click a header to fold it.
 
@@ -164,4 +170,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE); the rest of consts-AFK is [MIT](LICENSE).
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-AFK's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The rest of consts-AFK is [MIT](LICENSE).
