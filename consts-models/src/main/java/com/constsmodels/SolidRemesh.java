@@ -90,7 +90,13 @@ final class SolidRemesh
     /** The mesh as one closed solid at the default voxel size and wall, with a flat bottom. */
     static Mesh makeSolid(Mesh mesh, double sizeMm)
     {
-        return makeSolid(mesh, sizeMm, defaultVoxelMm(sizeMm), MIN_WALL_MM, FLAT_MM);
+        return makeSolid(mesh, sizeMm, PrintProgress.NONE);
+    }
+
+    /** The same, telling progress how far it's got. */
+    static Mesh makeSolid(Mesh mesh, double sizeMm, PrintProgress progress)
+    {
+        return makeSolid(mesh, sizeMm, defaultVoxelMm(sizeMm), MIN_WALL_MM, FLAT_MM, progress);
     }
 
     /** The voxel size used by default for a print sizeMm long: fine enough for a wall three voxels thick. */
@@ -112,6 +118,13 @@ final class SolidRemesh
      */
     static Mesh makeSolid(Mesh mesh, double sizeMm, double voxelMm, double minWallMm, double flatMm)
     {
+        return makeSolid(mesh, sizeMm, voxelMm, minWallMm, flatMm, PrintProgress.NONE);
+    }
+
+    /** The same, telling progress how far it's got. */
+    static Mesh makeSolid(Mesh mesh, double sizeMm, double voxelMm, double minWallMm, double flatMm,
+        PrintProgress progress)
+    {
         float[] box = mesh.bounds();
         double longest = Math.max(box[3] - box[0], Math.max(box[4] - box[1], box[5] - box[2]));
         if (mesh.isEmpty() || !(longest > 0) || !(sizeMm > 0))
@@ -129,7 +142,7 @@ final class SolidRemesh
             }
             Nearest nearest = new Nearest(triangles, plan);
             MarchingCubes.Surface surface = voxelSurface(triangles, plan, nearest, flatMm,
-                Math.max(flatMm, MAX_FLAT_SHARE * sizeMm));
+                Math.max(flatMm, MAX_FLAT_SHARE * sizeMm), progress.step(0, 0.75));
             if (surface == null)
             {
                 // Too much surface to thin out in bounded memory: coarser voxels, a bit over half the triangles
@@ -148,7 +161,10 @@ final class SolidRemesh
             {
                 surface = QuadricDecimator.decimate(surface, MAX_ERROR);
             }
-            return toMesh(mesh.name, plan, surface, nearest, mesh.color);
+            progress.done(0.95);
+            Mesh solid = toMesh(mesh.name, plan, surface, nearest, mesh.color);
+            progress.done(1);
+            return solid;
         }
     }
 
@@ -158,7 +174,7 @@ final class SolidRemesh
      * triangles. The voxels are let go when it returns.
      */
     private static MarchingCubes.Surface voxelSurface(double[] triangles, Plan plan, Nearest nearest, double flatMm,
-        double deepestMm)
+        double deepestMm, PrintProgress progress)
     {
         VoxelGrid grid = new VoxelGrid(plan.nx, plan.ny, plan.nz);
 
@@ -179,9 +195,11 @@ final class SolidRemesh
             }
         });
         nearest.index();
+        progress.done(0.25);
 
         // Steps 2 to 4
         Solid solid = Solid.of(grid, plan, shell, surface);
+        progress.done(0.6);
 
         // Step 5: the distance to the model from every voxel near it, to place the surface between voxels
         byte[] distance = grid.scratch();
@@ -196,6 +214,7 @@ final class SolidRemesh
                 distance[index] = (byte) q;
             }
         });
+        progress.done(0.7);
         MarchingCubes.Occupancy occupancy = solid.occupancy(grid, distance, step, plan.shell);
         if (flatMm > 0 && !solid.all.isEmpty())
         {
@@ -218,7 +237,9 @@ final class SolidRemesh
                 }
             };
         }
-        return MarchingCubes.extract(grid, occupancy, MAX_EXTRACTED);
+        MarchingCubes.Surface extracted = MarchingCubes.extract(grid, occupancy, MAX_EXTRACTED);
+        progress.done(1);
+        return extracted;
     }
 
     /**

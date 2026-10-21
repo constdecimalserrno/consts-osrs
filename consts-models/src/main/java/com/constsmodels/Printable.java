@@ -39,9 +39,17 @@ final class Printable
     /** Makes the model printable; this is the slow part. */
     static Printable of(Mesh model, PrintSettings settings)
     {
+        return of(model, settings, PrintProgress.NONE);
+    }
+
+    /** Makes the model printable, telling progress how far it's got. */
+    static Printable of(Mesh model, PrintSettings settings, PrintProgress progress)
+    {
+        progress.done(0);
         // Made with each triangle's number in place of its color, which carries through as the color does, so each
         // of the solid's triangles knows the model's triangle it came from; then colored by those
         ShellCaps.Capped capped = ShellCaps.cap(model);
+        progress.done(0.05);
         Mesh closed = capped.mesh;
         int[] number = new int[closed.faceCount()];
         for (int f = 0; f < number.length; f++)
@@ -49,7 +57,8 @@ final class Printable
             number[f] = f;
         }
         Mesh numbered = SolidRemesh.makeSolid(
-            new Mesh(closed.name, closed.x, closed.y, closed.z, closed.a, closed.b, closed.c, number), settings.sizeMm);
+            new Mesh(closed.name, closed.x, closed.y, closed.z, closed.a, closed.b, closed.c, number), settings.sizeMm,
+            progress.step(0.05, 0.97));
         int[] from = new int[numbered.faceCount()];
         int[] color = new int[numbered.faceCount()];
         for (int t = 0; t < from.length; t++)
@@ -60,7 +69,9 @@ final class Printable
         }
         Mesh solid = new Mesh(numbered.name, numbered.x, numbered.y, numbered.z, numbered.a, numbered.b, numbered.c,
             color);
-        return new Printable(model, settings, solid, from, PrintPrep.prepareSolid(solid, settings));
+        Printable printable = new Printable(model, settings, solid, from, PrintPrep.prepareSolid(solid, settings));
+        progress.done(1);
+        return printable;
     }
 
     /**
