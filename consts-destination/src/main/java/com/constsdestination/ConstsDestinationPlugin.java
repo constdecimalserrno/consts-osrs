@@ -12,6 +12,7 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.ItemDespawned;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
@@ -34,12 +35,12 @@ import net.runelite.client.util.ImageUtil;
  * hover color, the tile you're walking to and whatever you're interacting with in the clicked color. The entity
  * outlines are RuneLite's Interact Highlight by Adam, folded in (InteractTracker, ConstsDestinationOutlineOverlay).
  * And where to stand: Tile Packs by TrevorMDev, folded in (the tilepacks package), its packs in the sidebar panel's
- * second tab.
+ * second tab. And what a left-click goes past: ground items, or loot and campfires (ClickThrough).
  */
 @PluginDescriptor(
     name = "consts-Destination",
-    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, and draws your tile packs: sets of marked tiles you make or paste in",
-    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object", "pack", "ground", "marker"}
+    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, lets a left-click go past loot, and draws your tile packs: sets of marked tiles you make or paste in",
+    tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object", "pack", "ground", "marker", "loot", "pickup", "forestry", "minigame"}
 )
 public class ConstsDestinationPlugin extends Plugin
 {
@@ -77,6 +78,9 @@ public class ConstsDestinationPlugin extends Plugin
 
     @Inject
     private TilePacks tilePacks;
+
+    @Inject
+    private ClickThrough clickThrough;
 
     // The sidebar button: the plugin's settings in a panel of their own.
     private ConfigSidePanel configPanel;
@@ -159,6 +163,12 @@ public class ConstsDestinationPlugin extends Plugin
             // Any other click clears the locked tile
             clickedTile = null;
         }
+    }
+
+    @Subscribe
+    public void onMenuEntryAdded(MenuEntryAdded event)
+    {
+        clickThrough.onMenuEntryAdded(event.getMenuEntry());
     }
 
     @Subscribe
