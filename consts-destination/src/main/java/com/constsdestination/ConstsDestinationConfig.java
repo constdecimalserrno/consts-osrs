@@ -10,7 +10,8 @@ import net.runelite.client.config.Range;
 
 /**
  * One idea in two forms: the hover color for what you're about to act on, the clicked color for what you acted on.
- * Tiles show it on the ground, outlines on NPCs, players, objects and ground items. Then how tile packs are drawn.
+ * Tiles show it on the ground, outlines on NPCs, players, objects and ground items. First, what a left-click goes
+ * past; last, how tile packs are drawn.
  */
 @ConfigGroup(ConstsDestinationConfig.GROUP)
 public interface ConstsDestinationConfig extends Config
@@ -22,7 +23,7 @@ public interface ConstsDestinationConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off hides every tile and outline consts-Destination draws, tile packs too. The plugin itself stays on, so its sidebar button stays.",
+        description = "Off hides every tile and outline consts-Destination draws, tile packs too, and leaves left-clicks as the game has them. The plugin itself stays on, so its sidebar button stays.",
         position = -1
     )
     default boolean masterSwitch()
@@ -31,32 +32,65 @@ public interface ConstsDestinationConfig extends Config
     }
 
     @ConfigSection(
+        name = "Clicks",
+        description = "What a left-click goes past. A right-click still has every option",
+        position = 0
+    )
+    String clicksSection = "clicks";
+
+    @ConfigSection(
         name = "Colors",
         description = "The hover color, the clicked color, and the color for a fight",
-        position = 0
+        position = 1
     )
     String colorsSection = "colors";
 
     @ConfigSection(
         name = "Tiles",
         description = "The tile under your cursor, and the tile you clicked to walk to",
-        position = 1
+        position = 2
     )
     String tilesSection = "tiles";
 
     @ConfigSection(
         name = "Outlines",
         description = "NPCs, players, objects and ground items you hover or interact with",
-        position = 2
+        position = 3
     )
     String outlinesSection = "outlines";
 
     @ConfigSection(
         name = "Tile packs",
         description = "How the tiles of the packs you turn on in the Tile packs tab are drawn",
-        position = 3
+        position = 4
     )
     String tilePacksSection = "tilePacks";
+
+    // Clicks
+
+    @ConfigItem(
+        keyName = "groundItemPickup",
+        name = "Ground Item Pickup",
+        description = "Left-click takes ground items. Off: taking one needs a right-click and it isn't outlined, so a left-click goes to the tree, NPC or tile behind it - for Forestry",
+        section = clicksSection,
+        position = 0
+    )
+    default boolean groundItemPickup()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "minigameFocus",
+        name = "Minigame Focus",
+        description = "Loot and campfires need a right-click, so a left-click stays on the minigame. Items you can't trade stay one click: what minigames have you pick up, like eggs, soul fragments and bruma roots, and clue scrolls",
+        section = clicksSection,
+        position = 1
+    )
+    default boolean minigameFocus()
+    {
+        return false;
+    }
 
     // Colors
 

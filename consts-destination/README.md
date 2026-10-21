@@ -12,6 +12,7 @@ And where to stand: [tile packs](#tile-packs), marked tiles for bosses, raids, m
 - **Clicked**: click a tile to walk there and it turns orange while you walk. Click an NPC, a player, an object or an item and its outline flashes white, then stays orange - red in a fight - while you're interacting with it.
 - **Cleared**: walking somewhere else, using an item, getting there, or logging out clears it.
 - **Tile packs**: the tiles of every pack you've turned on, in the world and, if you like, on the minimap.
+- **Clicks**: turn **Ground Item Pickup** off and a left-click goes past ground items to the tree, NPC or tile behind them, which helps in Forestry: taking one needs a right-click, and it isn't outlined. **Minigame Focus** does the same for loot and campfires only. Items you can't trade, the ones minigames have you pick up (eggs, soul fragments, bruma roots) and clue scrolls, stay one click.
 
 ## Tile packs
 
@@ -42,10 +43,12 @@ The first time consts-Destination starts with tile packs (1.3.0), it brings over
 
 The tile in RuneLite's sidebar opens a panel with two tabs, **Tile packs** and **Settings**. The Settings tab is the same as the plugin's page in the Configuration panel, so it's one click away while you play. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off hides every tile and outline, the tile packs' too, without turning the plugin off, so the sidebar button stays.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off hides every tile and outline, the tile packs' too, and leaves left-clicks as the game has them, without turning the plugin off, so the sidebar button stays.
 
 | Section | Setting | What it does | Default |
 |---|---|---|---|
+| Clicks | Ground Item Pickup | Left-click takes ground items. Off: a right-click takes them, and a left-click goes to what's behind them | On |
+| Clicks | Minigame Focus | Loot and campfires need a right-click; items you can't trade stay one click | Off |
 | Colors | Hover Color | The tile under your cursor, and anything you hover | Blue `#3EAAFF` |
 | Colors | Clicked Color | The tile you're walking to, and what you're interacting with | Orange `#FFA500` |
 | Colors | Attack Color | An NPC you're about to attack, or attacking | Red `#FF4632` |
