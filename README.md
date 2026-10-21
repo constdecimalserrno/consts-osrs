@@ -5,7 +5,7 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 | Plugin | What it does |
 |---|---|
 | [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
-| [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, and keeps what you clicked lit until you're done. Folds in RuneLite's Interact Highlight. |
+| [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, and draws your tile packs, sets of marked tiles you make or paste in. Folds in RuneLite's Interact Highlight and Tile Packs. |
 | [consts-Leaderboard](consts-leaderboard/) | Any player's skills from the hiscores in a sidebar panel: right-click and Lookup, or one button for your own. Levels stop at 99: a 99 is yellow, the lowest skill red. Cut down from RuneLite's HiScore. |
 
 ![The consts-AFK status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-afk/screenshots/status-panel.gif)
@@ -94,6 +94,6 @@ The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets
 
 ## License
 
-[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-AFK ([NOTICE](consts-afk/NOTICE)), Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)), the Configuration panel by Adam in both, as their sidebar settings, and HiScore by Adam, Psikoi and Bram91 in consts-Leaderboard ([NOTICE](consts-leaderboard/NOTICE)).
+[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-AFK ([NOTICE](consts-afk/NOTICE)), Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)), the Configuration panel by Adam in both, as their sidebar settings, and HiScore by Adam, Psikoi and Bram91 in consts-Leaderboard ([NOTICE](consts-leaderboard/NOTICE)). So does the Plugin Hub's [Tile Packs](https://github.com/TrevorMDev/tile-packs) by TrevorMDev, folded into consts-Destination (same NOTICE).
 
 Not affiliated with Jagex or RuneLite. Old School RuneScape is a trademark of Jagex Ltd.

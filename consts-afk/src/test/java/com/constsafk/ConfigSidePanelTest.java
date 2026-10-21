@@ -34,6 +34,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.ConfigSectionDescriptor;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
+import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -182,6 +183,52 @@ public class ConfigSidePanelTest
     }
 
     @Test
+    public void withoutATabOfItsOwnThereAreNoTabs()
+    {
+        assertNull(find(panel, MaterialTabGroup.class, g -> true));
+        assertFalse(labels(panel).contains(ConfigSidePanel.SETTINGS_TAB));
+    }
+
+    @Test
+    public void theSettingsComeFirstThenItsOwnTabs()
+    {
+        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        ConfigSidePanel tabbed = withMasterSwitch();
+        tabbed.addTab("Packs", new JLabel("pack list"));
+        tabbed.addTab("More", new JLabel("more things"));
+
+        MaterialTabGroup tabs = find(tabbed, MaterialTabGroup.class, g -> true);
+        assertNotNull(tabs);
+        assertEquals(ConfigSidePanel.SETTINGS_TAB, tabs.getTab(0).getText());
+        assertEquals("Packs", tabs.getTab(1).getText());
+        assertEquals("More", tabs.getTab(2).getText());
+        assertEquals(1, count(tabbed, MaterialTabGroup.class));
+
+        // The title and the master switch stay on top of the tabs.
+        assertTrue(labels(tabbed).contains("consts-AFK"));
+        assertNotNull(find(tabbed, JToggleButton.class, b -> ConstsAfkConfig.MASTER_KEY.equals(b.getName())));
+    }
+
+    @Test
+    public void itOpensOnTheSettingsAndItsOwnTabShowsItsOwn()
+    {
+        ConfigItemDescriptor flag = first(boolean.class);
+        panel.addTab("Packs", new JLabel("pack list"));
+        MaterialTabGroup tabs = find(panel, MaterialTabGroup.class, g -> true);
+
+        assertFalse(labels(panel).contains("pack list"));
+        assertNotNull(control(flag, JCheckBox.class));
+
+        tabs.select(tabs.getTab(1));
+        assertTrue(labels(panel).contains("pack list"));
+        assertNull(find(panel, JPanel.class, p -> flag.getItem().keyName().equals(p.getName())));
+
+        tabs.select(tabs.getTab(0));
+        assertFalse(labels(panel).contains("pack list"));
+        assertNotNull(control(flag, JCheckBox.class));
+    }
+
+    @Test
     public void colorsAndChoicesGetTheirOwnControls()
     {
         assertNotNull(control(first(Color.class), Component.class));
@@ -228,6 +275,23 @@ public class ConfigSidePanelTest
             }
         }
         return null;
+    }
+
+    private static int count(Container root, Class<?> type)
+    {
+        int found = 0;
+        for (Component c : root.getComponents())
+        {
+            if (type.isInstance(c))
+            {
+                found++;
+            }
+            if (c instanceof Container)
+            {
+                found += count((Container) c, type);
+            }
+        }
+        return found;
     }
 
     private static List<String> labels(Container root)

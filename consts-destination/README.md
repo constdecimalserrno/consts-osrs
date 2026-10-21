@@ -4,17 +4,41 @@
 
 RuneLite plugin for Old School RuneScape ( OSRS ): where you're about to act, and where you acted. Anything under your cursor that you can do something with lights up in blue - the tile, or the NPC, player, object or ground item on it. Click, and what you clicked turns orange and stays that way until you're done: the tile you're walking to, or what you're interacting with.
 
+And where to stand: [tile packs](#tile-packs), sets of marked tiles you make or paste in, each turned on with a click. They're Tile Packs by TrevorMDev, folded in.
+
 ## What it does
 
 - **Hover**: the tile under your cursor is outlined blue and follows the mouse. Over an NPC, a player, an object or a ground item, that thing is outlined blue instead - red if your click would attack it.
 - **Clicked**: click a tile to walk there and it turns orange while you walk. Click an NPC, a player, an object or an item and its outline flashes white, then stays orange - red in a fight - while you're interacting with it.
 - **Cleared**: walking somewhere else, using an item, getting there, or logging out clears it.
+- **Tile packs**: the tiles of every pack you've turned on, in the world and, if you like, on the minimap.
+
+## Tile packs
+
+The sidebar panel's **Tile packs** tab, beside Settings, lists your packs: sets of marked tiles, each with a name. Turn a pack on and its tiles show in the world, colored and labelled as the pack has them. They're kept apart from RuneLite's Ground Markers, so they don't touch your own markers.
+
+Each pack is a row with its controls:
+
+| Control | What it does |
+|---|---|
+| Green plus / red minus | Turns the pack on or off |
+| Copy | Copies the pack's tiles to the clipboard, in Ground Markers' format, to share |
+| Pencil | Changes the pack's name or tiles |
+| Cross | Deletes the pack, for good |
+
+### Adding a pack
+
+Under the list, give the pack a name, paste its tiles and press **Add Pack**: it's added, and on. The tiles are a Ground Markers export, in JSON: mark tiles with RuneLite's Ground Markers, right-click the world map orb beside the minimap and choose **Export ground markers**, which copies the markers around you. A pack someone shared is the same: what their Copy button or their own export gave them. [runelite.net/tile](https://runelite.net/tile/) checks or edits tiles.
+
+### Coming from Tile Packs
+
+The first time consts-Destination starts with tile packs, it brings over what you had in Tile Packs: your own packs, the packs you had on and Tile Packs' settings. The built-in packs you had on become packs of your own, with their names and tiles, still on; the rest of Tile Packs' built-in list doesn't come. Tile Packs' saved data is only read, never changed, so Tile Packs keeps working if you keep it. Once your packs are here you can turn the Tile Packs plugin off, or the same tiles are drawn twice. It happens once: later changes in Tile Packs don't follow.
 
 ## Settings
 
-The tile in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. Right-click a setting's name to reset it.
+The tile in RuneLite's sidebar opens a panel with two tabs, **Settings** and **Tile packs**, on Settings. The Settings tab is the same as the plugin's page in the Configuration panel, so it's one click away while you play. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off hides every tile and outline without turning the plugin off, so the sidebar button stays.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off hides every tile and outline, the tile packs' too, without turning the plugin off, so the sidebar button stays.
 
 | Section | Setting | What it does | Default |
 |---|---|---|---|
@@ -27,10 +51,19 @@ The switch beside the panel's title is the **Master Switch** (first in the plugi
 | Outlines | On Hover / On Interact | Turn either kind of outline off | On |
 | Outlines | NPCs / Players / Objects / Ground Items | Which things get outlined | All on |
 | Outlines | Width / Feather | Outline thickness, and how much of it fades out (0 to 4) | `4` / `4` |
+| Tile packs | Show Labels | The labels a pack gives its tiles | On |
+| Tile packs | Override Color Active / Override Color | Every pack tile in one color | Off / Yellow |
+| Tile packs | Draw Tiles on Minimap | Pack tiles on the minimap too | Off |
+| Tile packs | Border Width | Pack tile outline thickness in pixels | `2` |
+| Tile packs | Fill Opacity | The tiles' dark fill: 0 is none, 255 is solid | `50` |
 
 ## Credits
 
-The outlines are RuneLite's [Interact Highlight](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/interacthighlight) by Adam (BSD 2-Clause, Copyright (c) 2021, Adam), folded into consts-Destination: you can turn that plugin off and run this one alone. The ported files, `InteractTracker.java` and `ConstsDestinationOutlineOverlay.java`, keep its license header and license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-Destination's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The rest of consts-Destination is [MIT](LICENSE).
+The outlines are RuneLite's [Interact Highlight](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/interacthighlight) by Adam (BSD 2-Clause, Copyright (c) 2021, Adam), folded into consts-Destination: you can turn that plugin off and run this one alone. The ported files, `InteractTracker.java` and `ConstsDestinationOutlineOverlay.java`, keep its license header and license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-Destination's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE.
+
+The tile packs are [Tile Packs](https://github.com/TrevorMDev/tile-packs) by TrevorMDev (BSD 2-Clause, Copyright (c) 2022, TrevorMDev), folded into consts-Destination at its Plugin Hub version (8091ee8): once your packs are here you can turn that plugin off and run this one alone. The ported files, in `tilepacks/`, keep their license headers, Tile Packs' and those of the RuneLite authors whose code came into Tile Packs from RuneLite, mostly its Ground Markers plugin (TheLonelyDev, Adam, Jordan Atwood, Benjamin), and the licenses are reproduced in [NOTICE](NOTICE). Tile Packs' list of built-in packs, gathered by TrevorMDev with packs and fixes from David Lord, Matthew Johnson, Blackberry0Pie, Vic Segers and Tile Packs' community, comes along only to make the built-in packs you had on into your own. The icons are Tile Packs': made by Pixel perfect and Utari Nuraeni, from [flaticon.com](https://www.flaticon.com/).
+
+The rest of consts-Destination is [MIT](LICENSE).
 
 ## Running it
 
