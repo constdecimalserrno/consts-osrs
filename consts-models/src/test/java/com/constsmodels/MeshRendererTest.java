@@ -315,4 +315,35 @@ public class MeshRendererTest
         assertEquals(0x303030, image.getRGB(29, 5) & 0xFFFFFF);
         assertEquals(0x202020, image.getRGB(15, 10) & 0xFFFFFF);
     }
+
+    @Test
+    public void aClickPicksTheNearestTriangleDrawnThere()
+    {
+        // Red in front, blue behind it and bigger
+        MeshBuilder b = new MeshBuilder("Two squares");
+        square(b, 10, 0, RED);
+        square(b, 30, 40, BLUE);
+        Mesh mesh = b.build();
+        OrbitCamera camera = lookingNorth(30, 200);
+        BufferedImage image = render(mesh, camera);
+
+        // Where the picture shows red, a red triangle is picked; where it shows blue, a blue one; else none
+        for (int[] point : new int[][]{{100, 100}, {95, 104}, {70, 100}, {100, 130}, {100, 150}, {5, 5}})
+        {
+            int face = MeshRenderer.pick(mesh, camera, SIZE, SIZE, point[0], point[1]);
+            int shown = at(image, point[0], point[1]);
+            if (shown == BACKGROUND)
+            {
+                assertEquals(-1, face);
+            }
+            else
+            {
+                assertTrue(face >= 0);
+                assertEquals(isRed(shown) ? RED : BLUE, mesh.color[face]);
+            }
+        }
+        assertEquals(RED, mesh.color[MeshRenderer.pick(mesh, camera, SIZE, SIZE, 100, 100)]);
+        assertEquals(BLUE, mesh.color[MeshRenderer.pick(mesh, camera, SIZE, SIZE, 100, 130)]);
+        assertEquals(-1, MeshRenderer.pick(mesh, camera, SIZE, SIZE, 5, 5));
+    }
 }

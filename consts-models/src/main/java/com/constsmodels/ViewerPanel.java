@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -31,6 +32,10 @@ import org.slf4j.LoggerFactory;
  * The print is made off the Swing thread the first time it's shown, which takes a few seconds, and again only when
  * the print size changes; until it's ready the view shows the model in the filaments' colors and Save waits. Turning
  * the base on or off only stands the same solid on the plate again, which is quick.
+ *
+ * <p>A click on the picture picks the piece of the model under it ({@link Pieces}), lit up in orange, in either view;
+ * Remove piece, or Delete, takes it out of the model, for Game, Print and Save alike, and Bring back puts every piece
+ * taken out back. Those two show in the picture's top right corner while there's a piece picked or taken out.
  */
 final class ViewerPanel extends JPanel
 {
@@ -57,13 +62,31 @@ final class ViewerPanel extends JPanel
     // otherwise
     private boolean baseSetting;
 
+    // The model as it's shown and saved: the mesh with any pieces taken out, and each of its triangles' number in
+    // the mesh; the model the print was last tried with; the mesh the picture shows
+    private Mesh model;
+    private int[] modelFaces;
+    private Mesh triedModel;
+    private Mesh onCanvas;
+    // The mesh's pieces, found when one is first picked; those taken out; the one picked, or -1
+    private Pieces pieces;
+    private boolean[] removed;
+    private int picked = -1;
+    private final JButton remove = quietButton("Remove piece",
+        "Take the piece you picked out of the model, for Game, Print and Save (Delete)");
+    private final JButton restore = quietButton("Bring back", "Put back every piece you took out");
+
     ViewerPanel(Mesh mesh, ViewerActions actions)
     {
         super(new BorderLayout());
         this.mesh = mesh;
         this.actions = actions;
+        model = mesh;
+        modelFaces = everyFace(mesh);
         canvas = new ViewerCanvas(mesh);
         canvas.setBackgroundColor(actions.background());
+        canvas.onPick(this::picked);
+        canvas.setCorner(pieceButtons());
         PrintSettings settings = actions.printSettings();
         baseSetting = settings != null && settings.base;
         filaments = new FilamentControls(mesh, settings == null ? 4 : settings.maxColors, baseSetting,
@@ -84,6 +107,35 @@ final class ViewerPanel extends JPanel
                 save();
             }
         });
+        key(KeyEvent.VK_DELETE, "remove piece", this::removePicked);
+        key(KeyEvent.VK_BACK_SPACE, "remove piece", this::removePicked);
+        key(KeyEvent.VK_ESCAPE, "let go", () -> picked(-1));
+    }
+
+    private void key(int code, String name, Runnable action)
+    {
+        getInputMap(WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(code, 0), name);
+        getActionMap().put(name, new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                action.run();
+            }
+        });
+    }
+
+    /** Remove piece and Bring back, for the picture's top right corner; each shows only when there's call for it. */
+    private JComponent pieceButtons()
+    {
+        remove.addActionListener(e -> removePicked());
+        restore.addActionListener(e -> restoreAll());
+        JPanel corner = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        corner.setOpaque(false);
+        corner.add(restore);
+        corner.add(remove);
+        updatePieceButtons();
+        return corner;
     }
 
     private JComponent bar()
@@ -141,9 +193,16 @@ final class ViewerPanel extends JPanel
         button.setForeground(ColorScheme.TEXT_COLOR);
         button.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         button.setFocusPainted(false);
-        button.setPreferredSize(new Dimension(button.getPreferredSize().width, 28));
+        fit(button);
         button.setToolTipText(tip);
         return button;
+    }
+
+    /** As wide as the button's text needs, and as tall as the bar's controls. */
+    private static void fit(JButton button)
+    {
+        button.setPreferredSize(null);
+        button.setPreferredSize(new Dimension(button.getPreferredSize().width, 28));
     }
 
     private static JComponent gap()
@@ -158,14 +217,131 @@ final class ViewerPanel extends JPanel
     private void save()
     {
         ExportFormat chosen = (ExportFormat) format.getSelectedItem();
+        PrintColors colors = filaments.colors();
         if (!filaments.showsPrint())
         {
-            actions.save(mesh, chosen, filaments.colors());
+            actions.save(model, chosen, colors == null || model == mesh ? colors : colors.forFaces(modelFaces));
         }
-        else if (printable != null && !printable.isEmpty() && filaments.colors() != null)
+        else if (printable != null && printable.model == model && !printable.isEmpty() && colors != null)
         {
-            actions.savePrint(printable, chosen, filaments.colors());
+            actions.savePrint(printable, chosen, colors);
         }
+    }
+
+    /** The mesh's pieces, found the first time they're needed. */
+    private Pieces pieces()
+    {
+        if (pieces == null)
+        {
+            pieces = Pieces.of(mesh);
+            removed = new boolean[pieces.count];
+        }
+        return pieces;
+    }
+
+    /**
+     * A click on the picture, on a triangle of what it shows or -1 for none: picks the piece that triangle is part
+     * of, or lets go of the piece picked if it's that one again or nothing.
+     */
+    void picked(int face)
+    {
+        int piece = -1;
+        if (face >= 0 && (onCanvas == model || printable != null && onCanvas == printable.shown))
+        {
+            int modelFace = onCanvas == model ? face : printable.modelFace(face);
+            piece = modelFace < 0 ? -1 : pieces().piece[modelFaces[modelFace]];
+        }
+        int was = picked;
+        picked = piece == picked ? -1 : piece;
+        if (picked != was)
+        {
+            updatePieceButtons();
+            showView();
+        }
+    }
+
+    /** Takes the piece picked out of the model, unless it's all that's left. */
+    void removePicked()
+    {
+        if (picked < 0 || pieces.count - removedCount() <= 1)
+        {
+            return;
+        }
+        removed[picked] = true;
+        picked = -1;
+        modelChanged();
+    }
+
+    /** Puts every piece taken out back. */
+    void restoreAll()
+    {
+        if (removedCount() == 0)
+        {
+            return;
+        }
+        Arrays.fill(removed, false);
+        picked = -1;
+        modelChanged();
+    }
+
+    private int removedCount()
+    {
+        int count = 0;
+        for (int p = 0; removed != null && p < removed.length; p++)
+        {
+            count += removed[p] ? 1 : 0;
+        }
+        return count;
+    }
+
+    /** Pieces were taken out or put back: the model is made again, and its print. */
+    private void modelChanged()
+    {
+        if (removedCount() == 0)
+        {
+            model = mesh;
+            modelFaces = everyFace(mesh);
+        }
+        else
+        {
+            modelFaces = pieces.kept(removed);
+            model = Pieces.only(mesh, modelFaces);
+        }
+        // The print was of the model as it was: it goes, along with any being made
+        asked++;
+        printable = null;
+        making = false;
+        problem = null;
+        tried = null;
+        triedModel = null;
+        if (filaments.showsPrint())
+        {
+            makePrintIfNeeded(printSettings());
+        }
+        updatePieceButtons();
+        showView();
+    }
+
+    private void updatePieceButtons()
+    {
+        int out = removedCount();
+        remove.setVisible(picked >= 0);
+        remove.setEnabled(picked >= 0 && pieces.count - out > 1);
+        restore.setVisible(out > 0);
+        restore.setText(out == 1 ? "Bring back 1 piece" : "Bring back " + out + " pieces");
+        fit(restore);
+        canvas.revalidate();
+        canvas.repaint();
+    }
+
+    private static int[] everyFace(Mesh mesh)
+    {
+        int[] faces = new int[mesh.faceCount()];
+        for (int f = 0; f < faces.length; f++)
+        {
+            faces[f] = f;
+        }
+        return faces;
     }
 
     /** Game or Print, or the filaments, changed. */
@@ -196,11 +372,12 @@ final class ViewerPanel extends JPanel
      */
     private void makePrintIfNeeded(PrintSettings settings)
     {
-        if (settings == null || settings.sameShape(tried))
+        if (settings == null || settings.sameShape(tried) && triedModel == model)
         {
             return;
         }
-        if (tried != null && tried.sizeMm == settings.sizeMm && (making || printable != null || problem != null))
+        if (tried != null && triedModel == model && tried.sizeMm == settings.sizeMm
+            && (making || printable != null || problem != null))
         {
             tried = settings;
             if (printable != null)
@@ -211,6 +388,8 @@ final class ViewerPanel extends JPanel
         }
         int ticket = ++asked;
         tried = settings;
+        triedModel = model;
+        Mesh target = model;
         making = true;
         printable = null;
         problem = null;
@@ -220,7 +399,7 @@ final class ViewerPanel extends JPanel
             String failed = null;
             try
             {
-                made = Printable.of(mesh, settings);
+                made = Printable.of(target, settings);
                 if (made.isEmpty())
                 {
                     failed = "it's too thin to hold a wall";
@@ -257,18 +436,37 @@ final class ViewerPanel extends JPanel
         PrintColors colors = filaments.colors();
         if (print && printable != null && colors != null)
         {
-            canvas.show(printable.shown, printable.colors(colors));
+            int[] rgb = printable.colors(colors);
+            for (int t = 0; picked >= 0 && t < rgb.length; t++)
+            {
+                int face = printable.modelFace(t);
+                if (face >= 0 && pieces.piece[modelFaces[face]] == picked)
+                {
+                    rgb[t] = lit(rgb[t]);
+                }
+            }
+            show(printable.shown, rgb);
         }
         else if (print)
         {
             // Until the print is ready: the model in the filaments' colors
-            canvas.show(mesh, filaments.shownColors());
+            int[] all = filaments.shownColors();
+            int[] rgb = null;
+            if (all != null)
+            {
+                rgb = new int[model.faceCount()];
+                for (int f = 0; f < rgb.length; f++)
+                {
+                    rgb[f] = all[modelFaces[f]];
+                }
+            }
+            show(model, lightPicked(rgb));
         }
         else
         {
-            canvas.show(mesh, null);
+            show(model, lightPicked(null));
         }
-        canvas.setInfo(print ? printText(printable, making, problem) : sizeText(mesh, actions.printSettings()));
+        canvas.setInfo(print ? printText(printable, making, problem) : sizeText(model, actions.printSettings()));
 
         boolean ready = !print || printable != null && colors != null;
         save.setEnabled(ready);
@@ -277,9 +475,49 @@ final class ViewerPanel extends JPanel
             : making ? "Making it printable…" : "There's no print to save");
     }
 
+    private void show(Mesh shown, int[] rgb)
+    {
+        onCanvas = shown;
+        canvas.show(shown, rgb);
+    }
+
+    /** The model's colors, these or its own, with the piece picked lit up; null for its own when none is. */
+    private int[] lightPicked(int[] rgb)
+    {
+        if (picked < 0)
+        {
+            return rgb;
+        }
+        int[] out = (rgb != null ? rgb : model.color).clone();
+        for (int f = 0; f < out.length; f++)
+        {
+            if (pieces.piece[modelFaces[f]] == picked)
+            {
+                out[f] = lit(out[f]);
+            }
+        }
+        return out;
+    }
+
+    /** A color lit up, as a picked piece is: most of the way to the brand's orange. */
+    static int lit(int rgb)
+    {
+        int orange = ColorScheme.BRAND_ORANGE.getRGB();
+        int r = ((rgb >> 16 & 0xFF) * 2 + (orange >> 16 & 0xFF) * 3) / 5;
+        int g = ((rgb >> 8 & 0xFF) * 2 + (orange >> 8 & 0xFF) * 3) / 5;
+        int b = ((rgb & 0xFF) * 2 + (orange & 0xFF) * 3) / 5;
+        return r << 16 | g << 8 | b;
+    }
+
     ViewerCanvas canvas()
     {
         return canvas;
+    }
+
+    /** The model as shown and saved, any pieces taken out. */
+    Mesh model()
+    {
+        return model;
     }
 
     /**

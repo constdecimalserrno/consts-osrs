@@ -86,7 +86,7 @@ final class MeshExporter
                     }
                     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(file), 1 << 16))
                     {
-                        ThreeMfWriter.write(print.mesh, palette, onFilament, out);
+                        ThreeMfWriter.write(print.mesh, palette, onFilament, print.modelFaces, out);
                     }
                     break;
                 case OBJ:
@@ -146,7 +146,8 @@ final class MeshExporter
                 case THREE_MF:
                     try (OutputStream out = new BufferedOutputStream(new FileOutputStream(file), 1 << 16))
                     {
-                        ThreeMfWriter.write(mesh, colors.palette(), printable.filaments(colors), out);
+                        ThreeMfWriter.write(mesh, colors.palette(), printable.filaments(colors),
+                            printable.print.modelFaces, out);
                     }
                     break;
                 case OBJ:
