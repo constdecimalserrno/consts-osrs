@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import java.awt.Color;
 import java.util.function.Function;
@@ -11,53 +11,53 @@ import java.util.function.Predicate;
 enum AlertType
 {
     HEALTH("Health", "Current/max Hitpoints. Alerts below the threshold.",
-        ConstsAfkConfig::enableHealthAlert, ConstsAfkConfig::healthFlashColor,
-        ConstsAfkConfig::healthDismissOnClick),
+        ConstsExpConfig::enableHealthAlert, ConstsExpConfig::healthFlashColor,
+        ConstsExpConfig::healthDismissOnClick),
     PRAYER("Prayer", "Current/max Prayer. Alerts below the threshold.",
-        ConstsAfkConfig::enablePrayerAlert, ConstsAfkConfig::prayerFlashColor,
-        ConstsAfkConfig::prayerDismissOnClick),
+        ConstsExpConfig::enablePrayerAlert, ConstsExpConfig::prayerFlashColor,
+        ConstsExpConfig::prayerDismissOnClick),
     IDLE("Idle", "Time since last activity (movement, animation, combat, XP).",
-        ConstsAfkConfig::enableIdleAlert, ConstsAfkConfig::idleFlashColor,
-        ConstsAfkConfig::idleDismissOnClick),
+        ConstsExpConfig::enableIdleAlert, ConstsExpConfig::idleFlashColor,
+        ConstsExpConfig::idleDismissOnClick),
     AGGRO("Aggro", "Time until NPC aggression wears off. Leave the area, or right-click the panel, to reset it.",
-        ConstsAfkConfig::enableTimerAlert, ConstsAfkConfig::timerFlashColor,
-        ConstsAfkConfig::aggroDismissOnClick),
+        ConstsExpConfig::enableTimerAlert, ConstsExpConfig::timerFlashColor,
+        ConstsExpConfig::aggroDismissOnClick),
     LOGOUT("Logout", "Time until the 25-minute inactivity logout. Clicks and keys reset it.",
-        ConstsAfkConfig::enableLogoutWarning, ConstsAfkConfig::logoutWarningFlashColor,
+        ConstsExpConfig::enableLogoutWarning, ConstsExpConfig::logoutWarningFlashColor,
         config -> true),
     POTION("Potion", "Lights up when a potion or effect is about to expire.",
-        ConstsAfkConfig::enablePotionExpiryAlert, ConstsAfkConfig::potionExpiryFlashColor,
-        ConstsAfkConfig::potionDismissOnClick),
+        ConstsExpConfig::enablePotionExpiryAlert, ConstsExpConfig::potionExpiryFlashColor,
+        ConstsExpConfig::potionDismissOnClick),
     RANDOM("Random", "Lights up when a random event targets you.",
-        ConstsAfkConfig::enableRandomEventAlert, ConstsAfkConfig::randomEventFlashColor,
-        ConstsAfkConfig::randomDismissOnClick),
+        ConstsExpConfig::enableRandomEventAlert, ConstsExpConfig::randomEventFlashColor,
+        ConstsExpConfig::randomDismissOnClick),
     CANNON("Cannon", "Lights up when your cannon is out of ammo.",
-        ConstsAfkConfig::enableCannonAlert, ConstsAfkConfig::cannonFlashColor,
-        ConstsAfkConfig::cannonDismissOnClick),
+        ConstsExpConfig::enableCannonAlert, ConstsExpConfig::cannonFlashColor,
+        ConstsExpConfig::cannonDismissOnClick),
     INVENTORY_FULL("Inv Full", "Lights up when your inventory is too full to hold more.",
-        ConstsAfkConfig::enableInventoryFullAlert, ConstsAfkConfig::inventoryFullFlashColor,
-        ConstsAfkConfig::inventoryFullDismissOnClick),
+        ConstsExpConfig::enableInventoryFullAlert, ConstsExpConfig::inventoryFullFlashColor,
+        ConstsExpConfig::inventoryFullDismissOnClick),
     SALVAGE("Salvage", "Lights up when a shipwreck is depleted or you run out of salvage to sort.",
-        ConstsAfkConfig::enableSailingAlert, ConstsAfkConfig::sailingFlashColor,
-        ConstsAfkConfig::salvageDismissOnClick),
+        ConstsExpConfig::enableSailingAlert, ConstsExpConfig::sailingFlashColor,
+        ConstsExpConfig::salvageDismissOnClick),
     CARGO("Cargo", "Lights up when your crew can't salvage because the cargo hold is full.",
-        ConstsAfkConfig::enableCargoHoldAlert, ConstsAfkConfig::cargoHoldFlashColor,
-        ConstsAfkConfig::cargoDismissOnClick),
+        ConstsExpConfig::enableCargoHoldAlert, ConstsExpConfig::cargoHoldFlashColor,
+        ConstsExpConfig::cargoDismissOnClick),
     FORESTRY("Forestry", "Lights up when a Forestry event you picked starts nearby, and names it.",
-        ConstsAfkConfig::enableForestryAlert, ConstsAfkConfig::forestryFlashColor,
-        ConstsAfkConfig::forestryDismissOnClick);
+        ConstsExpConfig::enableForestryAlert, ConstsExpConfig::forestryFlashColor,
+        ConstsExpConfig::forestryDismissOnClick);
 
     private static final int PHASE_SLOTS = values().length;
 
     private final String label;
     private final String description;
-    private final Predicate<ConstsAfkConfig> toggle;
-    private final Function<ConstsAfkConfig, Color> flashColor;
-    private final Predicate<ConstsAfkConfig> dismissOnClick;
+    private final Predicate<ConstsExpConfig> toggle;
+    private final Function<ConstsExpConfig, Color> flashColor;
+    private final Predicate<ConstsExpConfig> dismissOnClick;
 
     // Logout's "dismiss" is the click itself: any click or key press restarts its countdown.
-    AlertType(String label, String description, Predicate<ConstsAfkConfig> toggle, Function<ConstsAfkConfig, Color> flashColor,
-        Predicate<ConstsAfkConfig> dismissOnClick)
+    AlertType(String label, String description, Predicate<ConstsExpConfig> toggle, Function<ConstsExpConfig, Color> flashColor,
+        Predicate<ConstsExpConfig> dismissOnClick)
     {
         this.label = label;
         this.description = description;
@@ -67,7 +67,7 @@ enum AlertType
     }
 
     /** Whether a click or key press silences this alert, per its Dismiss on Click option. */
-    boolean dismissesOnClick(ConstsAfkConfig config)
+    boolean dismissesOnClick(ConstsExpConfig config)
     {
         return dismissOnClick.test(config);
     }
@@ -83,12 +83,12 @@ enum AlertType
     }
 
     /** The alert's own Enable checkbox, which only applies under the Custom preset. */
-    boolean isToggledOn(ConstsAfkConfig config)
+    boolean isToggledOn(ConstsExpConfig config)
     {
         return toggle.test(config);
     }
 
-    Color getFlashColor(ConstsAfkConfig config)
+    Color getFlashColor(ConstsExpConfig config)
     {
         return flashColor.apply(config);
     }

@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import net.runelite.api.SoundEffectID;
 
@@ -29,7 +29,7 @@ public enum AlertSound
     }
 
     /** The game sound effect to play, or -1 for the system beep. */
-    int soundEffectId(ConstsAfkConfig config)
+    int soundEffectId(ConstsExpConfig config)
     {
         return this == CUSTOM ? Math.max(-1, config.customSoundId()) : soundEffectId;
     }

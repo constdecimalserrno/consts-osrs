@@ -1,7 +1,7 @@
 package com.osrs;
 
-import com.constsafk.ConstsAfkPlugin;
 import com.constsdestination.ConstsDestinationPlugin;
+import com.constsexp.ConstsExpPlugin;
 import com.constsleaderboard.ConstsLeaderboardPlugin;
 import com.constsmodels.ConstsModelsPlugin;
 import com.constsworld.ConstsWorldPlugin;
@@ -13,7 +13,7 @@ public class PluginLauncher
     public static void main(String[] args) throws Exception
     {
         ExternalPluginManager.loadBuiltin(
-            ConstsAfkPlugin.class,
+            ConstsExpPlugin.class,
             ConstsDestinationPlugin.class,
             ConstsLeaderboardPlugin.class,
             ConstsWorldPlugin.class,

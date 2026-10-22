@@ -11,15 +11,15 @@ import org.junit.Test;
 public class ConfigSidePanelCopyTest
 {
     /**
-     * ConfigSidePanel lives in consts-AFK, tested there; this copy has to match it, package line aside. Skipped when
+     * ConfigSidePanel lives in consts-EXP, tested there; this copy has to match it, package line aside. Skipped when
      * this plugin is built alone, as the Plugin Hub builds it.
      */
     @Test
-    public void itMatchesConstsAfksCopy() throws Exception
+    public void itMatchesConstsExpsCopy() throws Exception
     {
-        Path afk = Paths.get("../consts-afk/src/main/java/com/constsafk/ConfigSidePanel.java");
-        assumeTrue(Files.exists(afk));
-        String theirs = new String(Files.readAllBytes(afk), "UTF-8").replace("package com.constsafk;", "package com.constsdestination;");
+        Path exp = Paths.get("../consts-exp/src/main/java/com/constsexp/ConfigSidePanel.java");
+        assumeTrue(Files.exists(exp));
+        String theirs = new String(Files.readAllBytes(exp), "UTF-8").replace("package com.constsexp;", "package com.constsdestination;");
         String ours = new String(Files.readAllBytes(Paths.get("src/main/java/com/constsdestination/ConfigSidePanel.java")), "UTF-8");
         assertEquals(theirs, ours);
     }

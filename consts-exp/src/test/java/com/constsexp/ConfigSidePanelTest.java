@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -40,7 +40,7 @@ import org.junit.Test;
 
 public class ConfigSidePanelTest
 {
-    private static final String GROUP = ConstsAfkConfig.GROUP;
+    private static final String GROUP = ConstsExpConfig.GROUP;
 
     private final Map<String, String> saved = new HashMap<>();
     private ConfigManager configManager;
@@ -58,17 +58,17 @@ public class ConfigSidePanelTest
             String value = saved.get(i.getArgument(1));
             return value == null ? null : Integer.valueOf(value);
         });
-        ConstsAfkConfig config = (ConstsAfkConfig) Proxy.newProxyInstance(ConstsAfkConfig.class.getClassLoader(),
-            new Class<?>[]{ConstsAfkConfig.class}, (proxy, method, args) -> null);
+        ConstsExpConfig config = (ConstsExpConfig) Proxy.newProxyInstance(ConstsExpConfig.class.getClassLoader(),
+            new Class<?>[]{ConstsExpConfig.class}, (proxy, method, args) -> null);
         descriptor = configManager.getConfigDescriptor(config);
-        panel = new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsAfkPlugin());
+        panel = new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin());
     }
 
     @Test
     public void itDrawsEverySettingYouCanSeeAndEverySection()
     {
         List<String> labels = labels(panel);
-        assertTrue(labels.contains("consts-AFK"));
+        assertTrue(labels.contains("consts-EXP"));
         for (ConfigSectionDescriptor section : descriptor.getSections())
         {
             assertTrue(section.name(), labels.contains(section.name()));
@@ -146,13 +146,13 @@ public class ConfigSidePanelTest
     @Test
     public void theMasterSwitchSitsBesideTheTitleInsteadOfInTheList()
     {
-        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        saved.put(ConstsExpConfig.MASTER_KEY, "true");
         ConfigSidePanel withSwitch = withMasterSwitch();
 
-        JToggleButton toggle = find(withSwitch, JToggleButton.class, b -> ConstsAfkConfig.MASTER_KEY.equals(b.getName()));
+        JToggleButton toggle = find(withSwitch, JToggleButton.class, b -> ConstsExpConfig.MASTER_KEY.equals(b.getName()));
         assertNotNull(toggle);
         assertTrue(toggle.isSelected());
-        assertNull(find(withSwitch, JPanel.class, p -> ConstsAfkConfig.MASTER_KEY.equals(p.getName())));
+        assertNull(find(withSwitch, JPanel.class, p -> ConstsExpConfig.MASTER_KEY.equals(p.getName())));
         assertFalse(labels(withSwitch).contains("Master Switch"));
         // Without one, it's an ordinary row.
         assertTrue(labels(panel).contains("Master Switch"));
@@ -161,25 +161,25 @@ public class ConfigSidePanelTest
     @Test
     public void theMasterSwitchSavesWhenClickedAndFollowsTheConfig()
     {
-        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        saved.put(ConstsExpConfig.MASTER_KEY, "true");
         ConfigSidePanel withSwitch = withMasterSwitch();
-        JToggleButton toggle = find(withSwitch, JToggleButton.class, b -> ConstsAfkConfig.MASTER_KEY.equals(b.getName()));
+        JToggleButton toggle = find(withSwitch, JToggleButton.class, b -> ConstsExpConfig.MASTER_KEY.equals(b.getName()));
 
         toggle.doClick();
-        verify(configManager).setConfiguration(GROUP, ConstsAfkConfig.MASTER_KEY, "false");
+        verify(configManager).setConfiguration(GROUP, ConstsExpConfig.MASTER_KEY, "false");
 
-        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        saved.put(ConstsExpConfig.MASTER_KEY, "true");
         withSwitch.reload();
         assertTrue(toggle.isSelected());
-        verify(configManager, never()).setConfiguration(GROUP, ConstsAfkConfig.MASTER_KEY, "true");
+        verify(configManager, never()).setConfiguration(GROUP, ConstsExpConfig.MASTER_KEY, "true");
     }
 
     private ConfigSidePanel withMasterSwitch()
     {
-        ConstsAfkConfig config = (ConstsAfkConfig) Proxy.newProxyInstance(ConstsAfkConfig.class.getClassLoader(),
-            new Class<?>[]{ConstsAfkConfig.class}, (proxy, method, args) -> null);
-        return new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsAfkPlugin(),
-            ConstsAfkConfig.MASTER_KEY);
+        ConstsExpConfig config = (ConstsExpConfig) Proxy.newProxyInstance(ConstsExpConfig.class.getClassLoader(),
+            new Class<?>[]{ConstsExpConfig.class}, (proxy, method, args) -> null);
+        return new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
+            ConstsExpConfig.MASTER_KEY);
     }
 
     @Test
@@ -192,7 +192,7 @@ public class ConfigSidePanelTest
     @Test
     public void theSettingsComeFirstThenItsOwnTabs()
     {
-        saved.put(ConstsAfkConfig.MASTER_KEY, "true");
+        saved.put(ConstsExpConfig.MASTER_KEY, "true");
         ConfigSidePanel tabbed = withMasterSwitch();
         tabbed.addTab("Packs", new JLabel("pack list"));
         tabbed.addTab("More", new JLabel("more things"));
@@ -205,8 +205,8 @@ public class ConfigSidePanelTest
         assertEquals(1, count(tabbed, MaterialTabGroup.class));
 
         // The title and the master switch stay on top of the tabs.
-        assertTrue(labels(tabbed).contains("consts-AFK"));
-        assertNotNull(find(tabbed, JToggleButton.class, b -> ConstsAfkConfig.MASTER_KEY.equals(b.getName())));
+        assertTrue(labels(tabbed).contains("consts-EXP"));
+        assertNotNull(find(tabbed, JToggleButton.class, b -> ConstsExpConfig.MASTER_KEY.equals(b.getName())));
     }
 
     @Test

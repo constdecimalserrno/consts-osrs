@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2018, Woox <https://github.com/wooxsolo>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's NPC Aggression Timer,
- *   NpcAggroAreaPlugin.java, into a model of its own; the timer, alert and NPC matching are left to consts-AFK)
+ *   NpcAggroAreaPlugin.java, into a model of its own; the timer, alert and NPC matching are left to consts-EXP)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.constsafk;
+package com.constsexp;
 
 import java.awt.Polygon;
 import java.awt.geom.Area;
@@ -53,7 +53,7 @@ final class AggroArea
     static final int TELEPORT_DISTANCE = SAFE_AREA_RADIUS * 4;
     static final long AGGRESSIVE_TIME_MS = TimeUnit.SECONDS.toMillis(600L);
 
-    // Saved per RuneScape profile in consts-AFK's own config group, under keys of its own: sharing NPC Aggression
+    // Saved per RuneScape profile in consts-EXP's own config group, under keys of its own: sharing NPC Aggression
     // Timer's would let the two plugins clear each other's state at login.
     static final String CENTER1_KEY = "aggroCenter1";
     static final String CENTER2_KEY = "aggroCenter2";
@@ -244,23 +244,23 @@ final class AggroArea
 
     private void load(ConfigManager configManager, long nowMillis)
     {
-        safeCenters[0] = configManager.getRSProfileConfiguration(ConstsAfkConfig.GROUP, CENTER1_KEY, WorldPoint.class);
-        safeCenters[1] = configManager.getRSProfileConfiguration(ConstsAfkConfig.GROUP, CENTER2_KEY, WorldPoint.class);
-        lastPlayerLocation = configManager.getRSProfileConfiguration(ConstsAfkConfig.GROUP, LOCATION_KEY,
+        safeCenters[0] = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, CENTER1_KEY, WorldPoint.class);
+        safeCenters[1] = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, CENTER2_KEY, WorldPoint.class);
+        lastPlayerLocation = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, LOCATION_KEY,
             WorldPoint.class);
 
         // Negative when it ran out before logging out: the alert then fires right after login.
-        Duration timeLeft = configManager.getRSProfileConfiguration(ConstsAfkConfig.GROUP, DURATION_KEY,
+        Duration timeLeft = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, DURATION_KEY,
             Duration.class);
         endMillis = timeLeft != null ? nowMillis + timeLeft.toMillis() : 0L;
     }
 
     private static void unsave(ConfigManager configManager)
     {
-        configManager.unsetRSProfileConfiguration(ConstsAfkConfig.GROUP, CENTER1_KEY);
-        configManager.unsetRSProfileConfiguration(ConstsAfkConfig.GROUP, CENTER2_KEY);
-        configManager.unsetRSProfileConfiguration(ConstsAfkConfig.GROUP, LOCATION_KEY);
-        configManager.unsetRSProfileConfiguration(ConstsAfkConfig.GROUP, DURATION_KEY);
+        configManager.unsetRSProfileConfiguration(ConstsExpConfig.GROUP, CENTER1_KEY);
+        configManager.unsetRSProfileConfiguration(ConstsExpConfig.GROUP, CENTER2_KEY);
+        configManager.unsetRSProfileConfiguration(ConstsExpConfig.GROUP, LOCATION_KEY);
+        configManager.unsetRSProfileConfiguration(ConstsExpConfig.GROUP, DURATION_KEY);
     }
 
     private void save(ConfigManager configManager, long nowMillis)
@@ -271,10 +271,10 @@ final class AggroArea
         }
         else
         {
-            configManager.setRSProfileConfiguration(ConstsAfkConfig.GROUP, CENTER1_KEY, safeCenters[0]);
-            configManager.setRSProfileConfiguration(ConstsAfkConfig.GROUP, CENTER2_KEY, safeCenters[1]);
-            configManager.setRSProfileConfiguration(ConstsAfkConfig.GROUP, LOCATION_KEY, lastPlayerLocation);
-            configManager.setRSProfileConfiguration(ConstsAfkConfig.GROUP, DURATION_KEY,
+            configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, CENTER1_KEY, safeCenters[0]);
+            configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, CENTER2_KEY, safeCenters[1]);
+            configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, LOCATION_KEY, lastPlayerLocation);
+            configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, DURATION_KEY,
                 Duration.ofMillis(endMillis - nowMillis));
         }
     }

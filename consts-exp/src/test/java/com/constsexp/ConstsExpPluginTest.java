@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -61,22 +61,22 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-public class ConstsAfkPluginTest
+public class ConstsExpPluginTest
 {
     private static final String CARGO_FULL_MESSAGE = "Your crewmate on the salvaging hook cannot salvage as the cargo hold is full.";
 
-    private ConstsAfkPlugin plugin;
+    private ConstsExpPlugin plugin;
     private Client client;
-    private ConstsAfkConfig config;
+    private ConstsExpConfig config;
     private ConfigManager configManager;
     private Player player;
 
     @Before
     public void setUp() throws Exception
     {
-        plugin = new ConstsAfkPlugin();
+        plugin = new ConstsExpPlugin();
         client = mock(Client.class);
-        config = mock(ConstsAfkConfig.class);
+        config = mock(ConstsExpConfig.class);
         configManager = mock(ConfigManager.class);
         player = mock(Player.class);
         ClientThread clientThread = mock(ClientThread.class);
@@ -239,13 +239,13 @@ public class ConstsAfkPluginTest
     @Test
     public void leavingCustomShouldSaveItsToggles()
     {
-        when(configManager.getConfiguration(ConstsAfkConfig.GROUP, "enableHealthAlert")).thenReturn("false");
-        when(configManager.getConfiguration(ConstsAfkConfig.GROUP, "enableCannonAlert")).thenReturn("true");
+        when(configManager.getConfiguration(ConstsExpConfig.GROUP, "enableHealthAlert")).thenReturn("false");
+        when(configManager.getConfiguration(ConstsExpConfig.GROUP, "enableCannonAlert")).thenReturn("true");
 
         plugin.onConfigChanged(presetChange("CUSTOM", "WOODCUTTING"));
 
         ArgumentCaptor<String> saved = ArgumentCaptor.forClass(String.class);
-        verify(configManager).setConfiguration(eq(ConstsAfkConfig.GROUP), eq(ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY),
+        verify(configManager).setConfiguration(eq(ConstsExpConfig.GROUP), eq(ConstsExpConfig.CUSTOM_SNAPSHOT_KEY),
             saved.capture());
         assertTrue(saved.getValue().contains("enableHealthAlert=false"));
         assertTrue(saved.getValue().contains("enableCannonAlert=true"));
@@ -255,14 +255,14 @@ public class ConstsAfkPluginTest
     @Test
     public void returningToCustomShouldRestoreItsToggles()
     {
-        when(configManager.getConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY))
+        when(configManager.getConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.CUSTOM_SNAPSHOT_KEY))
             .thenReturn("enableHealthAlert=false;enableCannonAlert=;notAToggle=true");
 
         plugin.onConfigChanged(presetChange("WOODCUTTING", "CUSTOM"));
 
-        verify(configManager).setConfiguration(ConstsAfkConfig.GROUP, "enableHealthAlert", "false");
-        verify(configManager).unsetConfiguration(ConstsAfkConfig.GROUP, "enableCannonAlert");
-        verify(configManager, never()).setConfiguration(ConstsAfkConfig.GROUP, "notAToggle", "true");
+        verify(configManager).setConfiguration(ConstsExpConfig.GROUP, "enableHealthAlert", "false");
+        verify(configManager).unsetConfiguration(ConstsExpConfig.GROUP, "enableCannonAlert");
+        verify(configManager, never()).setConfiguration(ConstsExpConfig.GROUP, "notAToggle", "true");
     }
 
     @Test
@@ -270,24 +270,24 @@ public class ConstsAfkPluginTest
     {
         plugin.onConfigChanged(presetChange("WOODCUTTING", "MINING"));
 
-        verify(configManager, never()).setConfiguration(eq(ConstsAfkConfig.GROUP),
-            eq(ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY), any(String.class));
-        verify(configManager, never()).getConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY);
+        verify(configManager, never()).setConfiguration(eq(ConstsExpConfig.GROUP),
+            eq(ConstsExpConfig.CUSTOM_SNAPSHOT_KEY), any(String.class));
+        verify(configManager, never()).getConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.CUSTOM_SNAPSHOT_KEY);
     }
 
     @Test
     public void everyAlertsOnOffShouldBePartOfCustom()
     {
-        for (java.lang.reflect.Method method : ConstsAfkConfig.class.getDeclaredMethods())
+        for (java.lang.reflect.Method method : ConstsExpConfig.class.getDeclaredMethods())
         {
             ConfigItem item = method.getAnnotation(ConfigItem.class);
             if (item != null && item.keyName().startsWith("enable") && !item.keyName().equals("enableAllSoundAlerts")
                 && !item.keyName().equals("enableScreenFlash"))
             {
-                assertTrue(item.keyName(), ConstsAfkPlugin.CUSTOM_TOGGLE_KEYS.contains(item.keyName()));
+                assertTrue(item.keyName(), ConstsExpPlugin.CUSTOM_TOGGLE_KEYS.contains(item.keyName()));
             }
         }
-        assertEquals(AlertType.values().length, ConstsAfkPlugin.CUSTOM_TOGGLE_KEYS.size());
+        assertEquals(AlertType.values().length, ConstsExpPlugin.CUSTOM_TOGGLE_KEYS.size());
     }
 
     @Test
@@ -301,7 +301,7 @@ public class ConstsAfkPluginTest
     public void applyPresetShouldPersistSelection()
     {
         plugin.applyPreset(Preset.SALVAGING_AFK);
-        verify(configManager).setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.PRESET_KEY, Preset.SALVAGING_AFK);
+        verify(configManager).setConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.PRESET_KEY, Preset.SALVAGING_AFK);
     }
 
     // Chat triggers
@@ -309,42 +309,42 @@ public class ConstsAfkPluginTest
     @Test
     public void cargoHoldFullMessageShouldTriggerCargoAlert()
     {
-        assertEquals(EnumSet.of(AlertType.CARGO), ConstsAfkPlugin.matchChatTriggers(CARGO_FULL_MESSAGE));
-        assertEquals(EnumSet.of(AlertType.CARGO), ConstsAfkPlugin.matchChatTriggers("<col=ef1020>Your cargo hold is full.</col>"));
+        assertEquals(EnumSet.of(AlertType.CARGO), ConstsExpPlugin.matchChatTriggers(CARGO_FULL_MESSAGE));
+        assertEquals(EnumSet.of(AlertType.CARGO), ConstsExpPlugin.matchChatTriggers("<col=ef1020>Your cargo hold is full.</col>"));
     }
 
     @Test
     public void chatTriggersShouldMatchEachBurstAlert()
     {
         assertEquals(EnumSet.of(AlertType.SALVAGE),
-            ConstsAfkPlugin.matchChatTriggers("You salvage all you can from the shipwreck before it is reclaimed by the sea."));
+            ConstsExpPlugin.matchChatTriggers("You salvage all you can from the shipwreck before it is reclaimed by the sea."));
         assertEquals(EnumSet.of(AlertType.SALVAGE),
-            ConstsAfkPlugin.matchChatTriggers("You have no more salvage to sort."));
+            ConstsExpPlugin.matchChatTriggers("You have no more salvage to sort."));
         assertEquals(EnumSet.of(AlertType.INVENTORY_FULL),
-            ConstsAfkPlugin.matchChatTriggers("Your inventory is too full to hold any more logs."));
+            ConstsExpPlugin.matchChatTriggers("Your inventory is too full to hold any more logs."));
         assertEquals(EnumSet.of(AlertType.CANNON),
-            ConstsAfkPlugin.matchChatTriggers("Your cannon is out of ammo!"));
+            ConstsExpPlugin.matchChatTriggers("Your cannon is out of ammo!"));
         assertEquals(EnumSet.of(AlertType.POTION),
-            ConstsAfkPlugin.matchChatTriggers("<col=ff0000>Your divine ranging potion is about to expire.</col>"));
+            ConstsExpPlugin.matchChatTriggers("<col=ff0000>Your divine ranging potion is about to expire.</col>"));
     }
 
     @Test
     public void chatTriggersShouldIgnoreUnrelatedMessages()
     {
-        assertTrue(ConstsAfkPlugin.matchChatTriggers("You drink some of your super combat potion.").isEmpty());
-        assertTrue(ConstsAfkPlugin.matchChatTriggers("Welcome to Old School RuneScape.").isEmpty());
-        assertTrue(ConstsAfkPlugin.matchChatTriggers(null).isEmpty());
+        assertTrue(ConstsExpPlugin.matchChatTriggers("You drink some of your super combat potion.").isEmpty());
+        assertTrue(ConstsExpPlugin.matchChatTriggers("Welcome to Old School RuneScape.").isEmpty());
+        assertTrue(ConstsExpPlugin.matchChatTriggers(null).isEmpty());
     }
 
     @Test
     public void randomEventMatcherShouldDetectKnownNpcNames()
     {
-        assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("Genie"));
-        assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("Sandwich lady"));
-        assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("<col=ffff00>Freaky Forester</col>"));
-        assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("Mr. Mordaut"));
-        assertFalse(ConstsAfkPlugin.matchesRandomEventNpcName("Banker"));
-        assertFalse(ConstsAfkPlugin.matchesRandomEventNpcName(null));
+        assertTrue(ConstsExpPlugin.matchesRandomEventNpcName("Genie"));
+        assertTrue(ConstsExpPlugin.matchesRandomEventNpcName("Sandwich lady"));
+        assertTrue(ConstsExpPlugin.matchesRandomEventNpcName("<col=ffff00>Freaky Forester</col>"));
+        assertTrue(ConstsExpPlugin.matchesRandomEventNpcName("Mr. Mordaut"));
+        assertFalse(ConstsExpPlugin.matchesRandomEventNpcName("Banker"));
+        assertFalse(ConstsExpPlugin.matchesRandomEventNpcName(null));
     }
 
     // Bursts
@@ -535,7 +535,7 @@ public class ConstsAfkPluginTest
         plugin.onGameObjectDespawned(objectDespawned(ObjectID.GATHERING_EVENT_RISING_ROOTS));
 
         Map<ForestryEvent, Long> goneSince = (Map<ForestryEvent, Long>) getField("forestryGoneSince");
-        goneSince.put(ForestryEvent.RISING_ROOTS, System.currentTimeMillis() - ConstsAfkPlugin.FORESTRY_REARM_MS - 1L);
+        goneSince.put(ForestryEvent.RISING_ROOTS, System.currentTimeMillis() - ConstsExpPlugin.FORESTRY_REARM_MS - 1L);
         plugin.onGameObjectSpawned(objectSpawned(ObjectID.GATHERING_EVENT_RISING_ROOTS));
 
         awaitTrue("roots after a long gap are a new event", () -> plugin.isAlertFiring(AlertType.FORESTRY));
@@ -560,7 +560,7 @@ public class ConstsAfkPluginTest
     public void forestryNpcsShouldLeaveOtherNpcsToTheRandomAlert()
     {
         assertNull(ForestryEvent.forNpc(0));
-        assertTrue(ConstsAfkPlugin.matchesRandomEventNpcName("Freaky Forester"));
+        assertTrue(ConstsExpPlugin.matchesRandomEventNpcName("Freaky Forester"));
     }
 
     // Random events
@@ -649,8 +649,8 @@ public class ConstsAfkPluginTest
         when(config.alertSound()).thenReturn(AlertSound.TOWN_CRIER_BELL);
         when(config.soundVolume()).thenReturn(96);
         ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(ConstsAfkConfig.GROUP);
-        changed.setKey(ConstsAfkConfig.ALERT_SOUND_KEY);
+        changed.setGroup(ConstsExpConfig.GROUP);
+        changed.setKey(ConstsExpConfig.ALERT_SOUND_KEY);
 
         plugin.onConfigChanged(changed);
 
@@ -904,7 +904,7 @@ public class ConstsAfkPluginTest
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
         invokePrivate("onAggroTimerDue");
         ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(ConstsAfkConfig.GROUP);
+        changed.setGroup(ConstsExpConfig.GROUP);
         changed.setProfile("rsprofile.test");
         changed.setKey(AggroArea.CENTER1_KEY);
 
@@ -1011,14 +1011,14 @@ public class ConstsAfkPluginTest
         setField("sessionActive", false);
         setField("overlayManager", mock(OverlayManager.class));
         setField("mouseManager", mock(MouseManager.class));
-        setField("flashOverlay", mock(ConstsAfkFlashOverlay.class));
-        setField("statusOverlay", mock(ConstsAfkStatusOverlay.class));
-        setField("aggroAreaOverlay", mock(ConstsAfkAggroAreaOverlay.class));
+        setField("flashOverlay", mock(ConstsExpFlashOverlay.class));
+        setField("statusOverlay", mock(ConstsExpStatusOverlay.class));
+        setField("aggroAreaOverlay", mock(ConstsExpAggroAreaOverlay.class));
         setField("clientToolbar", mock(ClientToolbar.class));
         setField("colorPickerManager", mock(ColorPickerManager.class));
         setField("eventBus", mock(EventBus.class));
         when(configManager.getConfigDescriptor(any())).thenReturn(
-            new ConfigDescriptor(ConstsAfkConfig.class.getAnnotation(ConfigGroup.class), List.of(), List.of()));
+            new ConfigDescriptor(ConstsExpConfig.class.getAnnotation(ConfigGroup.class), List.of(), List.of()));
         when(config.timerMode()).thenReturn(TimerMode.OSRS_AGGRO_10_MIN);
 
         plugin.startUp();
@@ -1042,13 +1042,13 @@ public class ConstsAfkPluginTest
         {
             saved.put(invocation.getArgument(1), invocation.getArgument(2));
             return null;
-        }).when(configManager).setRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString(), any());
+        }).when(configManager).setRSProfileConfiguration(eq(ConstsExpConfig.GROUP), anyString(), any());
         doAnswer(invocation ->
         {
             saved.remove(invocation.<String>getArgument(1));
             return null;
-        }).when(configManager).unsetRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString());
-        when(configManager.<Object>getRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString(), any(Type.class)))
+        }).when(configManager).unsetRSProfileConfiguration(eq(ConstsExpConfig.GROUP), anyString());
+        when(configManager.<Object>getRSProfileConfiguration(eq(ConstsExpConfig.GROUP), anyString(), any(Type.class)))
             .thenAnswer(invocation -> saved.get(invocation.<String>getArgument(1)));
     }
 
@@ -1131,8 +1131,8 @@ public class ConstsAfkPluginTest
     private static ConfigChanged masterSwitchChange(String from, String to)
     {
         ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(ConstsAfkConfig.GROUP);
-        changed.setKey(ConstsAfkConfig.MASTER_KEY);
+        changed.setGroup(ConstsExpConfig.GROUP);
+        changed.setKey(ConstsExpConfig.MASTER_KEY);
         changed.setOldValue(from);
         changed.setNewValue(to);
         return changed;
@@ -1141,8 +1141,8 @@ public class ConstsAfkPluginTest
     private static ConfigChanged presetChange(String from, String to)
     {
         ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(ConstsAfkConfig.GROUP);
-        changed.setKey(ConstsAfkConfig.PRESET_KEY);
+        changed.setGroup(ConstsExpConfig.GROUP);
+        changed.setKey(ConstsExpConfig.PRESET_KEY);
         changed.setOldValue(from);
         changed.setNewValue(to);
         return changed;
@@ -1180,21 +1180,21 @@ public class ConstsAfkPluginTest
         {
             types[i] = args[i].getClass();
         }
-        Method method = ConstsAfkPlugin.class.getDeclaredMethod(methodName, types);
+        Method method = ConstsExpPlugin.class.getDeclaredMethod(methodName, types);
         method.setAccessible(true);
         return method.invoke(plugin, args);
     }
 
     private void setField(String fieldName, Object value) throws Exception
     {
-        Field field = ConstsAfkPlugin.class.getDeclaredField(fieldName);
+        Field field = ConstsExpPlugin.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(plugin, value);
     }
 
     private Object getField(String fieldName) throws Exception
     {
-        Field field = ConstsAfkPlugin.class.getDeclaredField(fieldName);
+        Field field = ConstsExpPlugin.class.getDeclaredField(fieldName);
         field.setAccessible(true);
         return field.get(plugin);
     }

@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,39 +12,39 @@ import net.runelite.api.gameval.ObjectID;
  */
 enum ForestryEvent
 {
-    RISING_ROOTS("Roots", ConstsAfkConfig::forestryRisingRoots,
+    RISING_ROOTS("Roots", ConstsExpConfig::forestryRisingRoots,
         new int[0],
         new int[]{ObjectID.GATHERING_EVENT_RISING_ROOTS, ObjectID.GATHERING_EVENT_RISING_ROOTS_SPECIAL}),
     // The saved saplings are left out: once the sapling is saved the event is over.
-    STRUGGLING_SAPLING("Sapling", ConstsAfkConfig::forestryStrugglingSapling,
+    STRUGGLING_SAPLING("Sapling", ConstsExpConfig::forestryStrugglingSapling,
         new int[0],
         new int[]{
             ObjectID.GATHERING_EVENT_SAPLING_1X1, ObjectID.GATHERING_EVENT_SAPLING_WITHERING_1X1,
             ObjectID.GATHERING_EVENT_SAPLING_2X2, ObjectID.GATHERING_EVENT_SAPLING_WITHERING_2X2,
             ObjectID.GATHERING_EVENT_SAPLING_3X3, ObjectID.GATHERING_EVENT_SAPLING_WITHERING_3X3}),
-    FLOWERING_TREE("Flowers", ConstsAfkConfig::forestryFloweringTree,
+    FLOWERING_TREE("Flowers", ConstsExpConfig::forestryFloweringTree,
         new int[]{
             NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL01, NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL02,
             NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL03, NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL04,
             NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL05, NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL06,
             NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL07, NpcID.GATHERING_EVENT_FLOWERING_TREE_BUSH_COL08},
         new int[0]),
-    LEPRECHAUN("Leprechaun", ConstsAfkConfig::forestryLeprechaun,
+    LEPRECHAUN("Leprechaun", ConstsExpConfig::forestryLeprechaun,
         new int[]{NpcID.GATHERING_EVENT_WOODCUTTING_LEPRECHAUN},
         new int[0]),
-    BEEHIVE("Beehive", ConstsAfkConfig::forestryBeehive,
+    BEEHIVE("Beehive", ConstsExpConfig::forestryBeehive,
         new int[]{NpcID.GATHERING_EVENT_BEES_BEEBOX_4},
         new int[0]),
-    FRIENDLY_ENT("Ent", ConstsAfkConfig::forestryFriendlyEnt,
+    FRIENDLY_ENT("Ent", ConstsExpConfig::forestryFriendlyEnt,
         new int[]{NpcID.GATHERING_EVENT_ENTLINGS_NPC_01},
         new int[0]),
-    POACHERS("Poachers", ConstsAfkConfig::forestryPoachers,
+    POACHERS("Poachers", ConstsExpConfig::forestryPoachers,
         new int[]{NpcID.GATHERING_EVENT_POACHERS_FOX_OUTDOORS, NpcID.GATHERING_EVENT_POACHERS_FOX_INDOORS},
         new int[0]),
-    PHEASANT_CONTROL("Pheasants", ConstsAfkConfig::forestryPheasantControl,
+    PHEASANT_CONTROL("Pheasants", ConstsExpConfig::forestryPheasantControl,
         new int[]{NpcID.GATHERING_EVENT_PHEASANT_FORESTER},
         new int[0]),
-    ENCHANTMENT_RITUAL("Ritual", ConstsAfkConfig::forestryEnchantmentRitual,
+    ENCHANTMENT_RITUAL("Ritual", ConstsExpConfig::forestryEnchantmentRitual,
         new int[]{NpcID.GATHERING_EVENT_ENCHANTED_RITUAL_DRYAD},
         new int[0]);
 
@@ -67,11 +67,11 @@ enum ForestryEvent
     }
 
     private final String label;
-    private final Predicate<ConstsAfkConfig> wanted;
+    private final Predicate<ConstsExpConfig> wanted;
     private final int[] npcIds;
     private final int[] objectIds;
 
-    ForestryEvent(String label, Predicate<ConstsAfkConfig> wanted, int[] npcIds, int[] objectIds)
+    ForestryEvent(String label, Predicate<ConstsExpConfig> wanted, int[] npcIds, int[] objectIds)
     {
         this.label = label;
         this.wanted = wanted;
@@ -86,7 +86,7 @@ enum ForestryEvent
     }
 
     /** The event's own checkbox in the Forestry section. */
-    boolean isWanted(ConstsAfkConfig config)
+    boolean isWanted(ConstsExpConfig config)
     {
         return wanted.test(config);
     }

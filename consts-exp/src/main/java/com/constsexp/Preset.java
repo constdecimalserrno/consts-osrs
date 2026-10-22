@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -40,13 +40,13 @@ public enum Preset
         this.alerts = Collections.unmodifiableSet(set);
     }
 
-    boolean enables(AlertType type, ConstsAfkConfig config)
+    boolean enables(AlertType type, ConstsExpConfig config)
     {
         return this == CUSTOM ? type.isToggledOn(config) : alerts.contains(type);
     }
 
     /** Every preset is for AFK play, so Idle waits for the animation to stop; Custom asks the Idle section. */
-    boolean holdsIdleWhileAnimating(ConstsAfkConfig config)
+    boolean holdsIdleWhileAnimating(ConstsExpConfig config)
     {
         return this != CUSTOM || config.idleRequireNoAnimation();
     }

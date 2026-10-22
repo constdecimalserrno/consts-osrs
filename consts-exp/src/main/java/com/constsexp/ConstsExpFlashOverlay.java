@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import java.awt.Canvas;
 import java.awt.Color;
@@ -14,16 +14,16 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 
 /** Tints the whole game screen in the colors of every alert currently flashing. */
 @Singleton
-class ConstsAfkFlashOverlay extends Overlay
+class ConstsExpFlashOverlay extends Overlay
 {
     private static final int MAX_FLASH_ALPHA = 180;
 
     private final Client client;
-    private final ConstsAfkPlugin plugin;
-    private final ConstsAfkConfig config;
+    private final ConstsExpPlugin plugin;
+    private final ConstsExpConfig config;
 
     @Inject
-    private ConstsAfkFlashOverlay(Client client, ConstsAfkPlugin plugin, ConstsAfkConfig config)
+    private ConstsExpFlashOverlay(Client client, ConstsExpPlugin plugin, ConstsExpConfig config)
     {
         this.client = client;
         this.plugin = plugin;

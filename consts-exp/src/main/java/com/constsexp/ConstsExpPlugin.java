@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import com.google.inject.Provides;
 import java.awt.Color;
@@ -55,11 +55,11 @@ import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 
 @PluginDescriptor(
-    name = "consts-AFK",
-    description = "AFK alerts you can't sleep through: beeps, screen flashes and a status panel, with presets per activity and Forestry events.",
-    tags = {"afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
+    name = "consts-EXP",
+    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity and Forestry events.",
+    tags = {"xp", "exp", "helper", "afk","combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
 )
-public class ConstsAfkPlugin extends Plugin
+public class ConstsExpPlugin extends Plugin
 {
     static final long LOGOUT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(25L);
 
@@ -77,7 +77,7 @@ public class ConstsAfkPlugin extends Plugin
         "enableIdleAlert", "enableLogoutWarning", "enableInventoryFullAlert", "enableRandomEventAlert",
         "enableForestryAlert", "enableSailingAlert", "enableCargoHoldAlert");
     private static final Set<String> SOUND_KEYS = Set.of(
-        ConstsAfkConfig.ALERT_SOUND_KEY, ConstsAfkConfig.CUSTOM_SOUND_KEY, ConstsAfkConfig.SOUND_VOLUME_KEY);
+        ConstsExpConfig.ALERT_SOUND_KEY, ConstsExpConfig.CUSTOM_SOUND_KEY, ConstsExpConfig.SOUND_VOLUME_KEY);
 
     private static final Set<AlertType> LOOP_ALERTS = EnumSet.of(
         AlertType.HEALTH, AlertType.PRAYER, AlertType.IDLE, AlertType.LOGOUT);
@@ -109,7 +109,7 @@ public class ConstsAfkPlugin extends Plugin
     private ClientThread clientThread;
 
     @Inject
-    private ConstsAfkConfig config;
+    private ConstsExpConfig config;
 
     @Inject
     private ConfigManager configManager;
@@ -121,13 +121,13 @@ public class ConstsAfkPlugin extends Plugin
     private MouseManager mouseManager;
 
     @Inject
-    private ConstsAfkFlashOverlay flashOverlay;
+    private ConstsExpFlashOverlay flashOverlay;
 
     @Inject
-    private ConstsAfkStatusOverlay statusOverlay;
+    private ConstsExpStatusOverlay statusOverlay;
 
     @Inject
-    private ConstsAfkAggroAreaOverlay aggroAreaOverlay;
+    private ConstsExpAggroAreaOverlay aggroAreaOverlay;
 
     @Inject
     private ClientToolbar clientToolbar;
@@ -181,16 +181,16 @@ public class ConstsAfkPlugin extends Plugin
         }
     };
 
-    public ConstsAfkPlugin()
+    public ConstsExpPlugin()
     {
         LOOP_ALERTS.forEach(type -> loops.put(type, new LoopAlert(type)));
         BURST_ALERTS.forEach(type -> bursts.put(type, new BurstAlert(type)));
     }
 
     @Provides
-    ConstsAfkConfig provideConfig(ConfigManager configManager)
+    ConstsExpConfig provideConfig(ConfigManager configManager)
     {
-        return configManager.getConfig(ConstsAfkConfig.class);
+        return configManager.getConfig(ConstsExpConfig.class);
     }
 
     @Override
@@ -199,10 +199,10 @@ public class ConstsAfkPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
-        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsAfkConfig.MASTER_KEY);
+        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsExpConfig.MASTER_KEY);
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
-            .tooltip("consts-AFK")
+            .tooltip("consts-EXP")
             .icon(ImageUtil.loadImageResource(getClass(), "panel_icon.png"))
             .priority(4)
             .panel(configPanel)
@@ -264,16 +264,16 @@ public class ConstsAfkPlugin extends Plugin
     public void onConfigChanged(ConfigChanged event)
     {
         // The aggro area saves itself per RuneScape profile in this group at logout and login. Those aren't settings.
-        if (!ConstsAfkConfig.GROUP.equals(event.getGroup()) || event.getProfile() != null)
+        if (!ConstsExpConfig.GROUP.equals(event.getGroup()) || event.getProfile() != null)
         {
             return;
         }
 
-        if (ConstsAfkConfig.MASTER_KEY.equals(event.getKey()))
+        if (ConstsExpConfig.MASTER_KEY.equals(event.getKey()))
         {
             clientThread.invokeLater(this::followMasterSwitch);
         }
-        else if (ConstsAfkConfig.PRESET_KEY.equals(event.getKey()))
+        else if (ConstsExpConfig.PRESET_KEY.equals(event.getKey()))
         {
             keepCustom(event.getOldValue(), event.getNewValue());
         }
@@ -427,15 +427,15 @@ public class ConstsAfkPlugin extends Plugin
             String saved = CUSTOM_TOGGLE_KEYS.stream()
                 .map(key ->
                 {
-                    String value = configManager.getConfiguration(ConstsAfkConfig.GROUP, key);
+                    String value = configManager.getConfiguration(ConstsExpConfig.GROUP, key);
                     return key + "=" + (value == null ? "" : value);
                 })
                 .collect(Collectors.joining(";"));
-            configManager.setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY, saved);
+            configManager.setConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.CUSTOM_SNAPSHOT_KEY, saved);
         }
         else if (returning)
         {
-            String saved = configManager.getConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.CUSTOM_SNAPSHOT_KEY);
+            String saved = configManager.getConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.CUSTOM_SNAPSHOT_KEY);
             if (saved == null)
             {
                 return;
@@ -452,11 +452,11 @@ public class ConstsAfkPlugin extends Plugin
                 if (value.isEmpty())
                 {
                     // Never set before: back to its default.
-                    configManager.unsetConfiguration(ConstsAfkConfig.GROUP, key);
+                    configManager.unsetConfiguration(ConstsExpConfig.GROUP, key);
                 }
                 else
                 {
-                    configManager.setConfiguration(ConstsAfkConfig.GROUP, key, value);
+                    configManager.setConfiguration(ConstsExpConfig.GROUP, key, value);
                 }
             }
         }
@@ -471,7 +471,7 @@ public class ConstsAfkPlugin extends Plugin
 
     void applyPreset(Preset preset)
     {
-        configManager.setConfiguration(ConstsAfkConfig.GROUP, ConstsAfkConfig.PRESET_KEY, preset);
+        configManager.setConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.PRESET_KEY, preset);
     }
 
     /** Whether the alert is raising the alarm right now, as shown by its pulsing status panel bar. */
@@ -1078,7 +1078,7 @@ public class ConstsAfkPlugin extends Plugin
         {
             scheduler = Executors.newSingleThreadScheduledExecutor(r ->
             {
-                Thread thread = new Thread(r, "consts-afk-alerts");
+                Thread thread = new Thread(r, "consts-exp-alerts");
                 thread.setDaemon(true);
                 return thread;
             });

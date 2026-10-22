@@ -25,7 +25,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.constsafk;
+package com.constsexp;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -51,13 +51,13 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 
 /** Outlines the unaggressive area on the ground: one color while NPCs are aggressive, another once they've stopped. */
 @Singleton
-class ConstsAfkAggroAreaOverlay extends Overlay
+class ConstsExpAggroAreaOverlay extends Overlay
 {
     private static final int MAX_LOCAL_DRAW_LENGTH = 20 * Perspective.LOCAL_TILE_SIZE;
 
     private final Client client;
-    private final ConstsAfkConfig config;
-    private final ConstsAfkPlugin plugin;
+    private final ConstsExpConfig config;
+    private final ConstsExpPlugin plugin;
 
     // The outline in local coordinates, rebuilt only when the centers or the loaded scene change.
     private GeneralPath lines;
@@ -66,7 +66,7 @@ class ConstsAfkAggroAreaOverlay extends Overlay
     private int linesBaseY;
 
     @Inject
-    private ConstsAfkAggroAreaOverlay(Client client, ConstsAfkConfig config, ConstsAfkPlugin plugin)
+    private ConstsExpAggroAreaOverlay(Client client, ConstsExpConfig config, ConstsExpPlugin plugin)
     {
         this.client = client;
         this.config = config;

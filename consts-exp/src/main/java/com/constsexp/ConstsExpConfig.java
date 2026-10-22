@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import java.awt.Color;
 import net.runelite.api.SoundEffectID;
@@ -15,14 +15,12 @@ import net.runelite.client.config.Units;
  * General (Timing, Sounds, Screen Flash), then one section per alert, each named for its group (Combat, AFK, Sailing)
  * and kept in group order.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
- * on Click, Color, then whatever is its own. The key names predate this layout and stay, so saved settings carry
- * over.
+ * on Click, Color, then whatever is its own. The key names predate this layout.
  */
-@ConfigGroup(ConstsAfkConfig.GROUP)
-public interface ConstsAfkConfig extends Config
+@ConfigGroup(ConstsExpConfig.GROUP)
+public interface ConstsExpConfig extends Config
 {
-    // Group name from before the consts-AFK rename, kept so saved settings carry over.
-    String GROUP = "afkcombatalerts";
+    String GROUP = "constsexp";
     String MASTER_KEY = "masterSwitch";
     String PRESET_KEY = "preset";
     // Not a setting: Custom's on/off set, saved when you leave Custom for a preset.
@@ -34,7 +32,7 @@ public interface ConstsAfkConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off silences consts-AFK: no alerts, no status panel, no area lines. The plugin itself stays on, so its bell stays in the sidebar.",
+        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its bell stays in the sidebar.",
         position = -1
     )
     default boolean masterSwitch()

@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -288,7 +288,7 @@ public class AggroAreaTest
         when(worldView.getSizeY()).thenReturn(104);
         area.reset(new WorldPoint(3200, 3200, 0), NOW);
 
-        GeneralPath lines = ConstsAfkAggroAreaOverlay.calculateLines(worldView, area);
+        GeneralPath lines = ConstsExpAggroAreaOverlay.calculateLines(worldView, area);
 
         // The square's 21-tile sides are cut into 84 segments. Each corner sits on a tile's south-west edge:
         // scene tile 40 is local 40 * 128.
@@ -324,13 +324,13 @@ public class AggroAreaTest
         {
             saved.put(invocation.getArgument(1), invocation.getArgument(2));
             return null;
-        }).when(configManager).setRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString(), any());
+        }).when(configManager).setRSProfileConfiguration(eq(ConstsExpConfig.GROUP), anyString(), any());
         doAnswer(invocation ->
         {
             saved.remove(invocation.<String>getArgument(1));
             return null;
-        }).when(configManager).unsetRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString());
-        when(configManager.<Object>getRSProfileConfiguration(eq(ConstsAfkConfig.GROUP), anyString(), any(Type.class)))
+        }).when(configManager).unsetRSProfileConfiguration(eq(ConstsExpConfig.GROUP), anyString());
+        when(configManager.<Object>getRSProfileConfiguration(eq(ConstsExpConfig.GROUP), anyString(), any(Type.class)))
             .thenAnswer(invocation -> saved.get(invocation.<String>getArgument(1)));
         return configManager;
     }

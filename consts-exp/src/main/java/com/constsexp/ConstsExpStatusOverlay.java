@@ -1,4 +1,4 @@
-package com.constsafk;
+package com.constsexp;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -24,9 +24,9 @@ import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 
 /** Top-right panel: the active preset, one bar per enabled alert, and the interaction pause countdown. */
 @Singleton
-class ConstsAfkStatusOverlay extends OverlayPanel
+class ConstsExpStatusOverlay extends OverlayPanel
 {
-    private static final String TITLE = "consts-AFK";
+    private static final String TITLE = "consts-EXP";
     private static final int METRIC_WIDTH = 190;
     private static final Color ON_COLOR = new Color(75, 205, 90);
     private static final Color OFF_COLOR = new Color(210, 95, 95);
@@ -39,12 +39,12 @@ class ConstsAfkStatusOverlay extends OverlayPanel
         + " Walk out of the lines until the area settles and the ? goes away.";
 
     private final Client client;
-    private final ConstsAfkPlugin plugin;
-    private final ConstsAfkConfig config;
+    private final ConstsExpPlugin plugin;
+    private final ConstsExpConfig config;
     private final TooltipManager tooltipManager;
 
     @Inject
-    private ConstsAfkStatusOverlay(Client client, ConstsAfkPlugin plugin, ConstsAfkConfig config, TooltipManager tooltipManager)
+    private ConstsExpStatusOverlay(Client client, ConstsExpPlugin plugin, ConstsExpConfig config, TooltipManager tooltipManager)
     {
         this.client = client;
         this.plugin = plugin;
@@ -140,7 +140,7 @@ class ConstsAfkStatusOverlay extends OverlayPanel
             case LOGOUT:
             {
                 long remainingMs = plugin.getLogoutTimerRemainingMillis();
-                return bar(type, formatClock(remainingMs), remainingMs, ConstsAfkPlugin.LOGOUT_TIMEOUT_MS);
+                return bar(type, formatClock(remainingMs), remainingMs, ConstsExpPlugin.LOGOUT_TIMEOUT_MS);
             }
             case FORESTRY:
             {
