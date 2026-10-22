@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.font.FontRenderContext;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -37,6 +38,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
 {
     private static final String TITLE = "consts-EXP";
     private static final Font FONT = FontManager.getRunescapeSmallFont();
+    // Text is measured in the panel's own pixels, whatever the graphics' transform.
+    private static final FontRenderContext FRC = new FontRenderContext(null, false, false);
     private static final Color INFO_COLOR = new Color(255, 210, 80);
     private static final Color LABEL_COLOR = new Color(215, 208, 196);
     private static final Color QUIET_COLOR = new Color(16, 13, 10, 153);
@@ -286,9 +289,9 @@ class ConstsExpStatusOverlay extends OverlayPanel
     }
 
     /** The pixels the text's ink covers when drawn at 0, 0. Like the mockup, rows line text up by its ink. */
-    private static Rectangle ink(Graphics2D graphics, String text)
+    private static Rectangle ink(String text)
     {
-        return FONT.createGlyphVector(graphics.getFontRenderContext(), text).getPixelBounds(null, 0, 0);
+        return FONT.createGlyphVector(FRC, text).getVisualBounds().getBounds();
     }
 
     /** Text as RuneLite's TextComponent draws it: a black shadow 1 px down and right, then the text. */
@@ -364,8 +367,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
         @Override
         public Dimension render(Graphics2D graphics)
         {
-            Rectangle labelInk = ink(graphics, label);
-            Rectangle tagInk = ink(graphics, tag);
+            Rectangle labelInk = ink(label);
+            Rectangle tagInk = ink(tag);
             // A tag too long to sit 3 px clear of the name (the Salvaging presets) gets its own line under it.
             int tagY = labelInk.width + 3 + tagInk.width + 4 <= width ? location.y : location.y + 13;
             int right = location.x + width;
@@ -424,8 +427,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
 
             Color iconColor = foreground != null ? foreground : shade(ink, 0.9);
             icon(graphics, icon, x + 2, y + 3, iconColor);
-            text(graphics, label, x + 14 - ink(graphics, label).x, y + 14, foreground != null ? foreground : LABEL_COLOR);
-            Rectangle valueInk = ink(graphics, value);
+            text(graphics, label, x + 14 - ink(label).x, y + 14, foreground != null ? foreground : LABEL_COLOR);
+            Rectangle valueInk = ink(value);
             int valueX = x + width - 2 - valueInk.x - valueInk.width;
             text(graphics, value, valueX, y + 14, foreground != null ? foreground : Color.WHITE);
             if (held)
