@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2017, Adam <Adam@sigterm.info>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: cut down to one plugin's settings in its own sidebar
- * panel, kept up to date while it's open, with a master switch and optional tabs of the plugin's own)
+ * panel, kept up to date while it's open, with a master switch, optional settings tabs and tabs of the plugin's own)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -118,6 +118,10 @@ import org.slf4j.LoggerFactory;
  * <p>A plugin can also add tabs of its own (addTab). Then the title and switch sit over a row of tabs: Settings,
  * which the panel opens on, then the plugin's. Without one there are no tabs, only the settings.
  *
+ * <p>And it can split its settings into tabs (addSettingsTab), each holding the sections it names, in place of
+ * Settings. The settings outside any section, and any section no tab names, go on the first; Reset goes at the end of
+ * the last.
+ *
  * <p>Each consts-osrs plugin keeps its own copy, since each one is built alone for the Plugin Hub. The copies differ
  * only in their package line.
  */
@@ -163,8 +167,10 @@ class ConfigSidePanel extends PluginPanel
     private final JToggleButton masterSwitch;
     /** The title and master switch, and the tabs under them once there are any. */
     private final JPanel header;
-    /** The settings, scrolling: the whole panel below the title, or the Settings tab. */
-    private final JScrollPane settingsView;
+    /** Every setting, scrolling: the whole panel below the title, or the Settings tab. */
+    private final SettingsTab settings = new SettingsTab(SETTINGS_TAB, List.of());
+    /** Settings alone, or the plugin's settings tabs in its place, in the order they were added. */
+    private final List<SettingsTab> settingsTabs = new ArrayList<>(List.of(settings));
     /** The plugin's own tabs, title to contents, in the order they were added. */
     private final Map<String, JComponent> tabs = new LinkedHashMap<>();
     /** Shows the chosen tab's contents; null until the first tab is added. */
@@ -172,7 +178,6 @@ class ConfigSidePanel extends PluginPanel
     private MaterialTabGroup tabGroup;
 
     private final TitleCaseListCellRenderer listCellRenderer = new TitleCaseListCellRenderer();
-    private final JPanel mainPanel;
     private final Map<String, Boolean> sectionOpen = new HashMap<>();
     /** One per setting on screen: reads the setting back and shows it, if the screen is behind. */
     private final List<Runnable> loaders = new ArrayList<>();
@@ -244,35 +249,44 @@ class ConfigSidePanel extends PluginPanel
             masterSwitch = null;
         }
 
-        mainPanel = new FixedWidthPanel();
-        mainPanel.setBorder(new EmptyBorder(8, 10, 10, 10));
-        mainPanel.setLayout(new DynamicGridLayout(0, 1, 0, 5));
-        mainPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JPanel northPanel = new FixedWidthPanel();
-        northPanel.setLayout(new BorderLayout());
-        northPanel.add(mainPanel, BorderLayout.NORTH);
-
-        settingsView = new JScrollPane(northPanel);
-        settingsView.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        add(settingsView, BorderLayout.CENTER);
+        add(settings.view, BorderLayout.CENTER);
 
         rebuild();
     }
 
     /**
-     * Adds a tab of the plugin's own. The first one puts the panel in tabs under the title: Settings, then the
-     * plugin's tabs in the order they were added. The panel shows Settings.
+     * Adds a tab of the plugin's own. The first one puts the panel in tabs under the title: Settings, or the plugin's
+     * settings tabs, then the plugin's own tabs in the order they were added. The panel shows the first.
      */
     void addTab(String title, JComponent content)
     {
         tabs.put(title, content);
+        showTabs();
+    }
 
+    /**
+     * Adds a settings tab holding the sections named, after any added before it: the plugin's settings tabs take the
+     * place of Settings. The panel shows the first.
+     */
+    void addSettingsTab(String title, String... sectionKeys)
+    {
+        if (settingsTabs.remove(settings))
+        {
+            settings.rows.removeAll();
+        }
+        settingsTabs.add(new SettingsTab(title, List.of(sectionKeys)));
+        showTabs();
+        rebuild();
+    }
+
+    /** Puts the tabs under the title, the settings tabs then the plugin's own, and shows the first. */
+    private void showTabs()
+    {
         if (tabGroup == null)
         {
             tabDisplay = new JPanel(new BorderLayout());
             tabDisplay.setBackground(ColorScheme.DARK_GRAY_COLOR);
-            remove(settingsView);
+            remove(settings.view);
             add(tabDisplay, BorderLayout.CENTER);
         }
         else
@@ -283,14 +297,16 @@ class ConfigSidePanel extends PluginPanel
         // MaterialTabGroup can't put a tab before another, so it's built again with every tab in its place.
         tabGroup = new MaterialTabGroup(tabDisplay);
         tabGroup.setBorder(new EmptyBorder(0, 0, 6, 0));
-        MaterialTab settingsTab = new MaterialTab(SETTINGS_TAB, tabGroup, settingsView);
-        tabGroup.addTab(settingsTab);
+        for (SettingsTab tab : settingsTabs)
+        {
+            tabGroup.addTab(new MaterialTab(tab.title, tabGroup, tab.view));
+        }
         for (Map.Entry<String, JComponent> tab : tabs.entrySet())
         {
             tabGroup.addTab(new MaterialTab(tab.getKey(), tabGroup, tab.getValue()));
         }
         header.add(tabGroup, BorderLayout.SOUTH);
-        tabGroup.select(settingsTab);
+        tabGroup.select(tabGroup.getTab(0));
 
         revalidate();
         repaint();
@@ -309,7 +325,7 @@ class ConfigSidePanel extends PluginPanel
 
     void rebuild()
     {
-        mainPanel.removeAll();
+        settingsTabs.forEach(tab -> tab.rows.removeAll());
         loaders.clear();
 
         final Map<String, JPanel> sectionWidgets = new HashMap<>();
@@ -440,7 +456,9 @@ class ConfigSidePanel extends PluginPanel
             }
         }
 
-        topLevelPanels.values().forEach(mainPanel::add);
+        // Each section on the tab that names it; the settings outside any section, and any section no tab names, on
+        // the first.
+        topLevelPanels.forEach((setting, row) -> tabOf(setting).rows.add(row));
 
         JButton resetButton = new JButton("Reset");
         resetButton.addActionListener((e) ->
@@ -459,10 +477,26 @@ class ConfigSidePanel extends PluginPanel
                 rebuild();
             }
         });
-        mainPanel.add(resetButton);
+        settingsTabs.get(settingsTabs.size() - 1).rows.add(resetButton);
 
         revalidate();
         repaint();
+    }
+
+    private SettingsTab tabOf(ConfigObject setting)
+    {
+        if (setting instanceof ConfigSectionDescriptor)
+        {
+            String key = ((ConfigSectionDescriptor) setting).getKey();
+            for (SettingsTab tab : settingsTabs)
+            {
+                if (tab.sections.contains(key))
+                {
+                    return tab;
+                }
+            }
+        }
+        return settingsTabs.get(0);
     }
 
     /** Shows every setting as it's saved now, leaving the one being typed into alone. */
@@ -824,6 +858,32 @@ class ConfigSidePanel extends PluginPanel
         public Dimension getPreferredSize()
         {
             return new Dimension(PluginPanel.PANEL_WIDTH, super.getPreferredSize().height);
+        }
+    }
+
+    /** Settings, scrolling, on a tab of their own: the sections named. */
+    private static class SettingsTab
+    {
+        final String title;
+        final List<String> sections;
+        /** The settings and sections, one under another. */
+        final JPanel rows = new FixedWidthPanel();
+        final JScrollPane view;
+
+        SettingsTab(String title, List<String> sections)
+        {
+            this.title = title;
+            this.sections = sections;
+            rows.setBorder(new EmptyBorder(8, 10, 10, 10));
+            rows.setLayout(new DynamicGridLayout(0, 1, 0, 5));
+            rows.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JPanel northPanel = new FixedWidthPanel();
+            northPanel.setLayout(new BorderLayout());
+            northPanel.add(rows, BorderLayout.NORTH);
+
+            view = new JScrollPane(northPanel);
+            view.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         }
     }
 }

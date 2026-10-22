@@ -16,7 +16,7 @@ Formerly **consts-AFK**, and before that **AFK Alerts**. 2.0.0 starts fresh: eve
 
 ## Presets
 
-The **Preset** dropdown sits at the top of the plugin config, and of the bell's sidebar panel, under the Master Switch. You can also right-click the status panel and choose `Preset: …`.
+The **Preset** dropdown sits at the top of the plugin config, and at the top of the **Alerts** tab in the bell's sidebar panel. You can also right-click the status panel and choose `Preset: …`.
 
 | Preset | Alerts on |
 |---|---|
@@ -41,16 +41,13 @@ The bell in RuneLite's sidebar opens these settings in a panel of their own, the
 
 The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel and no area lines, without turning the plugin off, so the bell stays in the sidebar. Turning it back on starts fresh, as logging in does.
 
-Three General sections first, then one section per alert, each named for its group and kept in group order. Every section is open to start; click a header to fold it.
+Under the title, three tabs split the settings: **Alerts**, which the panel opens on, **Skills** and **General**. Each tab shows only its own sections. Every section is open to start; click a header to fold it. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 
-| Group | Sections |
+| Tab | Sections |
 |---|---|
-| General | General: Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), General: Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), General: Screen Flash (Enabled, Interval, Opacity) |
-| Combat | Combat: Health, Combat: Prayer, Combat: Aggro, Combat: Potion, Combat: Cannon |
-| AFK | AFK: Idle, AFK: Logout, AFK: Inventory Full |
-| Random Event | Random Event |
-| Forestry | Forestry, with a checkbox per event |
-| Sailing | Sailing: Salvage, Sailing: Cargo Hold |
+| Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
+| Skills | Woodcutting (the Forestry alert, with a checkbox per event), Sailing: Salvage, Sailing: Cargo Hold |
+| General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
 Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
 
@@ -75,14 +72,14 @@ Every alert's section has the same items in the same order: **Enabled** (read on
 | Cargo Hold | Chat: `…cargo hold is full` (e.g. `Your crewmate on the salvaging hook cannot salvage as the cargo hold is full.`) | A click, or Give Up After | Violet |
 | Forestry | A Forestry event you picked starts nearby | A click, or Give Up After | Lime |
 
-"A click" means with **Dismiss on Click** on. **Give Up After** (General: Timing, `2 min`) ends a one-off alert nobody clicks away.
+"A click" means with **Dismiss on Click** on. **Give Up After** (General → Timing, `2 min`) ends a one-off alert nobody clicks away.
 
 ### Aggro area
 
 In **OSRS** mode (the default), Aggro follows the game's own rule, the way RuneLite's NPC Aggression Timer does:
 
 - The game remembers two tiles, each with a 21×21 area around it. While you stay within 10 tiles of either one, the 10-minute timer keeps running. Step outside both and the older tile moves to where you stand: NPCs are aggressive again for another 10 minutes.
-- **Area lines** outline the area on the ground: translucent yellow while NPCs are still aggressive, solid yellow once they've stopped. Walk past them to reset the timer. **Show Area Lines** (on), **Aggressive Color** and **Unaggressive Color** are at the end of the **Combat: Aggro** section. The lines only show while the preset, or Custom, has Aggro on.
+- **Area lines** outline the area on the ground: translucent yellow while NPCs are still aggressive, solid yellow once they've stopped. Walk past them to reset the timer. **Show Area Lines** (on), **Aggressive Color** and **Unaggressive Color** are at the end of the **Aggro** section. The lines only show while the preset, or Custom, has Aggro on.
 - **Finding the area.** Until consts-EXP knows where both tiles are (right after you turn it on, or after logging in somewhere new), the bar reads `Aggro ?`. Teleport or take a dungeon entrance: that leaves both areas, so the timer starts and one area is known (`Aggro ? 9:59`). Walk out of it once and the second is known too, and the `?` goes away. Going back near where you teleported from before then makes it unknown again. Or right-click the panel → **Reset Aggro Timer** to start a fresh area where you stand.
 - **Logging out** saves the area and the time left for that account. Log back in on the same tile and Aggro carries on; anywhere else it starts over, unknown.
 
@@ -90,7 +87,7 @@ In **Custom Minutes** mode Aggro is a plain repeating timer, with no area and no
 
 ### Forestry events
 
-Each event has its own checkbox in the **Forestry** section, all on by default: Rising Roots, Struggling Sapling, Flowering Tree, Woodcutting Leprechaun, Beehive, Friendly Ent, Poachers, Pheasant Control and Enchantment Ritual. Untick the ones you don't care for.
+Each event has its own checkbox in the **Woodcutting** section (Skills tab), all on by default: Rising Roots, Struggling Sapling, Flowering Tree, Woodcutting Leprechaun, Beehive, Friendly Ent, Poachers, Pheasant Control and Enchantment Ritual. Untick the ones you don't care for.
 
 An event is spotted by the NPCs or objects that mark it, the same ones RuneLite's own Woodcutting plugin uses. It alerts once per event: more entlings, a withering sapling or a loading screen don't set it off again. While it fires, the status panel names it, e.g. `Forestry Leprechaun`. Pheasant Control's Freaky Forester no longer counts as a random event.
 
@@ -140,7 +137,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 
 - **Where:** Working a salvaging hook at a shipwreck yourself.
 - **What the alerts mean:** Inv Full says it is time to sort. Salvage fires when you have nothing left to sort, or the wreck is picked clean: back to the hook, or on to the next one.
-- **Tune:** Click the Inv Full alert away and start sorting: Quiet After Dismiss (General: Timing, 60 s) keeps it from starting again while the message repeats. Raise it if sorting takes longer.
+- **Tune:** Click the Inv Full alert away and start sorting: Quiet After Dismiss (General → Timing, 60 s) keeps it from starting again while the message repeats. Raise it if sorting takes longer.
 
 ### Salvaging AFK
 
@@ -161,8 +158,8 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 - **Give Up After** (`2 min`): a one-off alert nobody clicks away stops on its own.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out stops running alerts and starts the timers over, except Aggro in OSRS mode: its area and time left are saved per account and carry on if you log back in where you logged out.
-- **Sound**: the system beep by default. **Sound** (General: Sounds) swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
-- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (AFK: Idle).
+- **Sound**: the system beep by default. **Sound** (General → Sounds) swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
+- **Status panel**: shows the active preset, one bar per enabled alert (hover for details) and the pause countdown. Your current animation shows whenever Idle is waiting for it to stop, or always with `Show Animation ID` (Alerts → Idle).
 
 ## Running it
 

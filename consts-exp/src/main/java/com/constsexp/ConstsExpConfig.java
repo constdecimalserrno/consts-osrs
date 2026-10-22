@@ -12,8 +12,9 @@ import net.runelite.client.config.Range;
 import net.runelite.client.config.Units;
 
 /**
- * General (Timing, Sounds, Screen Flash), then one section per alert, each named for its group (Combat, AFK, Sailing)
- * and kept in group order.
+ * Sections in the order of the sidebar's tabs, where ConstsExpPlugin puts them: one per alert (Alerts), the skills'
+ * (Skills), then Timing, Sounds and Screen Flash (General). RuneLite's Configuration panel lists them in the same order
+ * with no tabs, so each name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
  * Salvage's with sailing.
@@ -53,109 +54,109 @@ public interface ConstsExpConfig extends Config
     }
 
     @ConfigSection(
-        name = "General: Timing",
-        description = "Click pause, quiet after dismiss, give up after and startup delay",
-        position = 1
-    )
-    String timingSection = "general";
-
-    @ConfigSection(
-        name = "General: Sounds",
-        description = "What alerts sound like, and how often",
-        position = 2
-    )
-    String soundsSection = "sounds";
-
-    @ConfigSection(
-        name = "General: Screen Flash",
-        description = "The flash over the game screen while an alert fires",
-        position = 3
-    )
-    String flashSection = "flash";
-
-    @ConfigSection(
-        name = "Combat: Health",
+        name = "Health",
         description = "Alert while Hitpoints are below a threshold",
-        position = 4
+        position = 1
     )
     String healthSection = "health";
 
     @ConfigSection(
-        name = "Combat: Prayer",
+        name = "Prayer",
         description = "Alert while Prayer is below a threshold",
-        position = 5
+        position = 2
     )
     String prayerSection = "prayer";
 
     @ConfigSection(
-        name = "Combat: Aggro",
+        name = "Aggro",
         description = "The aggro timer, the unaggressive area and its lines",
-        position = 6
+        position = 3
     )
     String aggroSection = "aggro";
 
     @ConfigSection(
-        name = "Combat: Potion",
+        name = "Potion",
         description = "Alert when a potion or effect is about to expire",
-        position = 7
+        position = 4
     )
     String potionSection = "potion";
 
     @ConfigSection(
-        name = "Combat: Cannon",
+        name = "Cannon",
         description = "Alert when your cannon is out of ammo",
-        position = 8
+        position = 5
     )
     String cannonSection = "cannon";
 
     @ConfigSection(
-        name = "AFK: Idle",
+        name = "Idle",
         description = "Alert when nothing has happened for a while",
-        position = 9
+        position = 6
     )
     String idleSection = "idle";
 
     @ConfigSection(
-        name = "AFK: Logout",
+        name = "Logout",
         description = "Warn before the inactivity logout",
-        position = 10
+        position = 7
     )
     String logoutSection = "logout";
 
     @ConfigSection(
-        name = "AFK: Inventory Full",
+        name = "Inventory Full",
         description = "Alert when your inventory is too full to hold more",
-        position = 11
+        position = 8
     )
     String inventoryFullSection = "inventoryFull";
 
     @ConfigSection(
         name = "Random Event",
         description = "Your own random events",
-        position = 12
+        position = 9
     )
     String randomSection = "random";
 
     @ConfigSection(
-        name = "Forestry",
+        name = "Woodcutting",
         description = "Forestry events, the ones you pick",
-        position = 13
+        position = 10
     )
     String forestrySection = "forestry";
 
     @ConfigSection(
         name = "Sailing: Salvage",
         description = "Alert when a shipwreck is depleted or there is nothing left to sort",
-        position = 14
+        position = 11
     )
     String salvageSection = "salvage";
 
     @ConfigSection(
         name = "Sailing: Cargo Hold",
         description = "Alert when the cargo hold is full",
-        position = 15
+        position = 12
     )
     String cargoSection = "cargo";
+
+    @ConfigSection(
+        name = "Timing",
+        description = "Click pause, quiet after dismiss, give up after and startup delay",
+        position = 13
+    )
+    String timingSection = "general";
+
+    @ConfigSection(
+        name = "Sounds",
+        description = "What alerts sound like, and how often",
+        position = 14
+    )
+    String soundsSection = "sounds";
+
+    @ConfigSection(
+        name = "Screen Flash",
+        description = "The flash over the game screen while an alert fires",
+        position = 15
+    )
+    String flashSection = "flash";
 
     // General
 
