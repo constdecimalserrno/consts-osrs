@@ -318,18 +318,6 @@ public interface ConstsExpConfig extends Config
         return 50;
     }
 
-    @ConfigItem(
-        keyName = "showAnimationId",
-        name = "Show Animation ID",
-        description = "Always show your current animation in the status panel, for tuning Idle; it shows anyway while Idle waits for it to stop",
-        section = idleSection,
-        position = 5
-    )
-    default boolean showAnimationId()
-    {
-        return false;
-    }
-
     // Combat
 
     @ConfigItem(
