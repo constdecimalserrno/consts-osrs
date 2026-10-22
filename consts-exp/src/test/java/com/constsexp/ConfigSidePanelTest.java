@@ -31,6 +31,8 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JToggleButton;
+import javax.swing.JViewport;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import net.runelite.client.config.ConfigDescriptor;
 import net.runelite.client.config.ConfigItemDescriptor;
@@ -38,6 +40,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.ConfigSectionDescriptor;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
@@ -228,8 +231,10 @@ public class ConfigSidePanelTest
     @Test
     public void withoutSettingsTabsTheSettingsAreOneListAsBefore()
     {
-        // One scrolling list under the title, with every section, then Reset.
+        // One scrolling list under the title, its scrollbar there only when it's needed, with every section, then Reset.
         assertEquals(1, count(panel, JScrollPane.class));
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            find(panel, JScrollPane.class, v -> true).getVerticalScrollBarPolicy());
         List<String> all = sections(panel);
         assertEquals(descriptor.getSections().size(), all.size());
         assertNotNull(find(panel, JButton.class, b -> "Reset".equals(b.getText())));
@@ -273,6 +278,27 @@ public class ConfigSidePanelTest
         // It opens on One.
         assertTrue(sections(tabbed).contains(sectionName(ConstsExpConfig.healthSection)));
         assertFalse(sections(tabbed).contains(sectionName(ConstsExpConfig.soundsSection)));
+    }
+
+    @Test
+    public void settingsTabsGiveTheirRowsTheSameWidthWhetherTheyScrollOrNot()
+    {
+        ConfigSidePanel tabbed = withMasterSwitch();
+        // One holds everything but Sounds, too long for the panel; Two holds Sounds alone, which fits.
+        tabbed.addSettingsTab("One", ConstsExpConfig.healthSection);
+        tabbed.addSettingsTab("Two", ConstsExpConfig.soundsSection);
+        MaterialTabGroup tabs = tabs(tabbed);
+
+        JViewport one = laidOut(tabbed, tabs, 0);
+        int oneRow = find(one, JPanel.class, p -> ConstsExpConfig.PRESET_KEY.equals(p.getName())).getWidth();
+        JViewport two = laidOut(tabbed, tabs, 1);
+        int twoRow = find(two, JPanel.class, p -> ConstsExpConfig.SOUND_VOLUME_KEY.equals(p.getName())).getWidth();
+
+        assertTrue(one.getView().getPreferredSize().height > one.getHeight());
+        assertTrue(two.getView().getPreferredSize().height <= two.getHeight());
+        assertEquals(one.getWidth(), two.getWidth());
+        assertTrue(oneRow > 0);
+        assertEquals(oneRow, twoRow);
     }
 
     @Test
@@ -367,6 +393,28 @@ public class ConfigSidePanelTest
             .findFirst()
             .orElseThrow(() -> new AssertionError("no section " + key))
             .name();
+    }
+
+    /** A tab's viewport, once the panel shows that tab, laid out at the sidebar's width and 400 px tall. */
+    private static JViewport laidOut(ConfigSidePanel panel, MaterialTabGroup tabs, int tab)
+    {
+        tabs.select(tabs.getTab(tab));
+        layOut(panel, PluginPanel.PANEL_WIDTH + PluginPanel.SCROLLBAR_WIDTH, 400);
+        return ((JScrollPane) tabs.getTab(tab).getContent()).getViewport();
+    }
+
+    /** Lays root out at a size, as a window would, all but what's folded away. */
+    private static void layOut(Container root, int width, int height)
+    {
+        root.setSize(width, height);
+        root.doLayout();
+        for (Component c : all(root, true))
+        {
+            if (c instanceof Container)
+            {
+                ((Container) c).doLayout();
+            }
+        }
     }
 
     /** A setting changed somewhere else, as the event bus tells the panel, and the panel caught up. */

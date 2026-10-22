@@ -116,11 +116,13 @@ import org.slf4j.LoggerFactory;
  * own on/off switch, instead of as a row. Off quiets the plugin without turning it off, so this panel stays put.
  *
  * <p>A plugin can also add tabs of its own (addTab). Then the title and switch sit over a row of tabs: Settings,
- * which the panel opens on, then the plugin's. Without one there are no tabs, only the settings.
+ * which the panel opens on, then the plugin's.
  *
  * <p>And it can split its settings into tabs (addSettingsTab), each holding the sections it names, in place of
  * Settings. The settings outside any section, and any section no tab names, go on the first; Reset goes at the end of
- * the last.
+ * the last. Each keeps its scrollbar showing, so the rows keep one width from one settings tab to the next.
+ *
+ * <p>With neither kind of tab there are no tabs, only the settings.
  *
  * <p>Each consts-osrs plugin keeps its own copy, since each one is built alone for the Plugin Hub. The copies differ
  * only in their package line.
@@ -167,8 +169,12 @@ class ConfigSidePanel extends PluginPanel
     private final JToggleButton masterSwitch;
     /** The title and master switch, and the tabs under them once there are any. */
     private final JPanel header;
-    /** Every setting, scrolling: the whole panel below the title, or the Settings tab. */
-    private final SettingsTab settings = new SettingsTab(SETTINGS_TAB, List.of());
+    /**
+     * Every setting in one scrolling list: the whole panel below the title, or the Settings tab. Out of settingsTabs,
+     * and empty, once the plugin adds settings tabs.
+     */
+    private final SettingsTab settings = new SettingsTab(SETTINGS_TAB, List.of(),
+        ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
     /** Settings alone, or the plugin's settings tabs in its place, in the order they were added. */
     private final List<SettingsTab> settingsTabs = new ArrayList<>(List.of(settings));
     /** The plugin's own tabs, title to contents, in the order they were added. */
@@ -274,7 +280,7 @@ class ConfigSidePanel extends PluginPanel
         {
             settings.rows.removeAll();
         }
-        settingsTabs.add(new SettingsTab(title, List.of(sectionKeys)));
+        settingsTabs.add(new SettingsTab(title, List.of(sectionKeys), ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS));
         showTabs();
         rebuild();
     }
@@ -861,7 +867,7 @@ class ConfigSidePanel extends PluginPanel
         }
     }
 
-    /** Settings, scrolling, on a tab of their own: the sections named. */
+    /** Settings, scrolling, on a tab of their own: the sections named. scrollbar: when the scrollbar shows. */
     private static class SettingsTab
     {
         final String title;
@@ -870,7 +876,7 @@ class ConfigSidePanel extends PluginPanel
         final JPanel rows = new FixedWidthPanel();
         final JScrollPane view;
 
-        SettingsTab(String title, List<String> sections)
+        SettingsTab(String title, List<String> sections, int scrollbar)
         {
             this.title = title;
             this.sections = sections;
@@ -882,8 +888,7 @@ class ConfigSidePanel extends PluginPanel
             northPanel.setLayout(new BorderLayout());
             northPanel.add(rows, BorderLayout.NORTH);
 
-            view = new JScrollPane(northPanel);
-            view.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            view = new JScrollPane(northPanel, scrollbar, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         }
     }
 }
