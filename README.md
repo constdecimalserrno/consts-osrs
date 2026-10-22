@@ -4,13 +4,13 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 
 | Plugin | What it does |
 |---|---|
-| [consts-AFK](consts-afk/) | OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
+| [consts-EXP](consts-exp/) | The all-in-one XP helper. Today that's OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel. |
 | [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, lets a left-click go past loot and campfires, and draws your tile packs, sets of marked tiles you make or paste in. Folds in RuneLite's Interact Highlight and Tile Packs. |
 | [consts-Leaderboard](consts-leaderboard/) | Any player's skills from the hiscores in a sidebar panel: right-click and Lookup, or one button for your own. Levels stop at 99: a 99 is yellow, the lowest skill red. Cut down from RuneLite's HiScore. |
 | [consts-Models](consts-models/) | Export any model in the game, or the area around you: right-click Export Model, turn it in a viewer, take out the pieces you don't want, and save it as OBJ or PLY for Blender and other 3D software. Built on the Plugin Hub's Model Exporter. |
 | [consts-World](consts-world/) | A world switcher that opens on your hot list: star the worlds you hop between once, then hop with a click. Search and sort either tab, the hot list or all worlds, by activity, number or region. Starts you back on the world you were last on. Cut down from RuneLite's World Hopper. |
 
-![The consts-AFK status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-afk/screenshots/status-panel.gif)
+![The consts-EXP status panel: Idle flashes yellow, Inv Full magenta, then Forestry lime, naming the event](consts-exp/screenshots/status-panel.gif)
 
 More at [constdecimalserrno.dev/consts-osrs](https://constdecimalserrno.dev/consts-osrs/).
 
@@ -57,7 +57,7 @@ The plugin shows up in RuneLite's plugin list. Its settings live under the wrenc
 
 For a machine that plays without building: `./gradlew playKit` writes `build/play-kit/`, with `consts-osrs.jar`, RuneLite and every plugin in one jar, and `play.sh`, which starts it on Java 11 (Temurin 11's macOS path, or `RUNELITE_JAVA_HOME`). Copy the folder over and run `play.sh`; the Jagex account step above is needed there too. The jar holds the RuneLite of the day it was built, so after a RuneLite update build it again with `./gradlew playKit --refresh-dependencies`.
 
-Each [release](https://github.com/constdecimalserrno/consts-osrs/releases) attaches a compiled plugin jar. Plugins are versioned and tagged on their own: `consts-destination-v1.0.0`, and consts-AFK from `consts-afk-v1.8.0` on (its earlier releases are tagged `v1.0.0` to `v1.7.0`). Build them yourself with `./gradlew jar`; they land in `<plugin>/build/libs/`.
+Each [release](https://github.com/constdecimalserrno/consts-osrs/releases) attaches a compiled plugin jar. Plugins are versioned and tagged on their own: `consts-destination-v1.0.0`, and consts-EXP from `consts-exp-v2.0.0` on. As consts-AFK it was tagged `consts-afk-v1.8.0` to `consts-afk-v1.14.0`, and plain `v1.0.0` to `v1.7.0` before that. Build them yourself with `./gradlew jar`; they land in `<plugin>/build/libs/`.
 
 ## Project structure
 
@@ -70,10 +70,10 @@ consts-osrs/
 ├── scripts/play.sh               # Starts the play kit's jar
 ├── src/test/java/com/osrs/
 │   └── PluginLauncher.java       # Loads every plugin into one RuneLite client
-├── consts-afk/
+├── consts-exp/
 │   ├── runelite-plugin.properties  # Plugin Hub metadata
 │   ├── icon.png                    # Plugin Hub icon, 48×72
-│   └── src/main/java/com/constsafk/...
+│   └── src/main/java/com/constsexp/...
 ├── consts-destination/
 │   ├── runelite-plugin.properties
 │   ├── icon.png
@@ -96,7 +96,7 @@ Each plugin is a Gradle subproject with its own version. Shared settings live in
 
 ## Plugin Hub
 
-The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets its own branch, `plugin-hub/<plugin>`, holding just its folder. `scripts/publish-hub-branch.sh consts-afk` cuts it from `main` with `git subtree split`, pushes it, and prints the `repository=` and `commit=` lines for the plugin's manifest in [runelite/plugin-hub](https://github.com/runelite/plugin-hub). The Hub replaces the plugin's `build.gradle` (`build=standard`), so a plugin may only depend on RuneLite itself.
+The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets its own branch, `plugin-hub/<plugin>`, holding just its folder. `scripts/publish-hub-branch.sh consts-exp` cuts it from `main` with `git subtree split`, pushes it, and prints the `repository=` and `commit=` lines for the plugin's manifest in [runelite/plugin-hub](https://github.com/runelite/plugin-hub). The Hub replaces the plugin's `build.gradle` (`build=standard`), so a plugin may only depend on RuneLite itself.
 
 ## Adding a plugin
 
@@ -104,11 +104,11 @@ The Plugin Hub builds a plugin only from the root of a repo, so each plugin gets
 2. Add `new-plugin/build.gradle` (a comment is enough).
 3. Add `include 'new-plugin'` to `settings.gradle` and `implementation project(':new-plugin')` to the root `build.gradle` dependencies.
 4. Write `NewPlugin.java` (extends `Plugin`, has `@PluginDescriptor`) and `NewPluginConfig.java` (extends `Config`, has `@ConfigGroup`).
-5. Add `NewPlugin.class` to `ExternalPluginManager.loadBuiltin(...)` in `PluginLauncher.java`, and give the plugin its own `new-plugin/runelite-plugin.properties` (copy consts-afk's).
+5. Add `NewPlugin.class` to `ExternalPluginManager.loadBuiltin(...)` in `PluginLauncher.java`, and give the plugin its own `new-plugin/runelite-plugin.properties` (copy consts-exp's).
 6. `./run.sh all`.
 
 ## License
 
-[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-AFK ([NOTICE](consts-afk/NOTICE)), Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)), the Configuration panel by Adam in both, as their sidebar settings, HiScore by Adam, Psikoi and Bram91 in consts-Leaderboard ([NOTICE](consts-leaderboard/NOTICE)) and World Hopper by Adam, Lotto, gregg1494 and Psikoi, with a part of Default World by Tomas Slusny, in consts-World ([NOTICE](consts-world/NOTICE)). So do the Plugin Hub's [Tile Packs](https://github.com/TrevorMDev/tile-packs) by TrevorMDev, folded into consts-Destination (same NOTICE), and its [Model Exporter](https://github.com/Bram91/Model-Dumper) by Bram91, with RuneLite's JagexColor by Abex, in consts-Models ([NOTICE](consts-models/NOTICE)).
+[MIT](LICENSE). Each plugin folder carries its own copy, because the Plugin Hub builds a plugin from its folder alone. Code ported from RuneLite plugins keeps its BSD 2-Clause license: NPC Aggression Timer by Woox in consts-EXP ([NOTICE](consts-exp/NOTICE)), Interact Highlight by Adam in consts-Destination ([NOTICE](consts-destination/NOTICE)), the Configuration panel by Adam in both, as their sidebar settings, HiScore by Adam, Psikoi and Bram91 in consts-Leaderboard ([NOTICE](consts-leaderboard/NOTICE)) and World Hopper by Adam, Lotto, gregg1494 and Psikoi, with a part of Default World by Tomas Slusny, in consts-World ([NOTICE](consts-world/NOTICE)). So do the Plugin Hub's [Tile Packs](https://github.com/TrevorMDev/tile-packs) by TrevorMDev, folded into consts-Destination (same NOTICE), and its [Model Exporter](https://github.com/Bram91/Model-Dumper) by Bram91, with RuneLite's JagexColor by Abex, in consts-Models ([NOTICE](consts-models/NOTICE)).
 
 Not affiliated with Jagex or RuneLite. Old School RuneScape is a trademark of Jagex Ltd.

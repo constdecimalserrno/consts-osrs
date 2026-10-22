@@ -1,14 +1,14 @@
-consts-AFK is MIT licensed (see LICENSE), except for three files ported from
+consts-EXP is MIT licensed (see LICENSE), except for three files ported from
 RuneLite, which keep their original license. Two are from its NPC Aggression
 Timer plugin:
 
-  src/main/java/com/constsafk/AggroArea.java
-  src/main/java/com/constsafk/ConstsAfkAggroAreaOverlay.java
+  src/main/java/com/constsexp/AggroArea.java
+  src/main/java/com/constsexp/ConstsExpAggroAreaOverlay.java
 
 and one, the sidebar's settings panel, is from its Configuration panel
 (ConfigPanel):
 
-  src/main/java/com/constsafk/ConfigSidePanel.java
+  src/main/java/com/constsexp/ConfigSidePanel.java
 
 Their licenses follow, in that order.
 

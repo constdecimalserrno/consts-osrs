@@ -1,8 +1,8 @@
-# consts-AFK
+# consts-EXP
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: Idle fills and flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
 
@@ -12,7 +12,7 @@ RuneLite plugin for AFK play in Old School RuneScape ( OSRS ): chinning, crabbin
 |---|---|
 | ![The Idle bar lit yellow, the screen tinted yellow](screenshots/panel-idle.jpg) | ![The Inv Full bar lit magenta, the screen tinted magenta](screenshots/panel-inventory-full.jpg) |
 
-Formerly **AFK Alerts**. Saved settings carry over: the config group is still `afkcombatalerts`.
+Formerly **consts-AFK**, and before that **AFK Alerts**. 2.0.0 starts fresh: every setting is back at its default, and the saved aggro area is gone.
 
 ## Presets
 
@@ -39,7 +39,7 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 The bell in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset and its alerts tick on in front of you. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-AFK, with no alerts, no status panel and no area lines, without turning the plugin off, so the bell stays in the sidebar. Turning it back on starts fresh, as logging in does.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel and no area lines, without turning the plugin off, so the bell stays in the sidebar. Turning it back on starts fresh, as logging in does.
 
 Three General sections first, then one section per alert, each named for its group and kept in group order. Every section is open to start; click a header to fold it.
 
@@ -83,7 +83,7 @@ In **OSRS** mode (the default), Aggro follows the game's own rule, the way RuneL
 
 - The game remembers two tiles, each with a 21×21 area around it. While you stay within 10 tiles of either one, the 10-minute timer keeps running. Step outside both and the older tile moves to where you stand: NPCs are aggressive again for another 10 minutes.
 - **Area lines** outline the area on the ground: translucent yellow while NPCs are still aggressive, solid yellow once they've stopped. Walk past them to reset the timer. **Show Area Lines** (on), **Aggressive Color** and **Unaggressive Color** are at the end of the **Combat: Aggro** section. The lines only show while the preset, or Custom, has Aggro on.
-- **Finding the area.** Until consts-AFK knows where both tiles are (right after you turn it on, or after logging in somewhere new), the bar reads `Aggro ?`. Teleport or take a dungeon entrance: that leaves both areas, so the timer starts and one area is known (`Aggro ? 9:59`). Walk out of it once and the second is known too, and the `?` goes away. Going back near where you teleported from before then makes it unknown again. Or right-click the panel → **Reset Aggro Timer** to start a fresh area where you stand.
+- **Finding the area.** Until consts-EXP knows where both tiles are (right after you turn it on, or after logging in somewhere new), the bar reads `Aggro ?`. Teleport or take a dungeon entrance: that leaves both areas, so the timer starts and one area is known (`Aggro ? 9:59`). Walk out of it once and the second is known too, and the `?` goes away. Going back near where you teleported from before then makes it unknown again. Or right-click the panel → **Reset Aggro Timer** to start a fresh area where you stand.
 - **Logging out** saves the area and the time left for that account. Log back in on the same tile and Aggro carries on; anywhere else it starts over, unknown.
 
 In **Custom Minutes** mode Aggro is a plain repeating timer, with no area and no lines.
@@ -100,7 +100,7 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 2. Pick **Salvaging AFK**.
 3. When the hold fills, the crew's chat message starts the Cargo Hold alert. Click anywhere to silence it, then empty the hold.
 
-The crew message arrives as a filtered (spam) game message; consts-AFK listens on that channel.
+The crew message arrives as a filtered (spam) game message; consts-EXP listens on that channel.
 
 ## Training guide
 
@@ -170,4 +170,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsAfkAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-AFK's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The rest of consts-AFK is [MIT](LICENSE).
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).
