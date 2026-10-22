@@ -233,7 +233,7 @@ public class ConstsExpPlugin extends Plugin
             ConstsExpConfig.aggroSection, ConstsExpConfig.potionSection, ConstsExpConfig.cannonSection,
             ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
             ConstsExpConfig.randomSection);
-        panel.addSettingsTab("Skills", ConstsExpConfig.forestrySection, ConstsExpConfig.salvageSection,
+        panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
             ConstsExpConfig.cargoSection);
         panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
             ConstsExpConfig.flashSection);

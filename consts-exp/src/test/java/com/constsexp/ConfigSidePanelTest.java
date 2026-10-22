@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -118,13 +120,7 @@ public class ConfigSidePanelTest
         saved.put(flag.getItem().keyName(), "true");
         saved.put(number.getItem().keyName(), String.valueOf(min + 1));
         saved.put(preset.getItem().keyName(), Preset.MINING.name());
-        ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(GROUP);
-        changed.setKey(flag.getItem().keyName());
-        panel.onConfigChanged(changed);
-        SwingUtilities.invokeAndWait(() ->
-        {
-        });
+        changedElsewhere(panel, GROUP, flag.getItem().keyName());
 
         assertTrue(box.isSelected());
         assertEquals(min + 1, spinner.getValue());
@@ -138,13 +134,7 @@ public class ConfigSidePanelTest
         ConfigItemDescriptor flag = first(boolean.class);
         JCheckBox box = control(flag, JCheckBox.class);
         saved.put(flag.getItem().keyName(), "true");
-        ConfigChanged changed = new ConfigChanged();
-        changed.setGroup("someotherplugin");
-        changed.setKey(flag.getItem().keyName());
-        panel.onConfigChanged(changed);
-        SwingUtilities.invokeAndWait(() ->
-        {
-        });
+        changedElsewhere(panel, "someotherplugin", flag.getItem().keyName());
         assertFalse(box.isSelected());
     }
 
@@ -179,6 +169,11 @@ public class ConfigSidePanelTest
         verify(configManager, never()).setConfiguration(GROUP, ConstsExpConfig.MASTER_KEY, "true");
     }
 
+    private ConfigSidePanel expPanel()
+    {
+        return ConstsExpPlugin.sidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin());
+    }
+
     private ConfigSidePanel withMasterSwitch()
     {
         return new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
@@ -200,8 +195,7 @@ public class ConfigSidePanelTest
         tabbed.addTab("Packs", new JLabel("pack list"));
         tabbed.addTab("More", new JLabel("more things"));
 
-        MaterialTabGroup tabs = find(tabbed, MaterialTabGroup.class, g -> true);
-        assertNotNull(tabs);
+        MaterialTabGroup tabs = tabs(tabbed);
         assertEquals(ConfigSidePanel.SETTINGS_TAB, tabs.getTab(0).getText());
         assertEquals("Packs", tabs.getTab(1).getText());
         assertEquals("More", tabs.getTab(2).getText());
@@ -217,7 +211,7 @@ public class ConfigSidePanelTest
     {
         ConfigItemDescriptor flag = first(boolean.class);
         panel.addTab("Packs", new JLabel("pack list"));
-        MaterialTabGroup tabs = find(panel, MaterialTabGroup.class, g -> true);
+        MaterialTabGroup tabs = tabs(panel);
 
         assertFalse(labels(panel).contains("pack list"));
         assertNotNull(control(flag, JCheckBox.class));
@@ -292,13 +286,7 @@ public class ConfigSidePanelTest
 
         // Changed elsewhere while One shows: Two's control follows.
         saved.put(ConstsExpConfig.SOUND_VOLUME_KEY, "42");
-        ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(GROUP);
-        changed.setKey(ConstsExpConfig.SOUND_VOLUME_KEY);
-        tabbed.onConfigChanged(changed);
-        SwingUtilities.invokeAndWait(() ->
-        {
-        });
+        changedElsewhere(tabbed, GROUP, ConstsExpConfig.SOUND_VOLUME_KEY);
         assertEquals(42, control(tabs.getTab(1).getContent(), volume, JSpinner.class).getValue());
 
         // A rebuild, as a profile change makes, fills each tab again with its own, and stays on the one showing.
@@ -313,8 +301,7 @@ public class ConfigSidePanelTest
     @Test
     public void constsExpsPanelOpensOnAlertsThenSkillsAndGeneral()
     {
-        ConfigSidePanel exp = ConstsExpPlugin.sidePanel(configManager, mock(ColorPickerManager.class), config,
-            new ConstsExpPlugin());
+        ConfigSidePanel exp = expPanel();
 
         MaterialTabGroup tabs = tabs(exp);
         assertEquals(3, count(exp, MaterialTab.class));
@@ -331,6 +318,23 @@ public class ConfigSidePanelTest
 
         assertTrue(labels(exp).contains("Preset"));
         assertFalse(sections(exp).contains("Timing"));
+    }
+
+    @Test
+    public void constsExpsAlertsAndSkillsStartFoldedAndGeneralOpen()
+    {
+        MaterialTabGroup tabs = tabs(expPanel());
+        List<String> alerts = rows(tabs.getTab(0).getContent(), true);
+        List<String> skills = rows(tabs.getTab(1).getContent(), true);
+        List<String> general = rows(tabs.getTab(2).getContent(), true);
+        assertTrue(alerts.size() > 1);
+        assertFalse(skills.isEmpty());
+        assertFalse(general.isEmpty());
+
+        // Every alert's and skill's setting sits under a folded header, Preset aside; every General setting shows.
+        assertEquals(List.of(ConstsExpConfig.PRESET_KEY), rows(tabs.getTab(0).getContent(), false));
+        assertEquals(List.of(), rows(tabs.getTab(1).getContent(), false));
+        assertEquals(general, rows(tabs.getTab(2).getContent(), false));
     }
 
     @Test
@@ -365,22 +369,16 @@ public class ConfigSidePanelTest
             .name();
     }
 
-    /** The section headers under root, top to bottom: the names drawn in orange, as a setting's never is. */
-    private static List<String> sections(Container root)
+    /** A setting changed somewhere else, as the event bus tells the panel, and the panel caught up. */
+    private static void changedElsewhere(ConfigSidePanel panel, String group, String key) throws Exception
     {
-        List<String> out = new ArrayList<>();
-        for (Component c : root.getComponents())
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(group);
+        changed.setKey(key);
+        panel.onConfigChanged(changed);
+        SwingUtilities.invokeAndWait(() ->
         {
-            if (c instanceof JLabel && ColorScheme.BRAND_ORANGE.equals(c.getForeground()))
-            {
-                out.add(((JLabel) c).getText());
-            }
-            if (c instanceof Container)
-            {
-                out.addAll(sections((Container) c));
-            }
-        }
-        return out;
+        });
     }
 
     private static MaterialTabGroup tabs(Container root)
@@ -409,57 +407,58 @@ public class ConfigSidePanelTest
         throw new AssertionError("no " + type.getSimpleName() + " for " + item.getItem().name());
     }
 
-    private static <T> T find(Container root, Class<T> type, java.util.function.Predicate<T> test)
+    /** Every component under root, depth first; with shownOnly, none that is hidden or inside something hidden. */
+    private static List<Component> all(Container root, boolean shownOnly)
     {
+        List<Component> out = new ArrayList<>();
         for (Component c : root.getComponents())
         {
-            if (type.isInstance(c) && test.test(type.cast(c)))
+            if (shownOnly && !c.isVisible())
             {
-                return type.cast(c);
+                continue;
             }
+            out.add(c);
             if (c instanceof Container)
             {
-                T found = find((Container) c, type, test);
-                if (found != null)
-                {
-                    return found;
-                }
+                out.addAll(all((Container) c, shownOnly));
             }
         }
-        return null;
+        return out;
+    }
+
+    private static <T> T find(Container root, Class<T> type, Predicate<T> test)
+    {
+        return all(root, false).stream().filter(type::isInstance).map(type::cast).filter(test).findFirst().orElse(null);
     }
 
     private static int count(Container root, Class<?> type)
     {
-        int found = 0;
-        for (Component c : root.getComponents())
-        {
-            if (type.isInstance(c))
-            {
-                found++;
-            }
-            if (c instanceof Container)
-            {
-                found += count((Container) c, type);
-            }
-        }
-        return found;
+        return (int) all(root, false).stream().filter(type::isInstance).count();
     }
 
     private static List<String> labels(Container root)
     {
-        List<String> out = new ArrayList<>();
-        for (Component c : root.getComponents())
-        {
-            if (c instanceof JLabel)
-            {
-                out.add(((JLabel) c).getText());
-            }
-            if (c instanceof Container)
-            {
-                out.addAll(labels((Container) c));
-            }
-        }
-        return out;
+        return all(root, false).stream()
+            .filter(JLabel.class::isInstance)
+            .map(c -> ((JLabel) c).getText())
+            .collect(Collectors.toList());
+    }
+
+    /** The section headers under root, top to bottom: the names drawn in orange, as a setting's never is. */
+    private static List<String> sections(Container root)
+    {
+        return all(root, false).stream()
+            .filter(c -> c instanceof JLabel && ColorScheme.BRAND_ORANGE.equals(c.getForeground()))
+            .map(c -> ((JLabel) c).getText())
+            .collect(Collectors.toList());
+    }
+
+    /** The settings' rows under root, by key, top to bottom: every one, or only those outside a folded section. */
+    private static List<String> rows(Container root, boolean foldedToo)
+    {
+        return all(root, !foldedToo).stream()
+            .filter(c -> c instanceof JPanel && c.getName() != null)
+            .map(Component::getName)
+            .collect(Collectors.toList());
     }
 }
