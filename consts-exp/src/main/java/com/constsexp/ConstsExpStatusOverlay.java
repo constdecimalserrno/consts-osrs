@@ -2,41 +2,64 @@ package com.constsexp;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Skill;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
-import net.runelite.client.ui.overlay.components.LineComponent;
-import net.runelite.client.ui.overlay.components.ProgressBarComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
+import net.runelite.client.util.ImageUtil;
 
-/** Top-right panel: the active preset, one bar per enabled alert, and the interaction pause countdown. */
+/**
+ * Top-right panel, drawn as ticket 15's mockup A: the title with the preset as a tag, one row per enabled alert (its
+ * icon, name and value), and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a
+ * timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color and pulses.
+ */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
 {
     private static final String TITLE = "consts-EXP";
-    private static final int METRIC_WIDTH = 190;
-    private static final Color ON_COLOR = new Color(75, 205, 90);
-    private static final Color OFF_COLOR = new Color(210, 95, 95);
+    private static final Font FONT = FontManager.getRunescapeSmallFont();
     private static final Color INFO_COLOR = new Color(255, 210, 80);
-    private static final Color BAR_BACKGROUND = new Color(30, 33, 40, 230);
+    private static final Color LABEL_COLOR = new Color(215, 208, 196);
+    private static final Color QUIET_COLOR = new Color(16, 13, 10, 153);
+    private static final Color TAG_COLOR = new Color(0, 0, 0, 102);
+    // A near-black alert color (Potion's default) would vanish on a quiet row: its icon and line use this instead.
+    private static final Color MUTED_INK = new Color(140, 130, 120);
+    private static final Map<AlertType, BufferedImage> ICONS = new EnumMap<>(AlertType.class);
+    private static final BufferedImage HOURGLASS = ImageUtil.loadImageResource(ConstsExpPlugin.class, "animating.png");
+    private static final String HELD_TOOLTIP = "The hourglass: you're animating, so Idle waits until you stop.";
     private static final String AGGRO_AREA_UNKNOWN_TOOLTIP = "Aggro ?: the unaggressive area isn't known yet. Teleport or"
         + " enter a dungeon, then walk until the area settles and the ? goes away.</br>Or right-click the panel and Reset"
         + " Aggro Timer to start it where you stand.";
     private static final String AGGRO_AREA_SETTLING_TOOLTIP = "Aggro ?: only part of the unaggressive area is known."
         + " Walk out of the lines until the area settles and the ? goes away.";
+
+    static
+    {
+        for (AlertType type : AlertType.values())
+        {
+            ICONS.put(type, ImageUtil.loadImageResource(ConstsExpPlugin.class,
+                "alert_" + type.name().toLowerCase(Locale.ROOT) + ".png"));
+        }
+    }
 
     private final Client client;
     private final ConstsExpPlugin plugin;
@@ -44,7 +67,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private final TooltipManager tooltipManager;
 
     @Inject
-    private ConstsExpStatusOverlay(Client client, ConstsExpPlugin plugin, ConstsExpConfig config, TooltipManager tooltipManager)
+    ConstsExpStatusOverlay(Client client, ConstsExpPlugin plugin, ConstsExpConfig config, TooltipManager tooltipManager)
     {
         this.client = client;
         this.plugin = plugin;
@@ -54,6 +77,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
         setPosition(OverlayPosition.TOP_RIGHT);
         setPriority(PRIORITY_HIGH);
         setLayer(OverlayLayer.ABOVE_WIDGETS);
+        // Rows sit 1 px apart, as in the mockup.
+        panelComponent.setGap(new Point(0, 1));
 
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset Aggro Timer", TITLE, e -> plugin.resetAggroTimer());
         for (Preset preset : Preset.values())
@@ -71,91 +96,104 @@ class ConstsExpStatusOverlay extends OverlayPanel
             return null;
         }
 
+        List<Row> rows = rows(System.currentTimeMillis());
         panelComponent.getChildren().clear();
-        List<HoverTarget> hoverTargets = new ArrayList<>();
+        panelComponent.getChildren().addAll(rows);
+        Dimension dimension = super.render(graphics);
+        addHoverTooltip(rows);
+        return dimension;
+    }
 
-        add(hoverTargets, TitleComponent.builder().text(TITLE).color(Color.WHITE).build(),
-            "Live AFK alert status. Right-click to switch preset or reset the aggro timer.");
+    /** The panel's rows at {@code now}: the title, then each enabled alert, then the pause countdown. */
+    List<Row> rows(long now)
+    {
+        List<Row> rows = new ArrayList<>();
+        rows.add(new TagRow(TITLE, Color.WHITE, String.valueOf(plugin.currentPreset()),
+            "Live AFK alert status, on the preset in the tag. Right-click to switch preset or reset the aggro timer."));
 
         if (client.getGameState() != GameState.LOGGED_IN)
         {
-            add(hoverTargets, line("Status", "Not Logged In", INFO_COLOR), "Log in to start alert tracking.");
-            return renderWithHoverTooltips(graphics, hoverTargets);
+            rows.add(new TagRow("Status", LABEL_COLOR, "Not Logged In", "Log in to start alert tracking."));
+            return rows;
         }
-
-        add(hoverTargets, line("Preset", String.valueOf(plugin.currentPreset()), INFO_COLOR),
-            "Which alerts are on. Right-click the panel to switch.");
 
         for (AlertType type : AlertType.values())
         {
             if (plugin.isAlertEnabled(type))
             {
-                add(hoverTargets, alertBar(type), tooltip(type));
+                rows.add(alertRow(type, now));
             }
         }
 
         long pauseRemainingMs = plugin.getPauseRemainingMillis();
         if (pauseRemainingMs > 0)
         {
-            add(hoverTargets, line("Paused", formatClock(pauseRemainingMs), INFO_COLOR),
-                "Alerts are silenced briefly after each click or key press.");
+            rows.add(new TagRow("Paused", LABEL_COLOR, formatClock(pauseRemainingMs),
+                "Alerts are silenced briefly after each click or key press."));
         }
-
-        // Whenever Idle waits for the animation to stop, show the animation, so a quiet Idle explains itself.
-        boolean holdingIdle = plugin.isAlertEnabled(AlertType.IDLE)
-            && plugin.currentPreset().holdsIdleWhileAnimating(config);
-        if (config.showAnimationId() || holdingIdle)
-        {
-            int animationId = plugin.getCurrentAnimationId();
-            boolean animating = animationId != -1;
-            add(hoverTargets, line("Animation", animating ? String.valueOf(animationId) : "None", animating ? ON_COLOR : OFF_COLOR),
-                holdingIdle
-                    ? "Your current animation. Idle waits until it stops, so it doesn't ding while you're busy."
-                    : "Current local player animation id.");
-        }
-
-        return renderWithHoverTooltips(graphics, hoverTargets);
+        return rows;
     }
 
-    private ProgressBarComponent alertBar(AlertType type)
+    private AlertRow alertRow(AlertType type, long now)
     {
+        boolean firing = plugin.isAlertFiring(type);
+        String value = "";
+        // How close a timer is to firing, or Health's and Prayer's level; one-off alerts have no line.
+        double line = 0;
         switch (type)
         {
             case HEALTH:
-                return skillBar(type, Skill.HITPOINTS);
             case PRAYER:
-                return skillBar(type, Skill.PRAYER);
+            {
+                Skill skill = type == AlertType.HEALTH ? Skill.HITPOINTS : Skill.PRAYER;
+                int level = client.getBoostedSkillLevel(skill);
+                int max = Math.max(1, client.getRealSkillLevel(skill));
+                value = level + "/" + max;
+                line = level / (double) max;
+                break;
+            }
             case IDLE:
             {
                 long idleMs = plugin.getIdleDurationMillis();
-                long thresholdMs = Math.max(1000L, config.idleThresholdMs());
-                return bar(type, formatClock(idleMs), Math.min(idleMs, thresholdMs), thresholdMs);
+                value = formatClock(idleMs);
+                line = idleMs / (double) Math.max(1000L, config.idleThresholdMs());
+                break;
             }
             case AGGRO:
             {
-                long remainingMs = Math.max(0L, plugin.getNextAggroAlertMillis() - System.currentTimeMillis());
-                String valueText = aggroValueText(remainingMs, !isAggroAreaUncalibrated(), plugin.getAggroArea().hasArea());
-                return bar(type, valueText, remainingMs, plugin.getAggroIntervalMillis());
+                // Toward running out; with no countdown yet (the area unknown), no line.
+                long dueMs = plugin.getNextAggroAlertMillis();
+                long remainingMs = Math.max(0L, dueMs - now);
+                boolean uncalibrated = isAggroAreaUncalibrated();
+                value = aggroValueText(remainingMs, !uncalibrated, uncalibrated && plugin.getAggroArea().hasArea());
+                line = dueMs > 0 ? 1 - remainingMs / (double) Math.max(1L, plugin.getAggroIntervalMillis()) : 0;
+                break;
             }
             case LOGOUT:
             {
+                // The value counts down to the 25-minute logout; the line fills toward the warning.
                 long remainingMs = plugin.getLogoutTimerRemainingMillis();
-                return bar(type, formatClock(remainingMs), remainingMs, ConstsExpPlugin.LOGOUT_TIMEOUT_MS);
+                value = formatClock(remainingMs);
+                line = (ConstsExpPlugin.LOGOUT_TIMEOUT_MS - remainingMs) / (double) Math.max(60_000L, config.logoutWarningMs());
+                break;
             }
             case FORESTRY:
             {
                 // Names the event while it fires, e.g. "Forestry Leprechaun".
-                boolean firing = plugin.isAlertFiring(type);
                 ForestryEvent event = plugin.getLastForestryEvent();
-                return bar(type, firing && event != null ? event.getLabel() : "0/1", firing ? 1L : 0L, 1L);
+                value = firing && event != null ? event.getLabel() : "";
+                break;
             }
             default:
-            {
-                // One-off alerts (chat or NPC triggered) fill up while they are firing.
-                boolean firing = plugin.isAlertFiring(type);
-                return bar(type, firing ? "1/1" : "0/1", firing ? 1L : 0L, 1L);
-            }
+                break;
         }
+
+        // Idle waits while you animate: an hourglass on its row says so, without the animation's number.
+        boolean held = type == AlertType.IDLE && plugin.currentPreset().holdsIdleWhileAnimating(config)
+            && plugin.getCurrentAnimationId() != -1;
+        Color color = type.getFlashColor(config);
+        return new AlertRow(ICONS.get(type), type.getLabel(), value, color, firing ? pulse(type, color, now) : null,
+            Math.max(0, Math.min(1, line)), held, held ? tooltip(type) + "</br>" + HELD_TOOLTIP : tooltip(type));
     }
 
     private String tooltip(AlertType type)
@@ -172,118 +210,36 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return plugin.usesAggroArea() && !plugin.getAggroArea().isCalibrated();
     }
 
-    private ProgressBarComponent skillBar(AlertType type, Skill skill)
+    /** The alert's color, dimmed to 45% on alternate flash phases. */
+    private Color pulse(AlertType type, Color base, long now)
     {
-        int current = client.getBoostedSkillLevel(skill);
-        int max = Math.max(1, client.getRealSkillLevel(skill));
-        return bar(type, current + "/" + max, current, max);
-    }
-
-    private ProgressBarComponent bar(AlertType type, String valueText, long value, long max)
-    {
-        long safeMax = Math.max(1L, max);
-        long clampedValue = Math.max(0L, Math.min(value, safeMax));
-        Color color = pulse(type);
-        // The label is centered, so it sits on the fill once the bar is at least half full.
-        boolean labelOnFill = clampedValue * 2 >= safeMax;
-
-        ProgressBarComponent bar = new ProgressBarComponent();
-        bar.setMinimum(0L);
-        bar.setMaximum(safeMax);
-        bar.setValue(clampedValue);
-        bar.setForegroundColor(color);
-        bar.setBackgroundColor(BAR_BACKGROUND);
-        bar.setFontColor(labelOnFill && isLight(color) ? Color.BLACK : Color.WHITE);
-        bar.setLabelDisplayMode(ProgressBarComponent.LabelDisplayMode.TEXT_ONLY);
-        bar.setCenterLabel(type.getLabel() + " " + valueText);
-        bar.setPreferredSize(new Dimension(METRIC_WIDTH, 16));
-        return bar;
-    }
-
-    /** The alert's color, dimmed on alternate flash phases while it is firing. */
-    private Color pulse(AlertType type)
-    {
-        Color base = type.getFlashColor(config);
         long interval = Math.max(80L, config.flashIntervalMs());
-        if (!plugin.isAlertFiring(type) || type.isFlashPhaseOn(System.currentTimeMillis(), interval))
-        {
-            return base;
-        }
-
-        return new Color((int) (base.getRed() * 0.45f), (int) (base.getGreen() * 0.45f), (int) (base.getBlue() * 0.45f));
+        return type.isFlashPhaseOn(now, interval) ? base : shade(base, 0.45);
     }
 
-    private static boolean isLight(Color color)
+    // The rows' bounds are within the panel; the overlay's bounds say where the renderer put the panel.
+    private void addHoverTooltip(List<Row> rows)
     {
-        return 0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue() > 186;
-    }
-
-    private static LineComponent line(String left, String right, Color rightColor)
-    {
-        return LineComponent.builder()
-            .left(left)
-            .right(right)
-            .rightColor(rightColor)
-            .build();
-    }
-
-    private void add(List<HoverTarget> hoverTargets, LayoutableRenderableEntity component, String tooltip)
-    {
-        panelComponent.getChildren().add(component);
-        hoverTargets.add(new HoverTarget(component, tooltip));
-    }
-
-    private Dimension renderWithHoverTooltips(Graphics2D graphics, List<HoverTarget> hoverTargets)
-    {
-        Dimension dimension = super.render(graphics);
-        maybeAddHoverTooltip(hoverTargets);
-        return dimension;
-    }
-
-    private void maybeAddHoverTooltip(List<HoverTarget> hoverTargets)
-    {
-        net.runelite.api.Point mousePosition = client.getMouseCanvasPosition();
-        if (mousePosition == null)
+        net.runelite.api.Point mouse = client.getMouseCanvasPosition();
+        if (mouse == null)
         {
             return;
         }
 
-        for (HoverTarget target : hoverTargets)
+        for (Row row : rows)
         {
-            if (isMouseInsideComponent(target.component.getBounds(), mousePosition.getX(), mousePosition.getY()))
+            Rectangle bounds = new Rectangle(row.getBounds());
+            bounds.translate(getBounds().x, getBounds().y);
+            if (bounds.contains(mouse.getX(), mouse.getY()))
             {
-                tooltipManager.add(new Tooltip(target.tooltip));
+                tooltipManager.add(new Tooltip(row.tooltip));
                 return;
             }
         }
     }
 
-    private boolean isMouseInsideComponent(Rectangle componentBounds, int mouseX, int mouseY)
-    {
-        if (componentBounds == null)
-        {
-            return false;
-        }
-
-        if (componentBounds.contains(mouseX, mouseY))
-        {
-            return true;
-        }
-
-        // Child bounds may be relative to the panel rather than the canvas.
-        Rectangle panelBounds = panelComponent.getBounds();
-        if (panelBounds == null)
-        {
-            return false;
-        }
-
-        Rectangle translated = new Rectangle(componentBounds);
-        translated.translate(panelBounds.x, panelBounds.y);
-        return translated.contains(mouseX, mouseY);
-    }
-
     /**
-     * The Aggro bar's value. Until both area centers are known the countdown may be off, so it wears a "?"; with no
+     * The Aggro row's value. Until both area centers are known the countdown may be off, so it wears a "?"; with no
      * area at all there is no countdown, only the "?".
      */
     static String aggroValueText(long remainingMs, boolean calibrated, boolean hasArea)
@@ -302,15 +258,182 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return totalSeconds / 60L + ":" + String.format("%02d", totalSeconds % 60L);
     }
 
-    private static final class HoverTarget
+    private static Color shade(Color color, double factor)
     {
-        private final LayoutableRenderableEntity component;
-        private final String tooltip;
+        return new Color((int) Math.round(color.getRed() * factor), (int) Math.round(color.getGreen() * factor),
+            (int) Math.round(color.getBlue() * factor));
+    }
 
-        private HoverTarget(LayoutableRenderableEntity component, String tooltip)
+    // WCAG relative luminance.
+    private static double luminance(Color color)
+    {
+        double luminance = 0;
+        double[] weights = {0.2126, 0.7152, 0.0722};
+        int[] channels = {color.getRed(), color.getGreen(), color.getBlue()};
+        for (int i = 0; i < 3; i++)
         {
-            this.component = component;
+            double c = channels[i] / 255.0;
+            luminance += weights[i] * (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+        }
+        return luminance;
+    }
+
+    /** Black or white, whichever stands out more on the fill. */
+    private static Color contrast(Color fill)
+    {
+        double luminance = luminance(fill);
+        return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? Color.BLACK : Color.WHITE;
+    }
+
+    /** The pixels the text's ink covers when drawn at 0, 0. Like the mockup, rows line text up by its ink. */
+    private static Rectangle ink(Graphics2D graphics, String text)
+    {
+        return FONT.createGlyphVector(graphics.getFontRenderContext(), text).getPixelBounds(null, 0, 0);
+    }
+
+    /** Text as RuneLite's TextComponent draws it: a black shadow 1 px down and right, then the text. */
+    private static void text(Graphics2D graphics, String text, int x, int y, Color color)
+    {
+        graphics.setFont(FONT);
+        graphics.setColor(Color.BLACK);
+        graphics.drawString(text, x + 1, y + 1);
+        graphics.setColor(color);
+        graphics.drawString(text, x, y);
+    }
+
+    /** A pixel icon in one color, with the text's shadow. */
+    private static void icon(Graphics2D graphics, BufferedImage mask, int x, int y, Color color)
+    {
+        graphics.drawImage(ImageUtil.fillImage(mask, Color.BLACK), x + 1, y + 1, null);
+        graphics.drawImage(ImageUtil.fillImage(mask, color), x, y, null);
+    }
+
+    /** A row of the panel. Its bounds, set as it renders, are for its tooltip. */
+    abstract static class Row implements LayoutableRenderableEntity
+    {
+        final String tooltip;
+        private final Rectangle bounds = new Rectangle();
+        Point location = new Point();
+        int width;
+
+        Row(String tooltip)
+        {
             this.tooltip = tooltip;
+        }
+
+        @Override
+        public Rectangle getBounds()
+        {
+            return bounds;
+        }
+
+        @Override
+        public void setPreferredLocation(Point location)
+        {
+            this.location = location;
+        }
+
+        @Override
+        public void setPreferredSize(Dimension size)
+        {
+            width = size.width;
+        }
+
+        Dimension size(int height)
+        {
+            bounds.setBounds(location.x, location.y, width, height);
+            return new Dimension(width, height);
+        }
+    }
+
+    /** A name, and a value in a dark tag: the title with the preset, or a note like the pause countdown. */
+    static final class TagRow extends Row
+    {
+        final String label;
+        final Color labelColor;
+        final String tag;
+
+        TagRow(String label, Color labelColor, String tag, String tooltip)
+        {
+            super(tooltip);
+            this.label = label;
+            this.labelColor = labelColor;
+            this.tag = tag;
+        }
+
+        @Override
+        public Dimension render(Graphics2D graphics)
+        {
+            Rectangle labelInk = ink(graphics, label);
+            Rectangle tagInk = ink(graphics, tag);
+            // A tag too long to sit 3 px clear of the name (the Salvaging presets) gets its own line under it.
+            int tagY = labelInk.width + 3 + tagInk.width + 4 <= width ? location.y : location.y + 13;
+            int right = location.x + width;
+            text(graphics, label, location.x - labelInk.x, location.y + 12, labelColor);
+            graphics.setColor(TAG_COLOR);
+            graphics.fillRect(right - tagInk.width - 4, tagY, tagInk.width + 4, 12);
+            text(graphics, tag, right - 2 - tagInk.x - tagInk.width, tagY + 12, INFO_COLOR);
+            return size(tagY - location.y + 14);
+        }
+    }
+
+    /** An alert: its icon, name and value, and under a quiet row a thin line. */
+    static final class AlertRow extends Row
+    {
+        private static final int HEIGHT = 15;
+
+        final BufferedImage icon;
+        final String label;
+        final String value;
+        final Color color;
+        // Its color in this flash phase while it fires; null while it's quiet.
+        final Color fill;
+        // How far the thin line under a quiet row reaches, 0 to 1.
+        final double line;
+        // Idle held by an animation.
+        final boolean held;
+
+        AlertRow(BufferedImage icon, String label, String value, Color color, Color fill, double line, boolean held,
+            String tooltip)
+        {
+            super(tooltip);
+            this.icon = icon;
+            this.label = label;
+            this.value = value;
+            this.color = color;
+            this.fill = fill;
+            this.line = line;
+            this.held = held;
+        }
+
+        @Override
+        public Dimension render(Graphics2D graphics)
+        {
+            int x = location.x;
+            int y = location.y;
+            Color ink = luminance(color) < 0.01 ? MUTED_INK : color;
+            Color foreground = fill != null ? contrast(fill) : null;
+
+            graphics.setColor(fill != null ? fill : QUIET_COLOR);
+            graphics.fillRect(x, y, width, HEIGHT);
+            if (fill == null)
+            {
+                graphics.setColor(shade(ink, 0.85));
+                graphics.fillRect(x, y + HEIGHT - 1, (int) Math.round(width * line), 1);
+            }
+
+            Color iconColor = foreground != null ? foreground : shade(ink, 0.9);
+            icon(graphics, icon, x + 2, y + 3, iconColor);
+            text(graphics, label, x + 14 - ink(graphics, label).x, y + 14, foreground != null ? foreground : LABEL_COLOR);
+            Rectangle valueInk = ink(graphics, value);
+            int valueX = x + width - 2 - valueInk.x - valueInk.width;
+            text(graphics, value, valueX, y + 14, foreground != null ? foreground : Color.WHITE);
+            if (held)
+            {
+                // Left of the value, 3 px clear of its ink.
+                icon(graphics, HOURGLASS, valueX + valueInk.x - 3 - HOURGLASS.getWidth(), y + 3, iconColor);
+            }
+            return size(HEIGHT);
         }
     }
 }
