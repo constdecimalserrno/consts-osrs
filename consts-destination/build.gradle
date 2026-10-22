@@ -1,2 +1,5 @@
 // Plugin-specific config; shared config comes from the root build.gradle
 version = '1.4.0'
+
+// ConfigSidePanelCopyTest compares this plugin's copy with consts-EXP's, so a change to that copy reruns the tests.
+tasks.named('test') { inputs.file('../consts-exp/src/main/java/com/constsexp/ConfigSidePanel.java') }

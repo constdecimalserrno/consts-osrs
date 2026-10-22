@@ -1,2 +1,0 @@
-// Plugin-specific config; shared config comes from the root build.gradle
-version = '1.14.0'

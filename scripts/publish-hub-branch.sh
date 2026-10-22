@@ -6,7 +6,7 @@
 # plugin gets a branch cut from it with git subtree split. The split is deterministic, so every publish
 # fast-forwards the branch and older hub commits stay reachable.
 #
-#   scripts/publish-hub-branch.sh consts-afk
+#   scripts/publish-hub-branch.sh consts-exp
 #
 # Prints the two lines for the plugin's manifest in runelite/plugin-hub (plugins/<plugin>).
 set -euo pipefail
