@@ -21,8 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -37,6 +35,7 @@ import net.runelite.client.config.ConfigItemDescriptor;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.ConfigSectionDescriptor;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
@@ -278,8 +277,8 @@ public class ConfigSidePanelTest
         assertEquals(descriptor.getSections().size() - 1, one.size());
 
         // It opens on One.
-        assertTrue(labels(tabbed).contains(sectionName(ConstsExpConfig.healthSection)));
-        assertFalse(labels(tabbed).contains(sectionName(ConstsExpConfig.soundsSection)));
+        assertTrue(sections(tabbed).contains(sectionName(ConstsExpConfig.healthSection)));
+        assertFalse(sections(tabbed).contains(sectionName(ConstsExpConfig.soundsSection)));
     }
 
     @Test
@@ -331,7 +330,7 @@ public class ConfigSidePanelTest
         assertEquals(List.of("Timing", "Sounds", "Screen Flash"), sections(tabs.getTab(2).getContent()));
 
         assertTrue(labels(exp).contains("Preset"));
-        assertFalse(labels(exp).contains("Timing"));
+        assertFalse(sections(exp).contains("Timing"));
     }
 
     @Test
@@ -366,11 +365,22 @@ public class ConfigSidePanelTest
             .name();
     }
 
-    /** The section headers under root, top to bottom. */
-    private List<String> sections(Container root)
+    /** The section headers under root, top to bottom: the names drawn in orange, as a setting's never is. */
+    private static List<String> sections(Container root)
     {
-        Set<String> names = descriptor.getSections().stream().map(ConfigSectionDescriptor::name).collect(Collectors.toSet());
-        return labels(root).stream().filter(names::contains).collect(Collectors.toList());
+        List<String> out = new ArrayList<>();
+        for (Component c : root.getComponents())
+        {
+            if (c instanceof JLabel && ColorScheme.BRAND_ORANGE.equals(c.getForeground()))
+            {
+                out.add(((JLabel) c).getText());
+            }
+            if (c instanceof Container)
+            {
+                out.addAll(sections((Container) c));
+            }
+        }
+        return out;
     }
 
     private static MaterialTabGroup tabs(Container root)

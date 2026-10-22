@@ -17,7 +17,7 @@ import net.runelite.client.config.Units;
  * with no tabs, so each name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
- * Salvage's with sailing.
+ * Salvage's with sailing, and two sections keep their old keys, Timing's general and Woodcutting's forestry.
  */
 @ConfigGroup(ConstsExpConfig.GROUP)
 public interface ConstsExpConfig extends Config

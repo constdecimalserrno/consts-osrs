@@ -220,11 +220,15 @@ public class ConstsExpPlugin extends Plugin
         });
     }
 
-    /** The sidebar panel: the title and Master Switch over three tabs of settings, Alerts, which it opens on, Skills and General. */
+    /**
+     * The sidebar panel: the title and Master Switch over three tabs of settings, Alerts, which it opens on, Skills and
+     * General.
+     */
     static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
         ConstsExpConfig config, Plugin plugin)
     {
-        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin, ConstsExpConfig.MASTER_KEY);
+        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin,
+            ConstsExpConfig.MASTER_KEY);
         panel.addSettingsTab("Alerts", ConstsExpConfig.healthSection, ConstsExpConfig.prayerSection,
             ConstsExpConfig.aggroSection, ConstsExpConfig.potionSection, ConstsExpConfig.cannonSection,
             ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
