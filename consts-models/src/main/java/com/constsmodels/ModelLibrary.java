@@ -144,7 +144,7 @@ final class ModelLibrary
     }
 
     /** Reads a capture's mesh back. */
-    Mesh load(Capture capture) throws IOException
+    static Mesh load(Capture capture) throws IOException
     {
         try (InputStream in = capture.meshFile.openInputStream())
         {
@@ -153,7 +153,7 @@ final class ModelLibrary
     }
 
     /** Deletes a capture's two files; false if the mesh is still there. */
-    boolean delete(Capture capture)
+    static boolean delete(Capture capture)
     {
         deleteQuietly(capture.pictureFile);
         deleteQuietly(capture.meshFile);

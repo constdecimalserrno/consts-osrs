@@ -16,12 +16,14 @@ import org.junit.Test;
 
 /**
  * The Plugin Hub refuses a plugin that reaches files by their path or opens the computer's file browser: files go
- * through RuneLite's Filepath, from the plugin's own folder or a folder the player picks. The sources are read as text.
+ * through RuneLite's Filepath, from the plugin's own folder or a folder the player picks, and nothing starts another
+ * program. The sources are read as text, so a wildcard import counts too.
  */
 public class HubRulesTest
 {
-    private static final List<String> FORBIDDEN = List.of("java.io.File", "FileInputStream", "FileOutputStream",
-        "java.nio.file", "RUNELITE_DIR", "LinkBrowser.open", "JFileChooser");
+    private static final List<String> FORBIDDEN = List.of("java.io.File", "java.io.*", "new File(", "FileInputStream",
+        "FileOutputStream", "java.nio.file", "RUNELITE_DIR", "LinkBrowser.open", "JFileChooser", "java.awt.Desktop",
+        "Desktop.getDesktop", "Runtime.getRuntime", "ProcessBuilder");
 
     @Test
     public void filesGoThroughRuneLitesFilepathOnly() throws IOException

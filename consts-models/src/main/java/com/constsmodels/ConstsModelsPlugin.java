@@ -53,8 +53,7 @@ import org.slf4j.LoggerFactory;
     name = "consts-Models",
     description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, save it as OBJ or PLY",
     tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "blender", "diorama", "scene"},
-    // The Plugin Hub's name for it; and the folder it used in .runelite before 1.1, which RuneLite moves into
-    // plugin-data
+    // Its name on the Plugin Hub, and its folder in .runelite before 1.1, which RuneLite moves into plugin-data
     internalName = "consts-models",
     legacyDataDirectory = "consts-models"
 )
@@ -262,7 +261,7 @@ public class ConstsModelsPlugin extends Plugin
         {
             try
             {
-                Mesh mesh = library().load(capture);
+                Mesh mesh = ModelLibrary.load(capture);
                 SwingUtilities.invokeLater(() -> ModelViewer.open(mesh, viewerActions));
             }
             catch (IOException | RuntimeException e)
@@ -278,7 +277,7 @@ public class ConstsModelsPlugin extends Plugin
     {
         executor.execute(() ->
         {
-            if (library != null && library.delete(capture))
+            if (ModelLibrary.delete(capture))
             {
                 sessionMeshes.remove(capture.id);
                 SwingUtilities.invokeLater(() -> panel.removed(capture));
@@ -372,7 +371,16 @@ public class ConstsModelsPlugin extends Plugin
             chat("There's no folder to copy: " + folderProblem + ".");
             return;
         }
-        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(folder.toString()), null);
+        try
+        {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(folder.toString()), null);
+        }
+        catch (IllegalStateException e)
+        {
+            // Another program holds the clipboard, as happens on Windows: the path is in chat to copy by hand
+            chat("Couldn't copy the path, the clipboard is busy. The folder is " + folder + ".");
+            return;
+        }
         chat("Copied " + folder + ". Paste it in Finder's Go to Folder (Cmd+Shift+G) or File Explorer's address bar.");
     }
 
