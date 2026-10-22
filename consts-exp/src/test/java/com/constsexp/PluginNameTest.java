@@ -14,14 +14,7 @@ import org.junit.Test;
 public class PluginNameTest
 {
     @Test
-    public void runeLiteLoadsItAsConstsExp() throws Exception
-    {
-        Class<?> plugin = Class.forName("com.constsexp.ConstsExpPlugin");
-        assertEquals("consts-EXP", plugin.getAnnotation(PluginDescriptor.class).name());
-    }
-
-    @Test
-    public void thePluginHubListsItAsConstsExp() throws Exception
+    public void thePluginHubAndRuneLiteLoadItAsConstsExp() throws Exception
     {
         Properties hub = new Properties();
         try (Reader in = Files.newBufferedReader(Paths.get("runelite-plugin.properties")))
@@ -30,12 +23,12 @@ public class PluginNameTest
         }
         assertEquals("consts-EXP", hub.getProperty("displayName"));
         assertEquals("com.constsexp.ConstsExpPlugin", hub.getProperty("plugins"));
+        assertEquals("consts-EXP", Class.forName(hub.getProperty("plugins")).getAnnotation(PluginDescriptor.class).name());
     }
 
     @Test
-    public void itsSettingsAreSavedUnderItsOwnName() throws Exception
+    public void itsSettingsAreSavedUnderItsOwnName()
     {
-        Class<?> config = Class.forName("com.constsexp.ConstsExpConfig");
-        assertEquals("constsexp", config.getAnnotation(ConfigGroup.class).value());
+        assertEquals("constsexp", ConstsExpConfig.class.getAnnotation(ConfigGroup.class).value());
     }
 }
