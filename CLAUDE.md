@@ -20,3 +20,19 @@ RuneLite plugins for Old School RuneScape, published under the pseudonym `constd
 - License: MIT. Every plugin folder keeps its own `LICENSE` (the Hub refuses a build without one at the root of what it builds). Code ported from elsewhere keeps its license, credited in the plugin's `NOTICE` and README.
 - Shared code is copied, not shared: the Hub builds each plugin folder alone. `ConfigSidePanel.java` (the sidebar settings panel) is the same in every plugin that has one, package line aside; change it in `consts-exp` and copy it, and `ConfigSidePanelCopyTest` fails until the copies match.
 - Plugin Hub: `scripts/publish-hub-branch.sh <plugin>` cuts the `plugin-hub/<plugin>` branch and prints the manifest lines; each plugin is its own Hub entry. The Hub's standard build compiles only `<plugin>/src/main` against RuneLite, so use nothing outside the RuneLite client and API: no third-party libraries, no core plugin classes.
+
+## Ticket runbook
+
+Every ticket runs the `/workbench:ticket-runbook` skill, with these settings:
+
+- **Service:** the plugins as const plays them: the play kit (`osrs-ship` publishes `build/play-kit`, and the MacBook pulls it at its next launch), each plugin's GitHub release, and the landing page on the blog.
+- **Deploy window:** any time, with const's yes. A ship reaches the MacBook at its next launch, never mid-session.
+- **Freeze:** none. Never build in the main checkout while RuneLite runs from it (`./run.sh`).
+- **Shared code that needs extra care:** `ConfigSidePanel.java` (one copy per plugin, held equal by `ConfigSidePanelCopyTest`); the root `build.gradle`, `settings.gradle`, `PluginLauncher.java` and `scripts/` (every plugin and the play kit).
+- **Outages confirmed as expected, and who confirmed them:** none yet.
+
+## Living doc
+
+Our living doc: https://claude.ai/artifact/H5jWP4bN3v66WAV5Vwuxbx. Its ticket files live in `.scratch/consts-exp/` and render to the local mirror `.scratch/consts-exp/living-doc.html`. Both stay in the main checkout, out of git (`.git/info/exclude`, since this repo is public), current after every change.
+
+After every ticket change, and for every new ticket (pasted, or from the page's form), use the `/workbench:living-doc` skill. It syncs the local mirror and the artifact, and respins the artifact when this link is unreachable after a Claude seat switch.
