@@ -28,7 +28,7 @@ Every ticket runs the `/workbench:ticket-runbook` skill, with these settings:
 - **Service:** the plugins as const plays them: the play kit (`osrs-ship` publishes `build/play-kit`, and the MacBook pulls it at its next launch), each plugin's GitHub release, and the landing page on the blog.
 - **Deploy window:** any time, with const's yes. A ship reaches the MacBook at its next launch, never mid-session.
 - **Freeze:** none. Never build in the main checkout while RuneLite runs from it (`./run.sh`).
-- **Shared code that needs extra care:** `ConfigSidePanel.java` (one copy per plugin, held equal by `ConfigSidePanelCopyTest`); the root `build.gradle`, `settings.gradle`, `PluginLauncher.java` and `scripts/` (every plugin and the play kit); the config group `afkcombatalerts` (saved settings must carry over).
+- **Shared code that needs extra care:** `ConfigSidePanel.java` (one copy per plugin, held equal by `ConfigSidePanelCopyTest`); the root `build.gradle`, `settings.gradle`, `PluginLauncher.java` and `scripts/` (every plugin and the play kit).
 - **Outages confirmed as expected, and who confirmed them:** none yet.
 
 ## Living doc
