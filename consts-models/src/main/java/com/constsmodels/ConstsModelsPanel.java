@@ -14,7 +14,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BaseMultiResolutionImage;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,7 +27,6 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
@@ -47,6 +45,7 @@ import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
+import net.runelite.client.util.Filepath;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.QuantityFormatter;
 import net.runelite.client.util.SwingUtil;
@@ -54,8 +53,8 @@ import net.runelite.client.util.Text;
 
 /**
  * The sidebar: its two main buttons, Capture area and Export yourself, with a hint that anything in the game can be
- * exported from its right-click menu; then the folder files are saved to, with a button to open it and one to choose
- * another; then the captures, newest first, on two tabs: this session's, and every one kept (see
+ * exported from its right-click menu; then the folder files are saved to, with a button to copy its path and one to
+ * choose another for the session; then the captures, newest first, on two tabs: this session's, and every one kept (see
  * {@link ModelLibrary}). A click on one opens it in the viewer again; its trash can deletes it, at once. Last, the
  * settings, in a section closed to start.
  */
@@ -149,7 +148,7 @@ class ConstsModelsPanel extends PluginPanel
         hint.setBorder(new EmptyBorder(0, 2, 0, 2));
         addRow(hint, c, 8);
 
-        // Where files go: the folder in a bar, then a button to open it and one to choose another
+        // Where files go: the folder in a bar, then a button to copy its path and one to choose another
         addRow(buildFolderBar(), c, 16);
         addRow(buildFolderButtons(), c, 4);
 
@@ -196,11 +195,11 @@ class ConstsModelsPanel extends PluginPanel
         refresh();
     }
 
-    /** Reads the folder and the area's size again, which may have changed in the settings since. */
+    /** Reads the folder and the settings again, either of which may have changed since. */
     void refresh()
     {
-        File folder = plugin.outputFolder();
-        String full = folder == null ? "" : folder.getAbsolutePath();
+        Filepath folder = plugin.outputFolder();
+        String full = folder == null ? "" : folder.toString();
         FontMetrics metrics = folderPath.getFontMetrics(folderPath.getFont());
         int width = CONTENT_WIDTH - 2 * BAR_PADDING - folderCaption.getPreferredSize().width - 6;
         folderPath.setText(shortPath(full, System.getProperty("user.home"), width, metrics::stringWidth));
@@ -451,17 +450,17 @@ class ConstsModelsPanel extends PluginPanel
 
     private JPanel buildFolderButtons()
     {
-        JButton open = new JButton("Open folder");
-        open.setToolTipText("Show the folder your models are saved in");
-        open.addActionListener(e -> plugin.openFolder());
+        JButton copy = new JButton("Copy path");
+        copy.setToolTipText("Copy the folder's path, to paste in Finder or File Explorer");
+        copy.addActionListener(e -> plugin.copyPath());
 
         JButton choose = new JButton("Choose folder");
-        choose.setToolTipText("Pick another folder to save your models in");
+        choose.setToolTipText("Pick another folder to save your models in, until RuneLite closes");
         choose.addActionListener(e -> chooseFolder());
 
         JPanel buttons = new JPanel(new GridLayout(1, 2, 4, 0));
         buttons.setOpaque(false);
-        for (JButton button : new JButton[]{open, choose})
+        for (JButton button : new JButton[]{copy, choose})
         {
             button.setFont(FontManager.getRunescapeSmallFont());
             button.setFocusPainted(false);
@@ -600,28 +599,23 @@ class ConstsModelsPanel extends PluginPanel
         return note;
     }
 
+    /** Asks for a folder to save in, through RuneLite's own chooser, which hands it over for the session. */
     private void chooseFolder()
     {
-        JFileChooser chooser = new JFileChooser(nearestExisting(plugin.outputFolder()));
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        chooser.setAcceptAllFileFilterUsed(false);
-        chooser.setDialogTitle("Choose where to save models");
-        if (chooser.showDialog(this, "Save here") == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null)
+        Filepath.Chooser chooser = new Filepath.Chooser()
+            .setAcceptsDirectories()
+            .setDialogTitle("Choose where to save models");
+        Filepath current = plugin.outputFolder();
+        if (current != null)
         {
-            plugin.setOutputFolder(chooser.getSelectedFile());
+            chooser.setCurrentDirectory(current);
+        }
+        List<Filepath> picked = chooser.showDialog(this);
+        if (picked != null && !picked.isEmpty())
+        {
+            plugin.setOutputFolder(picked.get(0));
             refresh();
         }
-    }
-
-    /** The folder, or the nearest folder above it that exists, for the chooser to start in. */
-    private static File nearestExisting(File folder)
-    {
-        File f = folder;
-        while (f != null && !f.isDirectory())
-        {
-            f = f.getParentFile();
-        }
-        return f;
     }
 
     private ImageIcon icon(String name)

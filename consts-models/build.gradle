@@ -1,2 +1,5 @@
 // Plugin-specific config; shared config comes from the root build.gradle
 version = '1.0.0'
+
+// HubRulesTest reads the sources as text, so a change to any of them, comments too, reruns the tests.
+tasks.named('test') { inputs.dir('src/main/java') }

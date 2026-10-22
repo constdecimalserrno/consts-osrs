@@ -10,10 +10,10 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import net.runelite.client.util.Filepath;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -22,6 +22,15 @@ public class LibraryTest
 {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
+
+    /** The temporary folder as a plugin gets its own from RuneLite: a Filepath that can't leave it. */
+    private Filepath root;
+
+    @Before
+    public void setUp()
+    {
+        root = Filepath.Unchecked.getRooted(folder.getRoot().toPath());
+    }
 
     @Test
     public void aCaptureFileGivesBackTheSameMesh() throws IOException
@@ -63,13 +72,16 @@ public class LibraryTest
     @Test
     public void theLibraryKeepsListsOpensAndDeletes() throws IOException
     {
-        ModelLibrary library = new ModelLibrary(new File(folder.getRoot(), "captures"));
+        // A folder not made yet lists nothing, and the first capture makes it
+        Filepath captures = root.joinSegment("captures");
+        ModelLibrary library = new ModelLibrary(captures);
         assertTrue(library.list().isEmpty());
 
         Mesh first = TestMeshes.box(0, 0, 0, 10, 10, 10, RED).withName("NPC Cow");
         Mesh second = TestMeshes.box(0, 0, 0, 20, 10, 10, RED).withName("NPC Goblin");
         ModelLibrary.Capture cow = library.keep(first, 1_000L);
         ModelLibrary.Capture goblin = library.keep(second, 2_000L);
+        assertTrue(captures.isDirectory());
         assertTrue(cow.meshFile.isFile());
         assertTrue(cow.pictureFile.isFile());
         assertNotNull(cow.picture);
@@ -94,7 +106,7 @@ public class LibraryTest
     @Test
     public void twoCapturesInTheSameMillisecondBothStay() throws IOException
     {
-        ModelLibrary library = new ModelLibrary(folder.getRoot());
+        ModelLibrary library = new ModelLibrary(root);
         Mesh box = TestMeshes.box(0, 0, 0, 10, 10, 10, RED);
         ModelLibrary.Capture one = library.keep(box, 5_000L);
         ModelLibrary.Capture two = library.keep(box, 5_000L);
@@ -105,12 +117,9 @@ public class LibraryTest
     @Test
     public void aDamagedFileIsLeftOutOfTheList() throws IOException
     {
-        ModelLibrary library = new ModelLibrary(folder.getRoot());
+        ModelLibrary library = new ModelLibrary(root);
         library.keep(TestMeshes.box(0, 0, 0, 10, 10, 10, RED), 1_000L);
-        try (FileOutputStream junk = new FileOutputStream(new File(folder.getRoot(), "broken.cmesh")))
-        {
-            junk.write(new byte[]{9, 9, 9});
-        }
+        root.joinSegment("broken.cmesh").write(new byte[]{9, 9, 9});
         assertEquals(1, library.list().size());
     }
 }

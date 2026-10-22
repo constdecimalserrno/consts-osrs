@@ -1,9 +1,11 @@
 package com.constsmodels;
 
 import com.google.inject.Provides;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -19,7 +21,6 @@ import net.runelite.api.GameState;
 import net.runelite.api.Model;
 import net.runelite.api.Player;
 import net.runelite.api.Renderable;
-import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
@@ -33,8 +34,8 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.Filepath;
 import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.LinkBrowser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,18 +44,23 @@ import org.slf4j.LoggerFactory;
  * and pick Export Model, or use the sidebar to capture yourself or the area around you. Each capture opens in a
  * viewer to turn and inspect, and saves as OBJ or PLY for 3D software, into a folder you choose. Built on the Model
  * Exporter plugin by Bram91.
+ *
+ * <p>Its files go through RuneLite's {@link Filepath}, as the Plugin Hub asks. Captures are kept in the plugin's own
+ * folder, .runelite/plugin-data/consts-models, and models and pictures are saved there too unless a folder is chosen
+ * for the session. The first time, RuneLite moves the folder used before 1.1, .runelite/consts-models, there.
  */
 @PluginDescriptor(
     name = "consts-Models",
     description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, save it as OBJ or PLY",
-    tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "blender", "diorama", "scene"}
+    tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "blender", "diorama", "scene"},
+    // The Plugin Hub's name for it; and the folder it used in .runelite before 1.1, which RuneLite moves into
+    // plugin-data
+    internalName = "consts-models",
+    legacyDataDirectory = "consts-models"
 )
 public class ConstsModelsPlugin extends Plugin
 {
     private static final Logger log = LoggerFactory.getLogger(ConstsModelsPlugin.class);
-
-    /** Where files go until a folder is chosen. */
-    static final File DEFAULT_FOLDER = new File(RuneLite.RUNELITE_DIR, "consts-models");
 
     @Inject
     private Client client;
@@ -77,9 +83,16 @@ public class ConstsModelsPlugin extends Plugin
     @Inject
     private ConstsModelsConfig config;
 
-    // Every capture, kept to open again in any session; this session's meshes stay in memory too
-    private final ModelLibrary library = new ModelLibrary(new File(DEFAULT_FOLDER, "captures"));
+    // The plugin's own folder, made at startup, and every capture kept in it to open again in any session; both null
+    // if it couldn't be made, and folderProblem says why. This session's meshes stay in memory too.
+    private volatile Filepath home;
+    private volatile ModelLibrary library;
+    private volatile String folderProblem = "its folder isn't ready yet";
     private final Map<String, Mesh> sessionMeshes = new ConcurrentHashMap<>();
+
+    // A folder chosen in the sidebar, saved to instead until RuneLite closes: RuneLite hands one over for the session
+    // only, and nothing turns a path kept in the settings back into one
+    private volatile Filepath chosen;
 
     private TextureColors textures;
     private ExportMenu exportMenu;
@@ -101,9 +114,9 @@ public class ConstsModelsPlugin extends Plugin
         }
 
         @Override
-        public void openFolder()
+        public void copyPath()
         {
-            ConstsModelsPlugin.this.openFolder();
+            ConstsModelsPlugin.this.copyPath();
         }
 
         @Override
@@ -150,11 +163,31 @@ public class ConstsModelsPlugin extends Plugin
             .build();
         clientToolbar.addNavigation(navButton);
 
-        // The captures kept from other sessions, for the All models tab
+        // The plugin's folder, moved from where it was before 1.1 the first time, then the captures kept from other
+        // sessions, for the All models tab. Off the Swing thread, and before any capture is kept or saved: the
+        // executor runs one task at a time.
         executor.execute(() ->
         {
+            try
+            {
+                Filepath folder = getPluginDirectory();
+                folder.createDirectories();
+                library = new ModelLibrary(folder.joinSegment("captures"));
+                home = folder;
+            }
+            catch (IOException | RuntimeException e)
+            {
+                log.warn("Couldn't make the plugin's folder", e);
+                folderProblem = "couldn't make its folder in .runelite/plugin-data (" + e.getMessage() + ")";
+                chat("Captures can't be kept or saved: " + folderProblem + ".");
+                return;
+            }
             List<ModelLibrary.Capture> kept = library.list();
-            SwingUtilities.invokeLater(() -> panel.setLibrary(kept));
+            SwingUtilities.invokeLater(() ->
+            {
+                panel.refresh();
+                panel.setLibrary(kept);
+            });
         });
     }
 
@@ -171,7 +204,7 @@ public class ConstsModelsPlugin extends Plugin
     @Subscribe
     public void onConfigChanged(ConfigChanged event)
     {
-        // The sidebar shows the area's size and the folder, so it follows the settings while open
+        // The sidebar shows the settings and the area's size, so it follows them while open
         if (ConstsModelsConfig.GROUP.equals(event.getGroup()))
         {
             SwingUtilities.invokeLater(panel::refresh);
@@ -204,7 +237,7 @@ public class ConstsModelsPlugin extends Plugin
         {
             try
             {
-                ModelLibrary.Capture capture = library.keep(mesh, time);
+                ModelLibrary.Capture capture = library().keep(mesh, time);
                 sessionMeshes.put(capture.id, mesh);
                 SwingUtilities.invokeLater(() -> panel.added(capture));
             }
@@ -229,7 +262,7 @@ public class ConstsModelsPlugin extends Plugin
         {
             try
             {
-                Mesh mesh = library.load(capture);
+                Mesh mesh = library().load(capture);
                 SwingUtilities.invokeLater(() -> ModelViewer.open(mesh, viewerActions));
             }
             catch (IOException | RuntimeException e)
@@ -245,7 +278,7 @@ public class ConstsModelsPlugin extends Plugin
     {
         executor.execute(() ->
         {
-            if (library.delete(capture))
+            if (library != null && library.delete(capture))
             {
                 sessionMeshes.remove(capture.id);
                 SwingUtilities.invokeLater(() -> panel.removed(capture));
@@ -291,42 +324,67 @@ public class ConstsModelsPlugin extends Plugin
         });
     }
 
-    /** Where files are saved: the folder chosen in the sidebar, or the default one. */
-    File outputFolder()
+    /** The captures kept, or why there are none. Call it on the executor. */
+    private ModelLibrary library() throws IOException
     {
-        String chosen = config.outputFolder();
-        return chosen == null || chosen.isBlank() ? DEFAULT_FOLDER : new File(chosen);
-    }
-
-    void setOutputFolder(File folder)
-    {
-        config.outputFolder(folder == null ? "" : folder.getAbsolutePath());
-    }
-
-    void openFolder()
-    {
-        File folder = outputFolder();
-        if (!folder.isDirectory() && !folder.mkdirs())
+        ModelLibrary kept = library;
+        if (kept == null)
         {
-            chat("Couldn't make the folder " + folder + ".");
+            throw new IOException(folderProblem);
+        }
+        return kept;
+    }
+
+    /** Where files are saved: the folder chosen in the sidebar this session, else the plugin's own; null if neither. */
+    Filepath outputFolder()
+    {
+        Filepath folder = chosen;
+        return folder != null ? folder : home;
+    }
+
+    /** A folder chosen in the sidebar: files are saved there until RuneLite closes. */
+    void setOutputFolder(Filepath folder)
+    {
+        chosen = folder;
+    }
+
+    /** The folder to save in, made again if it's gone. Call it on the executor. */
+    private Filepath saveFolder() throws IOException
+    {
+        Filepath folder = outputFolder();
+        if (folder == null)
+        {
+            throw new IOException(folderProblem);
+        }
+        folder.createDirectories();
+        return folder;
+    }
+
+    /**
+     * Puts the folder files are saved in on the clipboard, and says where to paste it: the Plugin Hub lets no plugin
+     * open the computer's file browser.
+     */
+    void copyPath()
+    {
+        Filepath folder = outputFolder();
+        if (folder == null)
+        {
+            chat("There's no folder to copy: " + folderProblem + ".");
             return;
         }
-        LinkBrowser.open(folder.getAbsolutePath());
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(folder.toString()), null);
+        chat("Copied " + folder + ". Paste it in Finder's Go to Folder (Cmd+Shift+G) or File Explorer's address bar.");
     }
 
     void save(Mesh mesh, ExportFormat format)
     {
-        File folder = outputFolder();
         executor.execute(() ->
         {
             try
             {
-                if (!folder.isDirectory() && !folder.mkdirs())
-                {
-                    throw new IOException("couldn't make " + folder);
-                }
-                File file = MeshExporter.export(mesh, format, folder);
-                chat("Saved " + file.getName() + " in " + folder + ".");
+                Filepath folder = saveFolder();
+                Filepath file = MeshExporter.export(mesh, format, folder);
+                chat("Saved " + file.getFileName() + " in " + folder + ".");
             }
             catch (IOException | RuntimeException e)
             {
@@ -338,20 +396,19 @@ public class ConstsModelsPlugin extends Plugin
 
     void saveImage(Mesh mesh, BufferedImage image)
     {
-        File folder = outputFolder();
         executor.execute(() ->
         {
             try
             {
-                if (!folder.isDirectory() && !folder.mkdirs())
+                Filepath folder = saveFolder();
+                Filepath file = folder.joinSegment(fileName(mesh.name, new Date()) + ".png");
+                try (OutputStream out = file.openOutputStream())
                 {
-                    throw new IOException("couldn't make " + folder);
+                    ImageIO.write(image, "png", out);
                 }
-                File file = new File(folder, fileName(mesh.name, new Date()) + ".png");
-                ImageIO.write(image, "png", file);
-                chat("Saved " + file.getName() + " in " + folder + ".");
+                chat("Saved " + file.getFileName() + " in " + folder + ".");
             }
-            catch (IOException e)
+            catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't save a picture of {}", mesh.name, e);
                 chat("Couldn't save a picture of " + mesh.name + ": " + e.getMessage());
