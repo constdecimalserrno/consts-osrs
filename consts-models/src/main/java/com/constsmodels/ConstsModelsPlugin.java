@@ -61,6 +61,8 @@ public class ConstsModelsPlugin extends Plugin
 {
     private static final Logger log = LoggerFactory.getLogger(ConstsModelsPlugin.class);
 
+    private static final String NOT_READY = "its folder isn't ready yet";
+
     @Inject
     private Client client;
 
@@ -84,9 +86,9 @@ public class ConstsModelsPlugin extends Plugin
 
     // The plugin's own folder, made at startup, and every capture kept in it to open again in any session; both null
     // if it couldn't be made, and folderProblem says why. This session's meshes stay in memory too.
-    private volatile Filepath home;
+    private volatile Filepath pluginFolder;
     private volatile ModelLibrary library;
-    private volatile String folderProblem = "its folder isn't ready yet";
+    private volatile String folderProblem = NOT_READY;
     private final Map<String, Mesh> sessionMeshes = new ConcurrentHashMap<>();
 
     // A folder chosen in the sidebar, saved to instead until RuneLite closes: RuneLite hands one over for the session
@@ -172,13 +174,16 @@ public class ConstsModelsPlugin extends Plugin
                 Filepath folder = getPluginDirectory();
                 folder.createDirectories();
                 library = new ModelLibrary(folder.joinSegment("captures"));
-                home = folder;
+                pluginFolder = folder;
             }
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't make the plugin's folder", e);
                 folderProblem = "couldn't make its folder in .runelite/plugin-data (" + e.getMessage() + ")";
-                chat("Captures can't be kept or saved: " + folderProblem + ".");
+                // No folder at all, even if an earlier start's task set one after shutDown
+                pluginFolder = null;
+                library = null;
+                chat("Captures can't be kept, and saves go only to a folder you choose: " + folderProblem + ".");
                 return;
             }
             List<ModelLibrary.Capture> kept = library.list();
@@ -197,6 +202,10 @@ public class ConstsModelsPlugin extends Plugin
         eventBus.unregister(exportMenu);
         clientToolbar.removeNavigation(navButton);
         sessionMeshes.clear();
+        // Made again at the next start: until then, and for good if that fails, there's none to show or use
+        pluginFolder = null;
+        library = null;
+        folderProblem = NOT_READY;
         SwingUtilities.invokeLater(ModelViewer::closeAll);
     }
 
@@ -261,7 +270,7 @@ public class ConstsModelsPlugin extends Plugin
         {
             try
             {
-                Mesh mesh = ModelLibrary.load(capture);
+                Mesh mesh = capture.load();
                 SwingUtilities.invokeLater(() -> ModelViewer.open(mesh, viewerActions));
             }
             catch (IOException | RuntimeException e)
@@ -277,7 +286,7 @@ public class ConstsModelsPlugin extends Plugin
     {
         executor.execute(() ->
         {
-            if (ModelLibrary.delete(capture))
+            if (capture.delete())
             {
                 sessionMeshes.remove(capture.id);
                 SwingUtilities.invokeLater(() -> panel.removed(capture));
@@ -338,7 +347,7 @@ public class ConstsModelsPlugin extends Plugin
     Filepath outputFolder()
     {
         Filepath folder = chosen;
-        return folder != null ? folder : home;
+        return folder != null ? folder : pluginFolder;
     }
 
     /** A folder chosen in the sidebar: files are saved there until RuneLite closes. */

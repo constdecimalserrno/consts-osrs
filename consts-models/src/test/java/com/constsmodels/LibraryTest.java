@@ -94,10 +94,10 @@ public class LibraryTest
         assertEquals(first.faceCount(), listed.get(1).faces);
         assertNotNull(listed.get(1).picture);
 
-        Mesh back = ModelLibrary.load(listed.get(1));
+        Mesh back = listed.get(1).load();
         assertArrayEquals(first.x, back.x, 0f);
 
-        assertTrue(ModelLibrary.delete(goblin));
+        assertTrue(goblin.delete());
         assertFalse(goblin.meshFile.exists());
         assertFalse(goblin.pictureFile.exists());
         assertEquals(1, library.list().size());

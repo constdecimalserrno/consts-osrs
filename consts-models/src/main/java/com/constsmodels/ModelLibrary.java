@@ -56,6 +56,23 @@ final class ModelLibrary
             this.pictureFile = pictureFile;
             this.picture = picture;
         }
+
+        /** Reads its mesh back. */
+        Mesh load() throws IOException
+        {
+            try (InputStream in = meshFile.openInputStream())
+            {
+                return MeshFile.read(in);
+            }
+        }
+
+        /** Deletes its two files; false if the mesh is still there. */
+        boolean delete()
+        {
+            deleteQuietly(pictureFile);
+            deleteQuietly(meshFile);
+            return !meshFile.exists();
+        }
     }
 
     ModelLibrary(Filepath folder)
@@ -141,23 +158,6 @@ final class ModelLibrary
         }
         captures.sort(Comparator.comparingLong((Capture c) -> c.time).thenComparing(c -> c.id).reversed());
         return captures;
-    }
-
-    /** Reads a capture's mesh back. */
-    static Mesh load(Capture capture) throws IOException
-    {
-        try (InputStream in = capture.meshFile.openInputStream())
-        {
-            return MeshFile.read(in);
-        }
-    }
-
-    /** Deletes a capture's two files; false if the mesh is still there. */
-    static boolean delete(Capture capture)
-    {
-        deleteQuietly(capture.pictureFile);
-        deleteQuietly(capture.meshFile);
-        return !capture.meshFile.exists();
     }
 
     /** Deletes the file if it's there; one that won't go is left, and logged. */
