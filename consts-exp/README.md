@@ -2,7 +2,7 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and lights up its row in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
 

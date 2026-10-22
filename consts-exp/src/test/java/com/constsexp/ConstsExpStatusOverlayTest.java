@@ -2,6 +2,7 @@ package com.constsexp;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.when;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.runelite.api.Client;
@@ -45,6 +47,7 @@ public class ConstsExpStatusOverlayTest
         when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
         when(plugin.currentPreset()).thenReturn(Preset.WOODCUTTING);
         when(plugin.getCurrentAnimationId()).thenReturn(-1);
+        when(plugin.getAggroArea()).thenReturn(new AggroArea());
         overlay = new ConstsExpStatusOverlay(client, plugin, config, tooltips);
     }
 
@@ -149,6 +152,16 @@ public class ConstsExpStatusOverlayTest
     }
 
     @Test
+    public void aNearBlackAlertShouldLightUpInTheMutedInk()
+    {
+        enable(AlertType.POTION);
+        when(plugin.isAlertFiring(AlertType.POTION)).thenReturn(true);
+
+        // Potion's default black would fill its row black, on the dark panel: no light at all.
+        assertEquals(new Color(140, 130, 120), alertRow("Potion", NOW).fill);
+    }
+
+    @Test
     public void forestryShouldNameItsEventWhileItFires()
     {
         enable(AlertType.FORESTRY);
@@ -192,6 +205,16 @@ public class ConstsExpStatusOverlayTest
         for (ConstsExpStatusOverlay.Row row : rows)
         {
             assertFalse(text(row), text(row).contains("879") || text(row).contains("Animation"));
+        }
+    }
+
+    @Test
+    public void showAnimationIdShouldStayGone()
+    {
+        // const: no animation number. Ticket 03 moves this setting, so a merge could bring it back.
+        for (Method method : ConstsExpConfig.class.getMethods())
+        {
+            assertNotEquals("showAnimationId", method.getName());
         }
     }
 
