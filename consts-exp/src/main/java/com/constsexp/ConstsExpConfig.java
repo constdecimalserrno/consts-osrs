@@ -15,7 +15,8 @@ import net.runelite.client.config.Units;
  * General (Timing, Sounds, Screen Flash), then one section per alert, each named for its group (Combat, AFK, Sailing)
  * and kept in group order.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
- * on Click, Color, then whatever is its own. The key names predate this layout.
+ * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
+ * Salvage's with sailing.
  */
 @ConfigGroup(ConstsExpConfig.GROUP)
 public interface ConstsExpConfig extends Config

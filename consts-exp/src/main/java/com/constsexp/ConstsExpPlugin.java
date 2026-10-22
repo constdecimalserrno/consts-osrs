@@ -57,7 +57,7 @@ import net.runelite.client.util.Text;
 @PluginDescriptor(
     name = "consts-EXP",
     description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity and Forestry events.",
-    tags = {"xp", "exp", "helper", "afk","combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
+    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
 )
 public class ConstsExpPlugin extends Plugin
 {
