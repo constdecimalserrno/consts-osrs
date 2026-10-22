@@ -22,8 +22,8 @@ public class PluginNameTest
             hub.load(in);
         }
         assertEquals("consts-EXP", hub.getProperty("displayName"));
-        assertEquals("com.constsexp.ConstsExpPlugin", hub.getProperty("plugins"));
-        assertEquals("consts-EXP", Class.forName(hub.getProperty("plugins")).getAnnotation(PluginDescriptor.class).name());
+        assertEquals(ConstsExpPlugin.class.getName(), hub.getProperty("plugins"));
+        assertEquals("consts-EXP", ConstsExpPlugin.class.getAnnotation(PluginDescriptor.class).name());
     }
 
     @Test
