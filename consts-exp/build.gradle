@@ -1,5 +1,5 @@
 // Plugin-specific config; shared config comes from the root build.gradle
-version = '2.1.0'
+version = '2.2.0'
 
 // PluginNameTest reads the Hub's properties file, so a change to it reruns the tests.
 tasks.named('test') { inputs.file('runelite-plugin.properties') }

@@ -669,18 +669,6 @@ public interface ConstsExpConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "showAnimationId",
-        name = "Show Animation ID",
-        description = "Always show your current animation in the status panel, for tuning Idle; it shows anyway while Idle waits for it to stop",
-        section = idleSection,
-        position = 5
-    )
-    default boolean showAnimationId()
-    {
-        return false;
-    }
-
-    @ConfigItem(
         keyName = "enableLogoutWarning",
         name = "Enabled",
         description = "Warn before the inactivity logout. Any click or key press restarts it (Custom preset only)",

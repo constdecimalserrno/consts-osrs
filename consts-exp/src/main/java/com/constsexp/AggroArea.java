@@ -43,7 +43,7 @@ import net.runelite.client.config.ConfigManager;
  * player moved out of the radius of both tiles, which resets one of them. The other should reset shortly after as
  * the player starts moving around.
  *
- * Only the client thread touches it: game ticks, game state changes and the panel's right-click reset.
+ * Only the client thread touches it: game ticks, game state changes and the panel's Shift + right-click reset.
  */
 final class AggroArea
 {
