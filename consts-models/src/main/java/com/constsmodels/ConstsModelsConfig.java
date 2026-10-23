@@ -68,24 +68,6 @@ public interface ConstsModelsConfig extends Config
     void shiftOnly(boolean shiftOnly);
 
     @ConfigItem(
-        keyName = "outputFolder",
-        name = "",
-        description = "",
-        hidden = true
-    )
-    default String outputFolder()
-    {
-        return "";
-    }
-
-    @ConfigItem(
-        keyName = "outputFolder",
-        name = "",
-        description = ""
-    )
-    void outputFolder(String folder);
-
-    @ConfigItem(
         keyName = "background",
         name = "",
         description = "",

@@ -46,7 +46,9 @@ public class ViewerPanelTest
         List<AbstractButton> buttons = new ArrayList<>();
         collect(panel, buttons);
         List<String> texts = buttons.stream().map(AbstractButton::getText).collect(Collectors.toList());
-        assertTrue(texts.toString(), texts.containsAll(List.of("Open folder", "Save image", "Save")));
+        // The folder's path goes on the clipboard: the Plugin Hub lets no plugin open the file browser
+        assertTrue(texts.toString(), texts.containsAll(List.of("Copy path", "Save image", "Save")));
+        assertFalse(texts.contains("Open folder"));
         assertFalse("no Print view any more", texts.contains("Print") || texts.contains("Base"));
         BackgroundButton bg = (BackgroundButton) buttons.stream().filter(c -> c instanceof BackgroundButton)
             .findFirst().orElse(null);
@@ -91,7 +93,7 @@ public class ViewerPanelTest
             }
 
             @Override
-            public void openFolder()
+            public void copyPath()
             {
             }
 
@@ -115,7 +117,7 @@ public class ViewerPanelTest
         };
     }
 
-    private static void collect(Container root, List<AbstractButton> out)
+    static void collect(Container root, List<AbstractButton> out)
     {
         for (Component c : root.getComponents())
         {

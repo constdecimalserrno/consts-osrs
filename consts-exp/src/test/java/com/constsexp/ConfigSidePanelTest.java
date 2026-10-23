@@ -21,19 +21,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JToggleButton;
+import javax.swing.JViewport;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import net.runelite.client.config.ConfigDescriptor;
 import net.runelite.client.config.ConfigItemDescriptor;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.ConfigSectionDescriptor;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
+import net.runelite.client.ui.components.materialtabs.MaterialTab;
 import net.runelite.client.ui.components.materialtabs.MaterialTabGroup;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,6 +53,7 @@ public class ConfigSidePanelTest
 
     private final Map<String, String> saved = new HashMap<>();
     private ConfigManager configManager;
+    private ConstsExpConfig config;
     private ConfigDescriptor descriptor;
     private ConfigSidePanel panel;
 
@@ -58,7 +68,7 @@ public class ConfigSidePanelTest
             String value = saved.get(i.getArgument(1));
             return value == null ? null : Integer.valueOf(value);
         });
-        ConstsExpConfig config = (ConstsExpConfig) Proxy.newProxyInstance(ConstsExpConfig.class.getClassLoader(),
+        config = (ConstsExpConfig) Proxy.newProxyInstance(ConstsExpConfig.class.getClassLoader(),
             new Class<?>[]{ConstsExpConfig.class}, (proxy, method, args) -> null);
         descriptor = configManager.getConfigDescriptor(config);
         panel = new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin());
@@ -113,13 +123,7 @@ public class ConfigSidePanelTest
         saved.put(flag.getItem().keyName(), "true");
         saved.put(number.getItem().keyName(), String.valueOf(min + 1));
         saved.put(preset.getItem().keyName(), Preset.MINING.name());
-        ConfigChanged changed = new ConfigChanged();
-        changed.setGroup(GROUP);
-        changed.setKey(flag.getItem().keyName());
-        panel.onConfigChanged(changed);
-        SwingUtilities.invokeAndWait(() ->
-        {
-        });
+        changedElsewhere(panel, GROUP, flag.getItem().keyName());
 
         assertTrue(box.isSelected());
         assertEquals(min + 1, spinner.getValue());
@@ -133,13 +137,7 @@ public class ConfigSidePanelTest
         ConfigItemDescriptor flag = first(boolean.class);
         JCheckBox box = control(flag, JCheckBox.class);
         saved.put(flag.getItem().keyName(), "true");
-        ConfigChanged changed = new ConfigChanged();
-        changed.setGroup("someotherplugin");
-        changed.setKey(flag.getItem().keyName());
-        panel.onConfigChanged(changed);
-        SwingUtilities.invokeAndWait(() ->
-        {
-        });
+        changedElsewhere(panel, "someotherplugin", flag.getItem().keyName());
         assertFalse(box.isSelected());
     }
 
@@ -174,10 +172,13 @@ public class ConfigSidePanelTest
         verify(configManager, never()).setConfiguration(GROUP, ConstsExpConfig.MASTER_KEY, "true");
     }
 
+    private ConfigSidePanel expPanel()
+    {
+        return ConstsExpPlugin.sidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin());
+    }
+
     private ConfigSidePanel withMasterSwitch()
     {
-        ConstsExpConfig config = (ConstsExpConfig) Proxy.newProxyInstance(ConstsExpConfig.class.getClassLoader(),
-            new Class<?>[]{ConstsExpConfig.class}, (proxy, method, args) -> null);
         return new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
             ConstsExpConfig.MASTER_KEY);
     }
@@ -197,8 +198,7 @@ public class ConfigSidePanelTest
         tabbed.addTab("Packs", new JLabel("pack list"));
         tabbed.addTab("More", new JLabel("more things"));
 
-        MaterialTabGroup tabs = find(tabbed, MaterialTabGroup.class, g -> true);
-        assertNotNull(tabs);
+        MaterialTabGroup tabs = tabs(tabbed);
         assertEquals(ConfigSidePanel.SETTINGS_TAB, tabs.getTab(0).getText());
         assertEquals("Packs", tabs.getTab(1).getText());
         assertEquals("More", tabs.getTab(2).getText());
@@ -214,7 +214,7 @@ public class ConfigSidePanelTest
     {
         ConfigItemDescriptor flag = first(boolean.class);
         panel.addTab("Packs", new JLabel("pack list"));
-        MaterialTabGroup tabs = find(panel, MaterialTabGroup.class, g -> true);
+        MaterialTabGroup tabs = tabs(panel);
 
         assertFalse(labels(panel).contains("pack list"));
         assertNotNull(control(flag, JCheckBox.class));
@@ -226,6 +226,141 @@ public class ConfigSidePanelTest
         tabs.select(tabs.getTab(0));
         assertFalse(labels(panel).contains("pack list"));
         assertNotNull(control(flag, JCheckBox.class));
+    }
+
+    @Test
+    public void withoutSettingsTabsTheSettingsAreOneListAsBefore()
+    {
+        // One scrolling list under the title, its scrollbar there only when it's needed, with every section, then Reset.
+        assertEquals(1, count(panel, JScrollPane.class));
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            find(panel, JScrollPane.class, v -> true).getVerticalScrollBarPolicy());
+        List<String> all = sections(panel);
+        assertEquals(descriptor.getSections().size(), all.size());
+        assertNotNull(find(panel, JButton.class, b -> "Reset".equals(b.getText())));
+
+        // A tab of its own puts that same list on Settings, first.
+        panel.addTab("Packs", new JLabel("pack list"));
+        MaterialTabGroup tabs = tabs(panel);
+        assertEquals(2, count(panel, MaterialTab.class));
+        assertEquals(ConfigSidePanel.SETTINGS_TAB, tabs.getTab(0).getText());
+        assertEquals(all, sections(tabs.getTab(0).getContent()));
+    }
+
+    @Test
+    public void settingsTabsHoldOnlyTheirOwnSectionsAndItOpensOnTheFirst()
+    {
+        ConfigSidePanel tabbed = withMasterSwitch();
+        tabbed.addSettingsTab("One", ConstsExpConfig.healthSection, ConstsExpConfig.prayerSection);
+        tabbed.addSettingsTab("Two", ConstsExpConfig.soundsSection);
+        tabbed.addTab("Packs", new JLabel("pack list"));
+
+        // The settings tabs in place of Settings, then its own.
+        MaterialTabGroup tabs = tabs(tabbed);
+        assertEquals(3, count(tabbed, MaterialTab.class));
+        assertEquals("One", tabs.getTab(0).getText());
+        assertEquals("Two", tabs.getTab(1).getText());
+        assertEquals("Packs", tabs.getTab(2).getText());
+
+        // Two holds Sounds alone, then Reset, at the end of the last settings tab.
+        assertEquals(List.of(sectionName(ConstsExpConfig.soundsSection)), sections(tabs.getTab(1).getContent()));
+        assertNotNull(find(tabs.getTab(1).getContent(), JButton.class, b -> "Reset".equals(b.getText())));
+        assertNull(find(tabs.getTab(0).getContent(), JButton.class, b -> "Reset".equals(b.getText())));
+
+        // One holds Preset on top, then Health, Prayer and every section no tab names.
+        assertEquals("Preset", labels(tabs.getTab(0).getContent()).get(0));
+        List<String> one = sections(tabs.getTab(0).getContent());
+        assertTrue(one.contains(sectionName(ConstsExpConfig.healthSection)));
+        assertTrue(one.contains(sectionName(ConstsExpConfig.prayerSection)));
+        assertFalse(one.contains(sectionName(ConstsExpConfig.soundsSection)));
+        assertEquals(descriptor.getSections().size() - 1, one.size());
+
+        // It opens on One.
+        assertTrue(sections(tabbed).contains(sectionName(ConstsExpConfig.healthSection)));
+        assertFalse(sections(tabbed).contains(sectionName(ConstsExpConfig.soundsSection)));
+    }
+
+    @Test
+    public void settingsTabsGiveTheirRowsTheSameWidthWhetherTheyScrollOrNot()
+    {
+        ConfigSidePanel tabbed = withMasterSwitch();
+        // One holds everything but Sounds, too long for the panel; Two holds Sounds alone, which fits.
+        tabbed.addSettingsTab("One", ConstsExpConfig.healthSection);
+        tabbed.addSettingsTab("Two", ConstsExpConfig.soundsSection);
+        MaterialTabGroup tabs = tabs(tabbed);
+
+        JViewport one = laidOut(tabbed, tabs, 0);
+        int oneRow = find(one, JPanel.class, p -> ConstsExpConfig.PRESET_KEY.equals(p.getName())).getWidth();
+        JViewport two = laidOut(tabbed, tabs, 1);
+        int twoRow = find(two, JPanel.class, p -> ConstsExpConfig.SOUND_VOLUME_KEY.equals(p.getName())).getWidth();
+
+        assertTrue(one.getView().getPreferredSize().height > one.getHeight());
+        assertTrue(two.getView().getPreferredSize().height <= two.getHeight());
+        assertEquals(one.getWidth(), two.getWidth());
+        assertTrue(oneRow > 0);
+        assertEquals(oneRow, twoRow);
+    }
+
+    @Test
+    public void aChangeShowsUpOnTheTabThatHoldsItAndARebuildKeepsEachTabsOwn() throws Exception
+    {
+        ConfigSidePanel tabbed = withMasterSwitch();
+        tabbed.addSettingsTab("One", ConstsExpConfig.healthSection);
+        tabbed.addSettingsTab("Two", ConstsExpConfig.soundsSection);
+        MaterialTabGroup tabs = tabs(tabbed);
+        ConfigItemDescriptor volume = item(ConstsExpConfig.SOUND_VOLUME_KEY);
+
+        // Changed elsewhere while One shows: Two's control follows.
+        saved.put(ConstsExpConfig.SOUND_VOLUME_KEY, "42");
+        changedElsewhere(tabbed, GROUP, ConstsExpConfig.SOUND_VOLUME_KEY);
+        assertEquals(42, control(tabs.getTab(1).getContent(), volume, JSpinner.class).getValue());
+
+        // A rebuild, as a profile change makes, fills each tab again with its own, and stays on the one showing.
+        tabs.select(tabs.getTab(1));
+        tabbed.rebuild();
+        assertEquals(List.of(sectionName(ConstsExpConfig.soundsSection)), sections(tabs.getTab(1).getContent()));
+        assertTrue(sections(tabs.getTab(0).getContent()).contains(sectionName(ConstsExpConfig.healthSection)));
+        assertFalse(sections(tabs.getTab(0).getContent()).contains(sectionName(ConstsExpConfig.soundsSection)));
+        assertEquals(42, control(tabbed, volume, JSpinner.class).getValue());
+    }
+
+    @Test
+    public void constsExpsPanelOpensOnAlertsThenSkillsAndGeneral()
+    {
+        ConfigSidePanel exp = expPanel();
+
+        MaterialTabGroup tabs = tabs(exp);
+        assertEquals(3, count(exp, MaterialTab.class));
+        assertEquals("Alerts", tabs.getTab(0).getText());
+        assertEquals("Skills", tabs.getTab(1).getText());
+        assertEquals("General", tabs.getTab(2).getText());
+
+        assertEquals("Preset", labels(tabs.getTab(0).getContent()).get(0));
+        assertEquals(List.of("Health", "Prayer", "Aggro", "Potion", "Cannon", "Idle", "Logout", "Inventory Full",
+            "Random Event"), sections(tabs.getTab(0).getContent()));
+        assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold"),
+            sections(tabs.getTab(1).getContent()));
+        assertEquals(List.of("Timing", "Sounds", "Screen Flash"), sections(tabs.getTab(2).getContent()));
+
+        assertTrue(labels(exp).contains("Preset"));
+        assertFalse(sections(exp).contains("Timing"));
+    }
+
+    @Test
+    public void constsExpsAlertsAndSkillsStartFoldedAndGeneralOpen()
+    {
+        MaterialTabGroup tabs = tabs(expPanel());
+        List<String> alerts = rows(tabs.getTab(0).getContent(), true);
+        List<String> skills = rows(tabs.getTab(1).getContent(), true);
+        List<String> general = rows(tabs.getTab(2).getContent(), true);
+        assertTrue(alerts.size() > 1);
+        assertFalse(skills.isEmpty());
+        assertFalse(general.isEmpty());
+
+        // Every alert's and skill's setting sits under a folded header, Preset aside; every General setting shows.
+        assertEquals(List.of(ConstsExpConfig.PRESET_KEY), rows(tabs.getTab(0).getContent(), false));
+        assertEquals(List.of(), rows(tabs.getTab(1).getContent(), false));
+        assertEquals(general, rows(tabs.getTab(2).getContent(), false));
     }
 
     @Test
@@ -243,10 +378,73 @@ public class ConfigSidePanelTest
             .orElseThrow(() -> new AssertionError("no " + type.getSimpleName() + " setting"));
     }
 
-    /** The control on a setting's row, the row named for its key: several settings share a name. */
+    private ConfigItemDescriptor item(String key)
+    {
+        return descriptor.getItems().stream()
+            .filter(i -> i.getItem().keyName().equals(key))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("no setting " + key));
+    }
+
+    private String sectionName(String key)
+    {
+        return descriptor.getSections().stream()
+            .filter(s -> s.getKey().equals(key))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("no section " + key))
+            .name();
+    }
+
+    /** A tab's viewport, once the panel shows that tab, laid out at the sidebar's width and 400 px tall. */
+    private static JViewport laidOut(ConfigSidePanel panel, MaterialTabGroup tabs, int tab)
+    {
+        tabs.select(tabs.getTab(tab));
+        layOut(panel, PluginPanel.PANEL_WIDTH + PluginPanel.SCROLLBAR_WIDTH, 400);
+        return ((JScrollPane) tabs.getTab(tab).getContent()).getViewport();
+    }
+
+    /** Lays root out at a size, as a window would, all but what's folded away. */
+    private static void layOut(Container root, int width, int height)
+    {
+        root.setSize(width, height);
+        root.doLayout();
+        for (Component c : all(root, true))
+        {
+            if (c instanceof Container)
+            {
+                ((Container) c).doLayout();
+            }
+        }
+    }
+
+    /** A setting changed somewhere else, as the event bus tells the panel, and the panel caught up. */
+    private static void changedElsewhere(ConfigSidePanel panel, String group, String key) throws Exception
+    {
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(group);
+        changed.setKey(key);
+        panel.onConfigChanged(changed);
+        SwingUtilities.invokeAndWait(() ->
+        {
+        });
+    }
+
+    private static MaterialTabGroup tabs(Container root)
+    {
+        MaterialTabGroup tabs = find(root, MaterialTabGroup.class, g -> true);
+        assertNotNull("no tabs", tabs);
+        return tabs;
+    }
+
     private <T> T control(ConfigItemDescriptor item, Class<T> type)
     {
-        JPanel row = find(panel, JPanel.class, p -> item.getItem().keyName().equals(p.getName()));
+        return control(panel, item, type);
+    }
+
+    /** The control on a setting's row, the row named for its key: several settings share a name. */
+    private static <T> T control(Container root, ConfigItemDescriptor item, Class<T> type)
+    {
+        JPanel row = find(root, JPanel.class, p -> item.getItem().keyName().equals(p.getName()));
         for (Component c : row.getComponents())
         {
             if (!(c instanceof JLabel) && type.isInstance(c))
@@ -257,57 +455,58 @@ public class ConfigSidePanelTest
         throw new AssertionError("no " + type.getSimpleName() + " for " + item.getItem().name());
     }
 
-    private static <T> T find(Container root, Class<T> type, java.util.function.Predicate<T> test)
+    /** Every component under root, depth first; with shownOnly, none that is hidden or inside something hidden. */
+    private static List<Component> all(Container root, boolean shownOnly)
     {
+        List<Component> out = new ArrayList<>();
         for (Component c : root.getComponents())
         {
-            if (type.isInstance(c) && test.test(type.cast(c)))
+            if (shownOnly && !c.isVisible())
             {
-                return type.cast(c);
+                continue;
             }
+            out.add(c);
             if (c instanceof Container)
             {
-                T found = find((Container) c, type, test);
-                if (found != null)
-                {
-                    return found;
-                }
+                out.addAll(all((Container) c, shownOnly));
             }
         }
-        return null;
+        return out;
+    }
+
+    private static <T> T find(Container root, Class<T> type, Predicate<T> test)
+    {
+        return all(root, false).stream().filter(type::isInstance).map(type::cast).filter(test).findFirst().orElse(null);
     }
 
     private static int count(Container root, Class<?> type)
     {
-        int found = 0;
-        for (Component c : root.getComponents())
-        {
-            if (type.isInstance(c))
-            {
-                found++;
-            }
-            if (c instanceof Container)
-            {
-                found += count((Container) c, type);
-            }
-        }
-        return found;
+        return (int) all(root, false).stream().filter(type::isInstance).count();
     }
 
     private static List<String> labels(Container root)
     {
-        List<String> out = new ArrayList<>();
-        for (Component c : root.getComponents())
-        {
-            if (c instanceof JLabel)
-            {
-                out.add(((JLabel) c).getText());
-            }
-            if (c instanceof Container)
-            {
-                out.addAll(labels((Container) c));
-            }
-        }
-        return out;
+        return all(root, false).stream()
+            .filter(JLabel.class::isInstance)
+            .map(c -> ((JLabel) c).getText())
+            .collect(Collectors.toList());
+    }
+
+    /** The section headers under root, top to bottom: the names drawn in orange, as a setting's never is. */
+    private static List<String> sections(Container root)
+    {
+        return all(root, false).stream()
+            .filter(c -> c instanceof JLabel && ColorScheme.BRAND_ORANGE.equals(c.getForeground()))
+            .map(c -> ((JLabel) c).getText())
+            .collect(Collectors.toList());
+    }
+
+    /** The settings' rows under root, by key, top to bottom: every one, or only those outside a folded section. */
+    private static List<String> rows(Container root, boolean foldedToo)
+    {
+        return all(root, !foldedToo).stream()
+            .filter(c -> c instanceof JPanel && c.getName() != null)
+            .map(Component::getName)
+            .collect(Collectors.toList());
     }
 }

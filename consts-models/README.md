@@ -4,9 +4,9 @@
 
 RuneLite plugin for Old School RuneScape ( OSRS ): export any model in the game, or the area around you. Right-click anything and pick **Export Model**, turn it in a viewer, and save it as OBJ or PLY for Blender and other 3D software.
 
-![The consts-Models viewer: the Kraken pet, its 797 triangles named in the corner, and Open folder, Background, Save image, the format and Save along the bottom](screenshots/viewer.png)
+![The consts-Models viewer: the Kraken pet, its 797 triangles named in the corner, and Copy path, Background, Save image, the format and Save along the bottom](screenshots/viewer.png)
 
-![The consts-Models sidebar: Capture area and Export yourself, the folder files go to, this session's three captures (Soup, Ironwood logs, Kraken), and the Settings section open: Save as, Area radius and Only with Shift](screenshots/panel.png)
+![The consts-Models sidebar: Capture area and Export yourself, the folder files go to with Copy path and Choose folder under it, this session's three captures (Soup, Ironwood logs, Kraken), and the Settings section open: Save as, Area radius and Only with Shift](screenshots/panel.png)
 
 ## What it does
 
@@ -17,8 +17,14 @@ RuneLite plugin for Old School RuneScape ( OSRS ): export any model in the game,
 - **Viewer**: each capture opens in a window of its own. Drag to turn it, scroll to zoom, right-drag or Shift-drag to move it, and double-click or press R to see all of it again.
 - **Pieces**: click a piece of the model to pick it, and it lights up orange. **Remove piece** (or Delete) takes it out of the view and the saved file, such as a flat shadow under an object. **Bring back** puts every piece back, and Escape lets go.
 - **Save**: the bar along the bottom saves the model as OBJ, with its colors in an MTL file beside it, or as PLY, with a color on every corner (Cmd/Ctrl+S). Files keep the game's units, 128 to a tile. **Save image** saves the view as a PNG on its **Background**: the viewer's own, black, a grey, white, a green or blue screen, sky, sand or any color.
-- **Folder**: files go to `~/.runelite/consts-models` until you press **Choose folder** in the sidebar. **Open folder**, in the sidebar or the viewer, shows it.
 - **Captures**: the sidebar lists every capture, newest first, on two tabs: **Session**, and **All models**, kept from one session to the next. Click one to open it again; its trash can deletes it at once. Files you saved from the viewer stay.
+
+## Where files go
+
+- **The plugin's folder**: `~/.runelite/plugin-data/consts-models`, where RuneLite keeps the plugin's files. The models and pictures you save go there, and every capture the sidebar keeps goes in its `captures` folder.
+- **Choose folder**, in the sidebar, saves models and pictures to a folder you pick, until RuneLite closes. RuneLite lets a plugin keep a folder you pick for one session only, so after a restart they go to the plugin's folder again. Captures always stay in the plugin's folder.
+- **Copy path**, in the sidebar or the viewer, copies the folder's path: the Plugin Hub doesn't let a plugin open Finder or File Explorer. Paste it in Finder's Go to Folder (Cmd+Shift+G) or File Explorer's address bar.
+- **Before 1.1**, files went to `~/.runelite/consts-models`. The first time 1.1 starts, RuneLite moves that folder, captures and all, to `~/.runelite/plugin-data/consts-models`. Files saved to a folder you chose stay where they are.
 
 ## Settings
 

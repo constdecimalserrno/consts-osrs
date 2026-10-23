@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * The viewer, a window of its own over the game for one mesh: drag to turn it, scroll to zoom, and buttons to save
- * it (the formats in {@link ExportFormat}), save a picture of it and open the folder. Each capture gets its own
+ * it (the formats in {@link ExportFormat}), save a picture of it and copy the folder's path. Each capture gets its own
  * window, none of them modal; a new one opens over the game, or a little down and right of the last one still open.
  */
 final class ModelViewer

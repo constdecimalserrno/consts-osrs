@@ -10,10 +10,15 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.List;
+import net.runelite.client.util.Filepath;
+import org.junit.AssumptionViolatedException;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -22,6 +27,15 @@ public class LibraryTest
 {
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
+
+    /** The temporary folder as a plugin gets its own from RuneLite: a Filepath that can't leave it. */
+    private Filepath root;
+
+    @Before
+    public void setUp()
+    {
+        root = Filepath.Unchecked.getRooted(folder.getRoot().toPath());
+    }
 
     @Test
     public void aCaptureFileGivesBackTheSameMesh() throws IOException
@@ -63,13 +77,16 @@ public class LibraryTest
     @Test
     public void theLibraryKeepsListsOpensAndDeletes() throws IOException
     {
-        ModelLibrary library = new ModelLibrary(new File(folder.getRoot(), "captures"));
+        // A folder not made yet lists nothing, and the first capture makes it
+        Filepath captures = root.joinSegment("captures");
+        ModelLibrary library = new ModelLibrary(captures);
         assertTrue(library.list().isEmpty());
 
         Mesh first = TestMeshes.box(0, 0, 0, 10, 10, 10, RED).withName("NPC Cow");
         Mesh second = TestMeshes.box(0, 0, 0, 20, 10, 10, RED).withName("NPC Goblin");
         ModelLibrary.Capture cow = library.keep(first, 1_000L);
         ModelLibrary.Capture goblin = library.keep(second, 2_000L);
+        assertTrue(captures.isDirectory());
         assertTrue(cow.meshFile.isFile());
         assertTrue(cow.pictureFile.isFile());
         assertNotNull(cow.picture);
@@ -82,19 +99,40 @@ public class LibraryTest
         assertEquals(first.faceCount(), listed.get(1).faces);
         assertNotNull(listed.get(1).picture);
 
-        Mesh back = library.load(listed.get(1));
+        Mesh back = listed.get(1).load();
         assertArrayEquals(first.x, back.x, 0f);
 
-        assertTrue(library.delete(goblin));
+        assertTrue(goblin.delete());
         assertFalse(goblin.meshFile.exists());
         assertFalse(goblin.pictureFile.exists());
         assertEquals(1, library.list().size());
     }
 
     @Test
+    public void aFolderThatsALinkToAnotherIsUsedAsItIs() throws IOException
+    {
+        // A player's folder can be a link to one elsewhere, and Java 11 won't make a folder that's a link already
+        Path elsewhere = folder.newFolder("elsewhere").toPath();
+        Path link;
+        try
+        {
+            link = Files.createSymbolicLink(elsewhere.resolveSibling("link"), elsewhere);
+        }
+        catch (IOException | UnsupportedOperationException e)
+        {
+            // Windows makes links only in Developer Mode or for an administrator
+            throw new AssumptionViolatedException("this computer can't make a link", e);
+        }
+        ModelLibrary library = new ModelLibrary(Filepath.Unchecked.getRooted(link));
+        ModelLibrary.Capture cow = library.keep(TestMeshes.box(0, 0, 0, 10, 10, 10, RED), 1_000L);
+        assertTrue(Files.isRegularFile(elsewhere.resolve(cow.id + ".cmesh")));
+        assertTrue(Files.isRegularFile(elsewhere.resolve(cow.id + ".png")));
+    }
+
+    @Test
     public void twoCapturesInTheSameMillisecondBothStay() throws IOException
     {
-        ModelLibrary library = new ModelLibrary(folder.getRoot());
+        ModelLibrary library = new ModelLibrary(root);
         Mesh box = TestMeshes.box(0, 0, 0, 10, 10, 10, RED);
         ModelLibrary.Capture one = library.keep(box, 5_000L);
         ModelLibrary.Capture two = library.keep(box, 5_000L);
@@ -103,14 +141,59 @@ public class LibraryTest
     }
 
     @Test
+    public void aFileThatGoesWhileTheyreListedIsLeftOutNotTheRest()
+    {
+        Filepath cow = root.joinSegment("cow.cmesh");
+        Filepath goblin = root.joinSegment("goblin.cmesh");
+        List<Object> walk = List.of(cow, new UncheckedIOException(new IOException("gone")), root.joinSegment("cow.png"),
+            goblin);
+        Iterator<Filepath> entries = new Iterator<>()
+        {
+            private int at;
+
+            @Override
+            public boolean hasNext()
+            {
+                // As Files.walk does for a file deleted between being found and being read, then it goes on
+                if (at < walk.size() && walk.get(at) instanceof UncheckedIOException)
+                {
+                    throw (UncheckedIOException) walk.get(at++);
+                }
+                return at < walk.size();
+            }
+
+            @Override
+            public Filepath next()
+            {
+                return (Filepath) walk.get(at++);
+            }
+        };
+        assertEquals(List.of(cow, goblin), ModelLibrary.meshFiles(entries));
+
+        // A walk that never moves past its failure ends all the same
+        Iterator<Filepath> stuck = new Iterator<>()
+        {
+            @Override
+            public boolean hasNext()
+            {
+                throw new UncheckedIOException(new IOException("stuck"));
+            }
+
+            @Override
+            public Filepath next()
+            {
+                throw new AssertionError();
+            }
+        };
+        assertEquals(List.of(), ModelLibrary.meshFiles(stuck));
+    }
+
+    @Test
     public void aDamagedFileIsLeftOutOfTheList() throws IOException
     {
-        ModelLibrary library = new ModelLibrary(folder.getRoot());
+        ModelLibrary library = new ModelLibrary(root);
         library.keep(TestMeshes.box(0, 0, 0, 10, 10, 10, RED), 1_000L);
-        try (FileOutputStream junk = new FileOutputStream(new File(folder.getRoot(), "broken.cmesh")))
-        {
-            junk.write(new byte[]{9, 9, 9});
-        }
+        root.joinSegment("broken.cmesh").write(new byte[]{9, 9, 9});
         assertEquals(1, library.list().size());
     }
 }

@@ -5,12 +5,12 @@ import static com.constsmodels.TestMeshes.RED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import net.runelite.client.util.Filepath;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -33,9 +33,10 @@ public class PlyWriterTest
         b.addTriangle(v0, v2, v3, BLUE);
         Mesh mesh = b.build();
 
-        File file = MeshExporter.export(mesh, ExportFormat.PLY, folder.getRoot());
-        assertTrue(file.getName().endsWith(".ply"));
-        byte[] bytes = Files.readAllBytes(file.toPath());
+        Filepath root = Filepath.Unchecked.getRooted(folder.getRoot().toPath());
+        Filepath file = MeshExporter.export(mesh, ExportFormat.PLY, root);
+        assertTrue(file.getFileName().endsWith(".ply"));
+        byte[] bytes = Files.readAllBytes(Filepath.Unchecked.getPath(file));
         String text = new String(bytes, StandardCharsets.US_ASCII);
         int end = text.indexOf("end_header\n") + "end_header\n".length();
         String[] header = text.substring(0, end).split("\n");

@@ -199,7 +199,7 @@ public class ConstsExpPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
-        configPanel = new ConfigSidePanel(configManager, colorPickerManager, config, this, ConstsExpConfig.MASTER_KEY);
+        configPanel = sidePanel(configManager, colorPickerManager, config, this);
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
             .tooltip("consts-EXP")
@@ -218,6 +218,26 @@ public class ConstsExpPlugin extends Plugin
                 startSession();
             }
         });
+    }
+
+    /**
+     * The sidebar panel: the title and Master Switch over three tabs of settings, Alerts, which it opens on, Skills and
+     * General.
+     */
+    static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
+        ConstsExpConfig config, Plugin plugin)
+    {
+        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin,
+            ConstsExpConfig.MASTER_KEY);
+        panel.addSettingsTab("Alerts", ConstsExpConfig.healthSection, ConstsExpConfig.prayerSection,
+            ConstsExpConfig.aggroSection, ConstsExpConfig.potionSection, ConstsExpConfig.cannonSection,
+            ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
+            ConstsExpConfig.randomSection);
+        panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
+            ConstsExpConfig.cargoSection);
+        panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
+            ConstsExpConfig.flashSection);
+        return panel;
     }
 
     @Override

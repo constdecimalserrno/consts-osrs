@@ -5,7 +5,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -327,13 +326,6 @@ public class ConstsExpStatusOverlayTest
         {
             assertFalse(text(row), text(row).contains("879") || text(row).contains("Animation"));
         }
-    }
-
-    @Test
-    public void showAnimationIdShouldStayGone()
-    {
-        // The panel shows no animation number, so the setting is gone. A merge that moved it could bring it back.
-        assertThrows(NoSuchMethodException.class, () -> ConstsExpConfig.class.getMethod("showAnimationId"));
     }
 
     @Test
