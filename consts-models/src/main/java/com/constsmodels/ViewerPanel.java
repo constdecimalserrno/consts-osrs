@@ -23,7 +23,7 @@ import net.runelite.client.ui.FontManager;
 
 /**
  * What a viewer window holds: the picture of the model, with a line about it in the corner, and a bar along the
- * bottom with what to do with it: open the folder, pick the background, save a picture, and Save, in the format
+ * bottom with what to do with it: copy the folder's path, pick the background, save a picture, and Save, in the format
  * picked beside it.
  *
  * <p>A click on the picture picks the piece of the model under it ({@link Pieces}), lit up in orange; Remove piece, or
@@ -115,8 +115,8 @@ final class ViewerPanel extends JPanel
 
     private JComponent bar()
     {
-        JButton folder = quietButton("Open folder", "Open the folder files are saved in");
-        folder.addActionListener(e -> actions.openFolder());
+        JButton copy = quietButton("Copy path", "Copy the path of the folder files are saved in");
+        copy.addActionListener(e -> actions.copyPath());
 
         JButton image = quietButton("Save image", "Save this view as a PNG picture, on its background");
         image.addActionListener(e -> canvas.picture(picture -> actions.saveImage(mesh, picture)));
@@ -145,7 +145,7 @@ final class ViewerPanel extends JPanel
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         buttons.setOpaque(false);
-        buttons.add(folder);
+        buttons.add(copy);
         buttons.add(background);
         buttons.add(image);
         buttons.add(gap());

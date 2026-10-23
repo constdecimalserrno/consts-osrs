@@ -9,8 +9,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.AbstractButton;
+import net.runelite.client.util.Filepath;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,7 +29,7 @@ public class ConstsModelsPanelTest
     {
         plugin = mock(ConstsModelsPlugin.class);
         config = mock(ConstsModelsConfig.class);
-        when(plugin.outputFolder()).thenReturn(new File(System.getProperty("user.home"), ".runelite/consts-models"));
+        when(plugin.outputFolder()).thenReturn(folder(".runelite", "plugin-data", "consts-models"));
         when(config.captureRadius()).thenReturn(6);
     }
 
@@ -36,7 +39,13 @@ public class ConstsModelsPanelTest
     private static ModelLibrary.Capture capture(String name, int triangles)
     {
         t += 60_000;
-        return new ModelLibrary.Capture("id" + t, name, t, triangles, new File("m" + t), new File("p" + t), null);
+        return new ModelLibrary.Capture("id" + t, name, t, triangles, null, null, null);
+    }
+
+    /** A folder in the home folder, as RuneLite hands one over. */
+    private static Filepath folder(String... names)
+    {
+        return Filepath.Unchecked.getRooted(Paths.get(System.getProperty("user.home"), names));
     }
 
     private static List<String> titles(ConstsModelsPanel panel)
@@ -192,15 +201,38 @@ public class ConstsModelsPanelTest
     public void theFolderLabelShortensHomeAndKeepsTheFullPathInItsTooltip()
     {
         ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
-        String full = plugin.outputFolder().getAbsolutePath();
+        String full = plugin.outputFolder().toString();
         String sep = File.separator;
-        assertEquals("~" + sep + ".runelite" + sep + "consts-models", panel.folderLabel().getText());
+        // Too long for the bar: the folders between home and the last make way for dots
+        assertEquals("~" + sep + "..." + sep + "consts-models", panel.folderLabel().getText());
         assertEquals(full, panel.folderLabel().getToolTipText());
 
         // A folder chosen later shows once the panel reads it again
-        when(plugin.outputFolder()).thenReturn(new File(System.getProperty("user.home"), "Prints"));
+        when(plugin.outputFolder()).thenReturn(folder("Prints"));
         panel.onActivate();
         assertEquals("~" + sep + "Prints", panel.folderLabel().getText());
+    }
+
+    @Test
+    public void theFolderButtonsCopyItsPathAndChooseAnotherForTheSession()
+    {
+        ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
+        List<AbstractButton> buttons = new ArrayList<>();
+        ViewerPanelTest.collect(panel, buttons);
+        AbstractButton copy = button(buttons, "Copy path");
+        AbstractButton choose = button(buttons, "Choose folder");
+        assertTrue(buttons.stream().noneMatch(b -> "Open folder".equals(b.getText())));
+        // A folder chosen can't be kept past a restart: RuneLite hands it over for the session only
+        assertTrue(choose.getToolTipText(), choose.getToolTipText().contains("until RuneLite closes"));
+
+        copy.doClick();
+        verify(plugin).copyPath();
+    }
+
+    private static AbstractButton button(List<AbstractButton> buttons, String text)
+    {
+        return buttons.stream().filter(b -> text.equals(b.getText())).findFirst()
+            .orElseThrow(() -> new AssertionError("no " + text + " button"));
     }
 
     @Test

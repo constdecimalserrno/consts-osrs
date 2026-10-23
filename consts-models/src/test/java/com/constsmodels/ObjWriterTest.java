@@ -5,7 +5,6 @@ import static com.constsmodels.TestMeshes.RED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -13,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.runelite.client.util.Filepath;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -35,14 +35,15 @@ public class ObjWriterTest
         b.addTriangle(v0, v3, v1, RED);
         Mesh mesh = b.build();
 
-        File file = MeshExporter.export(mesh, ExportFormat.OBJ, folder.getRoot());
-        assertTrue(file.getName().startsWith("NPC Goblin "));
-        assertTrue(file.getName().endsWith(".obj"));
-        String base = file.getName().substring(0, file.getName().length() - 4);
-        File mtlFile = new File(folder.getRoot(), base + ".mtl");
+        Filepath root = Filepath.Unchecked.getRooted(folder.getRoot().toPath());
+        Filepath file = MeshExporter.export(mesh, ExportFormat.OBJ, root);
+        assertTrue(file.getFileName().startsWith("NPC Goblin "));
+        assertTrue(file.getFileName().endsWith(".obj"));
+        String base = file.getFileName().substring(0, file.getFileName().length() - 4);
+        Filepath mtlFile = root.joinSegment(base + ".mtl");
         assertTrue(mtlFile.isFile());
 
-        List<String> obj = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+        List<String> obj = Files.readAllLines(Filepath.Unchecked.getPath(file), StandardCharsets.UTF_8);
         assertTrue(obj.contains("mtllib " + base + ".mtl"));
         List<String> vertices = new ArrayList<>();
         List<String> faces = new ArrayList<>();
@@ -79,7 +80,7 @@ public class ObjWriterTest
         assertEquals("f 1 2 3", faces.get(1));
         assertEquals("f 1 4 2", faces.get(2));
 
-        List<String> mtl = Files.readAllLines(mtlFile.toPath(), StandardCharsets.UTF_8);
+        List<String> mtl = Files.readAllLines(Filepath.Unchecked.getPath(mtlFile), StandardCharsets.UTF_8);
         int red = mtl.indexOf("newmtl c_C02020");
         assertTrue(red >= 0);
         assertEquals("Kd 0.7529 0.1255 0.1255", mtl.get(red + 1));

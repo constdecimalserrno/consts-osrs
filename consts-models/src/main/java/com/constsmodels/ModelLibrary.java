@@ -1,16 +1,19 @@
 package com.constsmodels;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 import javax.imageio.ImageIO;
+import net.runelite.client.util.Filepath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +32,7 @@ final class ModelLibrary
     private static final String MESH = ".cmesh";
     private static final String PNG = ".png";
 
-    private final File folder;
+    private final Filepath folder;
 
     /** A capture kept: what it is, when it was captured, and its two files. */
     static final class Capture
@@ -38,12 +41,13 @@ final class ModelLibrary
         final String name;
         final long time;
         final int faces;
-        final File meshFile;
-        final File pictureFile;
+        final Filepath meshFile;
+        final Filepath pictureFile;
         /** Its picture, or null when it has none. */
         final BufferedImage picture;
 
-        Capture(String id, String name, long time, int faces, File meshFile, File pictureFile, BufferedImage picture)
+        Capture(String id, String name, long time, int faces, Filepath meshFile, Filepath pictureFile,
+            BufferedImage picture)
         {
             this.id = id;
             this.name = name;
@@ -53,38 +57,53 @@ final class ModelLibrary
             this.pictureFile = pictureFile;
             this.picture = picture;
         }
+
+        /** Reads its mesh back. */
+        Mesh load() throws IOException
+        {
+            try (InputStream in = meshFile.openInputStream())
+            {
+                return MeshFile.read(in);
+            }
+        }
+
+        /** Deletes its two files; false if the mesh is still there. */
+        boolean delete()
+        {
+            deleteQuietly(pictureFile);
+            deleteQuietly(meshFile);
+            return !meshFile.exists();
+        }
     }
 
-    ModelLibrary(File folder)
+    ModelLibrary(Filepath folder)
     {
         this.folder = folder;
-    }
-
-    File folder()
-    {
-        return folder;
     }
 
     /** Keeps a capture: writes its mesh and its picture, and returns it. */
     Capture keep(Mesh mesh, long time) throws IOException
     {
-        if (!folder.isDirectory() && !folder.mkdirs())
-        {
-            throw new IOException("couldn't make " + folder);
-        }
+        makeFolder(folder);
         String id = unusedId(time);
-        File meshFile = new File(folder, id + MESH);
-        File pictureFile = new File(folder, id + PNG);
+        Filepath meshFile = folder.joinSegment(id + MESH);
+        Filepath pictureFile = folder.joinSegment(id + PNG);
         BufferedImage picture = picture(mesh);
         try
         {
-            MeshFile.write(mesh, time, new FileOutputStream(meshFile));
-            ImageIO.write(picture, "png", pictureFile);
+            try (OutputStream out = meshFile.openOutputStream())
+            {
+                MeshFile.write(mesh, time, out);
+            }
+            try (OutputStream out = pictureFile.openOutputStream())
+            {
+                ImageIO.write(picture, "png", out);
+            }
         }
         catch (IOException | RuntimeException e)
         {
-            meshFile.delete();
-            pictureFile.delete();
+            deleteQuietly(meshFile);
+            deleteQuietly(pictureFile);
             throw e;
         }
         return new Capture(id, mesh.name, time, mesh.faceCount(), meshFile, pictureFile, picture);
@@ -94,24 +113,37 @@ final class ModelLibrary
     List<Capture> list()
     {
         List<Capture> captures = new ArrayList<>();
-        File[] files = folder.listFiles((dir, name) -> name.endsWith(MESH));
-        if (files == null)
+        if (!folder.isDirectory())
         {
             return captures;
         }
-        for (File meshFile : files)
+        List<Filepath> meshFiles;
+        try (Stream<Filepath> files = folder.walk(1))
         {
-            String id = meshFile.getName().substring(0, meshFile.getName().length() - MESH.length());
+            meshFiles = meshFiles(files.iterator());
+        }
+        catch (IOException | RuntimeException e)
+        {
+            log.warn("Couldn't list the captures in {}", folder, e);
+            return captures;
+        }
+        for (Filepath meshFile : meshFiles)
+        {
+            String id = meshFile.getFileName().substring(0, meshFile.getFileName().length() - MESH.length());
             try
             {
-                MeshFile.Header header = MeshFile.readHeader(new FileInputStream(meshFile));
-                File pictureFile = new File(folder, id + PNG);
+                MeshFile.Header header;
+                try (InputStream in = meshFile.openInputStream())
+                {
+                    header = MeshFile.readHeader(in);
+                }
+                Filepath pictureFile = folder.joinSegment(id + PNG);
                 BufferedImage picture = null;
                 if (pictureFile.isFile())
                 {
-                    try
+                    try (InputStream in = pictureFile.openInputStream())
                     {
-                        picture = ImageIO.read(pictureFile);
+                        picture = ImageIO.read(in);
                     }
                     catch (IOException e)
                     {
@@ -129,17 +161,62 @@ final class ModelLibrary
         return captures;
     }
 
-    /** Reads a capture's mesh back. */
-    Mesh load(Capture capture) throws IOException
+    /** The capture files among a folder's entries. One that goes while they're read is left out, not the rest. */
+    static List<Filepath> meshFiles(Iterator<Filepath> entries)
     {
-        return MeshFile.read(new FileInputStream(capture.meshFile));
+        List<Filepath> found = new ArrayList<>();
+        int failedInARow = 0;
+        while (true)
+        {
+            try
+            {
+                if (!entries.hasNext())
+                {
+                    return found;
+                }
+                Filepath entry = entries.next();
+                failedInARow = 0;
+                if (entry.getFileName().endsWith(MESH))
+                {
+                    found.add(entry);
+                }
+            }
+            catch (UncheckedIOException e)
+            {
+                // Java's walk moves on past the file that failed; should one ever not, stop rather than spin forever
+                if (++failedInARow >= 1000)
+                {
+                    log.warn("Gave up listing the captures", e);
+                    return found;
+                }
+                log.debug("A file went while the captures were listed", e);
+            }
+        }
     }
 
-    /** Deletes a capture's two files; false if the mesh is still there. */
-    boolean delete(Capture capture)
+    /**
+     * Makes the folder unless it's there. One that's a link to a folder counts as there: Java 11's createDirectories
+     * refuses a link that's already there.
+     */
+    static void makeFolder(Filepath folder) throws IOException
     {
-        capture.pictureFile.delete();
-        return capture.meshFile.delete() || !capture.meshFile.exists();
+        if (!folder.isDirectory())
+        {
+            folder.createDirectories();
+        }
+    }
+
+    /** Deletes the file if it's there; one that won't go is left, and logged. */
+    static void deleteQuietly(Filepath file)
+    {
+        try
+        {
+            file.deleteIfExists();
+        }
+        catch (IOException e)
+        {
+            log.debug("Couldn't delete {}", file, e);
+        }
     }
 
     /** The capture's picture: framed as the viewer first frames it, on the viewer's own background. */
@@ -155,7 +232,7 @@ final class ModelLibrary
     {
         String base = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss-SSS").format(new Date(time));
         String id = base;
-        for (int n = 2; new File(folder, id + MESH).exists(); n++)
+        for (int n = 2; folder.joinSegment(id + MESH).exists(); n++)
         {
             id = base + "-" + n;
         }
