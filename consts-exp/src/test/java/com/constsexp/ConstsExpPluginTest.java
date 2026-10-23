@@ -297,7 +297,8 @@ public class ConstsExpPluginTest
         when(config.flashIntervalMs()).thenReturn(60);
         for (long now = 0; now < 480; now += 7)
         {
-            assertEquals("at " + now + " ms", AlertType.IDLE.isFlashPhaseOn(now, 60), plugin.isFlashPhaseOn(AlertType.IDLE, now));
+            assertEquals("at " + now + " ms", AlertType.IDLE.isFlashPhaseOn(now, 60),
+                plugin.isFlashPhaseOn(AlertType.IDLE, now));
         }
     }
 

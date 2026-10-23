@@ -992,8 +992,8 @@ public class ConstsExpPlugin extends Plugin
     }
 
     /**
-     * Reset Aggro Timer, on the status panel's Shift + right-click menu. In OSRS mode the tile you stand on becomes a fresh area center, as if you had just
-     * left both areas; in Custom Minutes the interval starts over.
+     * Reset Aggro Timer, on the status panel's Shift + right-click menu. In OSRS mode the tile you stand on becomes
+     * a fresh area center, as if you had just left both areas; in Custom Minutes the interval starts over.
      */
     void resetAggroTimer()
     {

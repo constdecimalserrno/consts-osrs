@@ -17,7 +17,6 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Skill;
 import net.runelite.client.ui.FontManager;
@@ -32,16 +31,17 @@ import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 
 /**
- * Top-right panel, drawn as ticket 15's mockup A: the title with the preset as a tag, one row per enabled alert (its
- * icon, name and value), and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a
- * timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color and pulses.
+ * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
+ * value), and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a timer gets close,
+ * or shows Health's and Prayer's level; a firing row lights up in its color, and pulses with the screen flash. Text is
+ * RuneScape's small font whatever RuneLite's interface font is: the 129 px rows are laid out for it.
  */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
 {
     private static final String TITLE = "consts-EXP";
     private static final Font FONT = FontManager.getRunescapeSmallFont();
-    // Text is measured in the panel's own pixels, whatever the graphics' transform.
+    // Text is measured in the panel's own pixels: the same at any graphics scale, such as a 2x render.
     private static final FontRenderContext FRC = new FontRenderContext(null, false, false);
     private static final Color INFO_COLOR = new Color(255, 210, 80);
     private static final Color LABEL_COLOR = new Color(215, 208, 196);
@@ -53,7 +53,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private static final double MIN_CONTRAST = 2.75;
     private static final double INK_FLOOR = (luminance(QUIET_ON_WHITE) + 0.05) * MIN_CONTRAST - 0.05;
     private static final Map<AlertType, BufferedImage> ICONS = new EnumMap<>(AlertType.class);
-    private static final BufferedImage HOURGLASS = ImageUtil.loadImageResource(ConstsExpPlugin.class, "animating.png");
+    static final BufferedImage HOURGLASS = ImageUtil.loadImageResource(ConstsExpPlugin.class, "animating.png");
     // The icons, tinted, by mask and color. ponytail: never emptied, as it only grows when a color setting changes.
     private static final Map<Map.Entry<BufferedImage, Color>, BufferedImage> TINTED = new HashMap<>();
     private static final String HELD_TOOLTIP = "The hourglass: you're animating, so Idle waits until you stop.";
@@ -88,7 +88,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         setPosition(OverlayPosition.TOP_RIGHT);
         setPriority(PRIORITY_HIGH);
         setLayer(OverlayLayer.ABOVE_WIDGETS);
-        // Rows sit 1 px apart, as in the mockup.
+        // Rows sit 1 px apart.
         panelComponent.setGap(new Point(0, 1));
 
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset Aggro Timer", TITLE, e -> plugin.resetAggroTimer());
@@ -118,8 +118,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
             return null;
         }
 
+        // OverlayPanel clears the children again after each frame.
         List<Row> rows = rows(System.currentTimeMillis());
-        panelComponent.getChildren().clear();
         panelComponent.getChildren().addAll(rows);
         Dimension dimension = super.render(graphics);
         addHoverTooltip(rows);
@@ -131,13 +131,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
     {
         List<Row> rows = new ArrayList<>();
         rows.add(new TagRow(TITLE, Color.WHITE, String.valueOf(plugin.currentPreset()),
-            "Live AFK alert status, on the preset in the tag. Shift + right-click to switch preset or reset the aggro timer."));
-
-        if (client.getGameState() != GameState.LOGGED_IN)
-        {
-            rows.add(new TagRow("Status", LABEL_COLOR, "Not Logged In", "Log in to start alert tracking."));
-            return rows;
-        }
+            "Live AFK alert status, on the preset in the tag. Shift + right-click to switch preset or reset the"
+                + " aggro timer."));
 
         for (AlertType type : AlertType.values())
         {
@@ -200,7 +195,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
             }
             case FORESTRY:
             {
-                // Names the event while it fires, e.g. "Forestry Leprechaun".
+                // Names the event while it fires: Leprechaun, Ent.
                 ForestryEvent event = plugin.getLastForestryEvent();
                 value = firing && event != null ? event.getLabel() : "";
                 break;
@@ -217,7 +212,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         {
             // Lit, and in step with the screen flash while it flashes: dimmed to 45% in its dark half.
             boolean dark = plugin.isFlashingScreen(type, now) && !plugin.isFlashPhaseOn(type, now);
-            fill = dark ? shade(ink, 0.45) : ink;
+            fill = dark ? ColorUtil.colorLerp(Color.BLACK, ink, 0.45) : ink;
         }
         return new AlertRow(ICONS.get(type), type.getLabel(), value, ink, fill, line > 0 ? Math.min(1, line) : 0, held,
             held ? tooltip(type) + "</br>" + HELD_TOOLTIP : tooltip(type));
@@ -275,13 +270,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
     static String formatClock(long millis)
     {
         long totalSeconds = Math.max(0L, millis / 1000L);
-        return totalSeconds / 60L + ":" + String.format("%02d", totalSeconds % 60L);
-    }
-
-    private static Color shade(Color color, double factor)
-    {
-        return new Color((int) Math.round(color.getRed() * factor), (int) Math.round(color.getGreen() * factor),
-            (int) Math.round(color.getBlue() * factor));
+        return totalSeconds / 60L + ":" + String.format(Locale.ROOT, "%02d", totalSeconds % 60L);
     }
 
     // WCAG relative luminance.
@@ -330,7 +319,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return (luminance + 0.05) / 0.05 >= 1.05 / (luminance + 0.05) ? Color.BLACK : Color.WHITE;
     }
 
-    /** The pixels the text's ink covers when drawn at 0, 0. Like the mockup, rows line text up by its ink. */
+    /** The pixels the text's ink covers when drawn at 0, 0. Rows line text up by its ink, not its advance. */
     private static Rectangle textBounds(String text)
     {
         return FONT.createGlyphVector(FRC, text).getVisualBounds().getBounds();
@@ -478,12 +467,12 @@ class ConstsExpStatusOverlay extends OverlayPanel
             graphics.fillRect(x, y, width, HEIGHT);
             if (fill == null)
             {
-                graphics.setColor(shade(ink, 0.85));
+                graphics.setColor(ColorUtil.colorLerp(Color.BLACK, ink, 0.85));
                 // Floored: full only once the alert is due.
                 graphics.fillRect(x, y + HEIGHT - 1, (int) (width * line), 1);
             }
 
-            Color iconColor = foreground != null ? foreground : shade(ink, 0.9);
+            Color iconColor = foreground != null ? foreground : ColorUtil.colorLerp(Color.BLACK, ink, 0.9);
             icon(graphics, icon, x + 2, y + 3, iconColor);
             text(graphics, label, x + 14 - textBounds(label).x, y + 14, foreground != null ? foreground : LABEL_COLOR);
             Rectangle valueInk = textBounds(value);

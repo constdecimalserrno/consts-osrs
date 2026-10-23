@@ -3,7 +3,9 @@ package com.constsexp;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -14,15 +16,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
+import net.runelite.api.Point;
 import net.runelite.api.Skill;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.client.util.ImageUtil;
@@ -48,7 +51,6 @@ public class ConstsExpStatusOverlayTest
         // Every setting at its default.
         config = mock(ConstsExpConfig.class, CALLS_REAL_METHODS);
         tooltips = mock(TooltipManager.class);
-        when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
         when(plugin.currentPreset()).thenReturn(Preset.WOODCUTTING);
         when(plugin.getCurrentAnimationId()).thenReturn(-1);
         when(plugin.getAggroArea()).thenReturn(new AggroArea());
@@ -69,12 +71,12 @@ public class ConstsExpStatusOverlayTest
     {
         Graphics2D graphics = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB).createGraphics();
         ConstsExpStatusOverlay.Row title = overlay.rows(NOW).get(0);
-        title.setPreferredSize(new java.awt.Dimension(121, 0));
+        title.setPreferredSize(new Dimension(121, 0));
         assertEquals("Woodcutting fits beside the title", 14, title.render(graphics).height);
 
         when(plugin.currentPreset()).thenReturn(Preset.SALVAGING_ACTIVE);
         title = overlay.rows(NOW).get(0);
-        title.setPreferredSize(new java.awt.Dimension(121, 0));
+        title.setPreferredSize(new Dimension(121, 0));
         assertEquals("Salvaging Active goes under it", 27, title.render(graphics).height);
     }
 
@@ -106,7 +108,8 @@ public class ConstsExpStatusOverlayTest
             {
                 if (title.getRGB(x, y) >>> 24 == 255)
                 {
-                    assertTrue("tag ink at " + x + "," + y + " outside the box's rows " + top + ".." + bottom, y >= top && y <= bottom);
+                    assertTrue("tag ink at " + x + "," + y + " outside the box's rows " + top + ".." + bottom,
+                        y >= top && y <= bottom);
                 }
             }
         }
@@ -132,8 +135,10 @@ public class ConstsExpStatusOverlayTest
 
         List<ConstsExpStatusOverlay.AlertRow> rows = alertRows();
         assertEquals(AlertType.values().length, rows.size());
+        assertNotNull("the hourglass", ConstsExpStatusOverlay.HOURGLASS);
         for (ConstsExpStatusOverlay.AlertRow row : rows)
         {
+            assertNotNull(row.label + "'s icon", row.icon);
             for (ConstsExpStatusOverlay.AlertRow other : rows)
             {
                 if (other != row)
@@ -273,7 +278,8 @@ public class ConstsExpStatusOverlayTest
         {
             for (int x = 0; x < 121; x++)
             {
-                assertEquals("pixel " + x + "," + y, white.getRGB(x, y) == 0xFFFFFFFF, black.getRGB(x, y) == 0xFF000000);
+                assertEquals("pixel " + x + "," + y, white.getRGB(x, y) == 0xFFFFFFFF,
+                    black.getRGB(x, y) == 0xFF000000);
             }
         }
     }
@@ -326,11 +332,8 @@ public class ConstsExpStatusOverlayTest
     @Test
     public void showAnimationIdShouldStayGone()
     {
-        // const: no animation number. Ticket 03 moves this setting, so a merge could bring it back.
-        for (Method method : ConstsExpConfig.class.getMethods())
-        {
-            assertNotEquals("showAnimationId", method.getName());
-        }
+        // The panel shows no animation number, so the setting is gone. A merge that moved it could bring it back.
+        assertThrows(NoSuchMethodException.class, () -> ConstsExpConfig.class.getMethod("showAnimationId"));
     }
 
     @Test
@@ -353,12 +356,12 @@ public class ConstsExpStatusOverlayTest
 
         // A width dragged smaller, or saved that way by an older version: the rows are laid out for 129 px.
         // (The panel sizes itself from the frame before, so each width is drawn twice.)
-        overlay.setPreferredSize(new java.awt.Dimension(80, 0));
+        overlay.setPreferredSize(new Dimension(80, 0));
         assertEquals(129, overlay.getPreferredSize().width);
         overlay.render(graphics);
         assertEquals(129, overlay.render(graphics).width);
 
-        overlay.setPreferredSize(new java.awt.Dimension(200, 0));
+        overlay.setPreferredSize(new Dimension(200, 0));
         overlay.render(graphics);
         assertEquals("wider is fine", 200, overlay.render(graphics).width);
     }
@@ -394,7 +397,7 @@ public class ConstsExpStatusOverlayTest
         enable(AlertType.IDLE);
         // The renderer put the panel top right; the mouse is over Idle's row, under the 4 px border and the title.
         overlay.getBounds().setLocation(600, 10);
-        when(client.getMouseCanvasPosition()).thenReturn(new net.runelite.api.Point(600 + 30, 10 + 4 + 15 + 7));
+        when(client.getMouseCanvasPosition()).thenReturn(new Point(600 + 30, 10 + 4 + 15 + 7));
 
         BufferedImage canvas = new BufferedImage(129, 60, BufferedImage.TYPE_INT_ARGB);
         Graphics2D graphics = canvas.createGraphics();
@@ -411,6 +414,21 @@ public class ConstsExpStatusOverlayTest
         assertEquals("0:01", ConstsExpStatusOverlay.formatClock(1000L));
         assertEquals("2:34", ConstsExpStatusOverlay.formatClock(154000L));
         assertEquals("10:00", ConstsExpStatusOverlay.formatClock(600000L));
+    }
+
+    @Test
+    public void clocksShouldUseWesternDigitsInAnyLocale()
+    {
+        Locale before = Locale.getDefault();
+        try
+        {
+            Locale.setDefault(Locale.forLanguageTag("th-TH-u-nu-thai"));
+            assertEquals("1:05", ConstsExpStatusOverlay.formatClock(65_000L));
+        }
+        finally
+        {
+            Locale.setDefault(before);
+        }
     }
 
     @Test
@@ -446,7 +464,12 @@ public class ConstsExpStatusOverlayTest
 
     private List<ConstsExpStatusOverlay.AlertRow> alertRows()
     {
-        return overlay.rows(NOW).stream()
+        return alertRows(NOW);
+    }
+
+    private List<ConstsExpStatusOverlay.AlertRow> alertRows(long now)
+    {
+        return overlay.rows(now).stream()
             .filter(ConstsExpStatusOverlay.AlertRow.class::isInstance)
             .map(ConstsExpStatusOverlay.AlertRow.class::cast)
             .collect(Collectors.toList());
@@ -459,9 +482,7 @@ public class ConstsExpStatusOverlayTest
 
     private ConstsExpStatusOverlay.AlertRow alertRow(String label, long now)
     {
-        return overlay.rows(now).stream()
-            .filter(ConstsExpStatusOverlay.AlertRow.class::isInstance)
-            .map(ConstsExpStatusOverlay.AlertRow.class::cast)
+        return alertRows(now).stream()
             .filter(row -> row.label.equals(label))
             .findFirst()
             .orElseThrow(() -> new AssertionError("no " + label + " row"));
@@ -478,7 +499,7 @@ public class ConstsExpStatusOverlayTest
     private static BufferedImage render(ConstsExpStatusOverlay.Row row)
     {
         BufferedImage image = new BufferedImage(121, 30, BufferedImage.TYPE_INT_ARGB);
-        row.setPreferredSize(new java.awt.Dimension(121, 0));
+        row.setPreferredSize(new Dimension(121, 0));
         Graphics2D graphics = image.createGraphics();
         row.render(graphics);
         graphics.dispose();
@@ -498,7 +519,8 @@ public class ConstsExpStatusOverlayTest
 
     private static void assertRow(ConstsExpStatusOverlay.AlertRow row, String icon, String value)
     {
-        assertTrue(row.label + "'s icon is " + icon, samePixels(ImageUtil.loadImageResource(ConstsExpPlugin.class, icon), row.icon));
+        BufferedImage expected = ImageUtil.loadImageResource(ConstsExpPlugin.class, icon);
+        assertTrue(row.label + "'s icon is " + icon, samePixels(expected, row.icon));
         assertEquals(value, row.value);
     }
 
@@ -508,16 +530,9 @@ public class ConstsExpStatusOverlayTest
         {
             return false;
         }
-        for (int y = 0; y < a.getHeight(); y++)
-        {
-            for (int x = 0; x < a.getWidth(); x++)
-            {
-                if (a.getRGB(x, y) != b.getRGB(x, y))
-                {
-                    return false;
-                }
-            }
-        }
-        return true;
+        int width = a.getWidth();
+        int height = a.getHeight();
+        return Arrays.equals(a.getRGB(0, 0, width, height, null, 0, width),
+            b.getRGB(0, 0, width, height, null, 0, width));
     }
 }
