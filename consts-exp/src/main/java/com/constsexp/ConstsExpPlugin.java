@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -483,11 +484,17 @@ public class ConstsExpPlugin extends Plugin
 
     List<Color> getCurrentFlashColors()
     {
+        if (!config.enableScreenFlash() || !isTracking())
+        {
+            return Collections.emptyList();
+        }
+
         long now = System.currentTimeMillis();
+        long interval = getFlashIntervalMillis();
         List<Color> colors = new ArrayList<>();
         for (AlertType type : AlertType.values())
         {
-            if (isFlashingScreen(type, now) && isFlashPhaseOn(type, now))
+            if (flashes(type, now) && type.isFlashPhaseOn(now, interval))
             {
                 colors.add(type.getFlashColor(config));
             }
@@ -495,16 +502,27 @@ public class ConstsExpPlugin extends Plugin
         return colors;
     }
 
-    /** Whether the alert flashes the screen now, in either half of its flash. The Click Pause holds it off. */
+    /** Whether the alert flashes the screen now, in either half of its flash. */
     boolean isFlashingScreen(AlertType type, long now)
     {
-        return config.enableScreenFlash() && isTracking() && !isSilencedByClick(type) && isFlashing(type, now);
+        return config.enableScreenFlash() && isTracking() && flashes(type, now);
     }
 
     /** The bright half of the alert's flash: its color on the screen, and its status panel row bright. */
     boolean isFlashPhaseOn(AlertType type, long now)
     {
-        return type.isFlashPhaseOn(now, Math.max(MIN_FLASH_INTERVAL_MS, config.flashIntervalMs()));
+        return type.isFlashPhaseOn(now, getFlashIntervalMillis());
+    }
+
+    // An alert flashes while it fires, unless the Click Pause holds it.
+    private boolean flashes(AlertType type, long now)
+    {
+        return !isSilencedByClick(type) && isFlashing(type, now);
+    }
+
+    private long getFlashIntervalMillis()
+    {
+        return Math.max(MIN_FLASH_INTERVAL_MS, config.flashIntervalMs());
     }
 
     private boolean isFlashing(AlertType type, long now)

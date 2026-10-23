@@ -47,8 +47,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private static final Color LABEL_COLOR = new Color(215, 208, 196);
     private static final Color QUIET_COLOR = new Color(16, 13, 10, 153);
     private static final Color TAG_COLOR = new Color(0, 0, 0, 102);
-    // A quiet row is lightest over a white scene, where an alert's color shows least. Colors darker than the
-    // contrast every default but Potion's black already has there are lightened toward white until they have it.
+    // A quiet row is lightest over a white scene, where an alert's color shows least. A color with less than
+    // 2.75:1 against it there (of the defaults, only Potion's black) is lightened toward white until it has that.
     private static final Color QUIET_ON_WHITE = new Color(66, 62, 58);
     private static final double MIN_CONTRAST = 2.75;
     private static final double INK_FLOOR = (luminance(QUIET_ON_WHITE) + 0.05) * MIN_CONTRAST - 0.05;
@@ -90,6 +90,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
         setLayer(OverlayLayer.ABOVE_WIDGETS);
         // Rows sit 1 px apart.
         panelComponent.setGap(new Point(0, 1));
+        // RuneLite's resize drag stops at the 129 px the rows are laid out for (see setPreferredSize).
+        setMinimumSize(ComponentConstants.STANDARD_WIDTH);
 
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset Aggro Timer", TITLE, e -> plugin.resetAggroTimer());
         for (Preset preset : Preset.values())
@@ -99,8 +101,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
     }
 
     /**
-     * Never narrower than the standard 129 px the rows are laid out for, whether dragged smaller or saved that way
-     * by an older version. Wider is fine. RuneLite sets both through here.
+     * Never narrower than the standard 129 px the rows are laid out for. The drag already stops there (the minimum
+     * size); this catches a narrower width saved by an older version. Wider is fine.
      */
     @Override
     public void setPreferredSize(Dimension size)
@@ -287,7 +289,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return luminance;
     }
 
-    /** The alert's color as the panel draws it: a dark one, Potion's black say, lightened until it shows. */
+    /** The alert's color as the panel draws it: a dark one, like Potion's black, lightened until it shows. */
     private static Color ink(Color color)
     {
         if (luminance(color) >= INK_FLOOR)

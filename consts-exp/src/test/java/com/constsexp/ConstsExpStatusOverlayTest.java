@@ -364,6 +364,9 @@ public class ConstsExpStatusOverlayTest
         overlay.setPreferredSize(new Dimension(200, 0));
         overlay.render(graphics);
         assertEquals("wider is fine", 200, overlay.render(graphics).width);
+
+        // RuneLite's own drag stops there too, so a dragged west edge doesn't push the panel along.
+        assertEquals(129, overlay.getMinimumSize());
     }
 
     @Test
