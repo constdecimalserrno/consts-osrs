@@ -12,11 +12,12 @@ import net.runelite.client.config.Range;
 import net.runelite.client.config.Units;
 
 /**
- * General (Timing, Sounds, Screen Flash), then one section per alert, each named for its group (Combat, AFK, Sailing)
- * and kept in group order.
+ * Sections in the order of the sidebar's tabs, where ConstsExpPlugin puts them: one per alert (Alerts), the skills'
+ * (Skills), then Timing, Sounds and Screen Flash (General); only General's start open. RuneLite's Configuration panel
+ * lists them in the same order with no tabs, so each name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
- * Salvage's with sailing.
+ * Salvage's with sailing, and two sections keep their old keys, Timing's general and Woodcutting's forestry.
  */
 @ConfigGroup(ConstsExpConfig.GROUP)
 public interface ConstsExpConfig extends Config
@@ -53,109 +54,121 @@ public interface ConstsExpConfig extends Config
     }
 
     @ConfigSection(
-        name = "General: Timing",
-        description = "Click pause, quiet after dismiss, give up after and startup delay",
-        position = 1
-    )
-    String timingSection = "general";
-
-    @ConfigSection(
-        name = "General: Sounds",
-        description = "What alerts sound like, and how often",
-        position = 2
-    )
-    String soundsSection = "sounds";
-
-    @ConfigSection(
-        name = "General: Screen Flash",
-        description = "The flash over the game screen while an alert fires",
-        position = 3
-    )
-    String flashSection = "flash";
-
-    @ConfigSection(
-        name = "Combat: Health",
+        name = "Health",
         description = "Alert while Hitpoints are below a threshold",
-        position = 4
+        position = 1,
+        closedByDefault = true
     )
     String healthSection = "health";
 
     @ConfigSection(
-        name = "Combat: Prayer",
+        name = "Prayer",
         description = "Alert while Prayer is below a threshold",
-        position = 5
+        position = 2,
+        closedByDefault = true
     )
     String prayerSection = "prayer";
 
     @ConfigSection(
-        name = "Combat: Aggro",
+        name = "Aggro",
         description = "The aggro timer, the unaggressive area and its lines",
-        position = 6
+        position = 3,
+        closedByDefault = true
     )
     String aggroSection = "aggro";
 
     @ConfigSection(
-        name = "Combat: Potion",
+        name = "Potion",
         description = "Alert when a potion or effect is about to expire",
-        position = 7
+        position = 4,
+        closedByDefault = true
     )
     String potionSection = "potion";
 
     @ConfigSection(
-        name = "Combat: Cannon",
+        name = "Cannon",
         description = "Alert when your cannon is out of ammo",
-        position = 8
+        position = 5,
+        closedByDefault = true
     )
     String cannonSection = "cannon";
 
     @ConfigSection(
-        name = "AFK: Idle",
+        name = "Idle",
         description = "Alert when nothing has happened for a while",
-        position = 9
+        position = 6,
+        closedByDefault = true
     )
     String idleSection = "idle";
 
     @ConfigSection(
-        name = "AFK: Logout",
+        name = "Logout",
         description = "Warn before the inactivity logout",
-        position = 10
+        position = 7,
+        closedByDefault = true
     )
     String logoutSection = "logout";
 
     @ConfigSection(
-        name = "AFK: Inventory Full",
+        name = "Inventory Full",
         description = "Alert when your inventory is too full to hold more",
-        position = 11
+        position = 8,
+        closedByDefault = true
     )
     String inventoryFullSection = "inventoryFull";
 
     @ConfigSection(
         name = "Random Event",
         description = "Your own random events",
-        position = 12
+        position = 9,
+        closedByDefault = true
     )
     String randomSection = "random";
 
     @ConfigSection(
-        name = "Forestry",
+        name = "Woodcutting",
         description = "Forestry events, the ones you pick",
-        position = 13
+        position = 10,
+        closedByDefault = true
     )
-    String forestrySection = "forestry";
+    String woodcuttingSection = "forestry";
 
     @ConfigSection(
         name = "Sailing: Salvage",
         description = "Alert when a shipwreck is depleted or there is nothing left to sort",
-        position = 14
+        position = 11,
+        closedByDefault = true
     )
     String salvageSection = "salvage";
 
     @ConfigSection(
         name = "Sailing: Cargo Hold",
         description = "Alert when the cargo hold is full",
-        position = 15
+        position = 12,
+        closedByDefault = true
     )
     String cargoSection = "cargo";
+
+    @ConfigSection(
+        name = "Timing",
+        description = "Click pause, quiet after dismiss, give up after and startup delay",
+        position = 13
+    )
+    String timingSection = "general";
+
+    @ConfigSection(
+        name = "Sounds",
+        description = "What alerts sound like, and how often",
+        position = 14
+    )
+    String soundsSection = "sounds";
+
+    @ConfigSection(
+        name = "Screen Flash",
+        description = "The flash over the game screen while an alert fires",
+        position = 15
+    )
+    String flashSection = "flash";
 
     // General
 
@@ -318,19 +331,7 @@ public interface ConstsExpConfig extends Config
         return 50;
     }
 
-    @ConfigItem(
-        keyName = "showAnimationId",
-        name = "Show Animation ID",
-        description = "Always show your current animation in the status panel, for tuning Idle; it shows anyway while Idle waits for it to stop",
-        section = idleSection,
-        position = 5
-    )
-    default boolean showAnimationId()
-    {
-        return false;
-    }
-
-    // Combat
+    // Health, Prayer, Aggro, Potion, Cannon
 
     @ConfigItem(
         keyName = "enableHealthAlert",
@@ -603,7 +604,7 @@ public interface ConstsExpConfig extends Config
         return new Color(255, 140, 0);
     }
 
-    // AFK
+    // Idle, Logout, Inventory Full
 
     @ConfigItem(
         keyName = "enableIdleAlert",
@@ -665,6 +666,18 @@ public interface ConstsExpConfig extends Config
     default boolean idleRequireNoAnimation()
     {
         return true;
+    }
+
+    @ConfigItem(
+        keyName = "showAnimationId",
+        name = "Show Animation ID",
+        description = "Always show your current animation in the status panel, for tuning Idle; it shows anyway while Idle waits for it to stop",
+        section = idleSection,
+        position = 5
+    )
+    default boolean showAnimationId()
+    {
+        return false;
     }
 
     @ConfigItem(
@@ -793,13 +806,13 @@ public interface ConstsExpConfig extends Config
         return 20_000;
     }
 
-    // Forestry
+    // Woodcutting
 
     @ConfigItem(
         keyName = "enableForestryAlert",
         name = "Enabled",
         description = "Alert when a Forestry event you picked below starts nearby (Custom preset only)",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 0
     )
     default boolean enableForestryAlert()
@@ -811,7 +824,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryDismissOnClick",
         name = "Dismiss on Click",
         description = "A click or key press silences this alert. Off, it keeps going through clicks",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 1
     )
     default boolean forestryDismissOnClick()
@@ -823,7 +836,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryFlashColor",
         name = "Color",
         description = "Screen flash and panel color for Forestry",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 2
     )
     default Color forestryFlashColor()
@@ -835,7 +848,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryRisingRoots",
         name = "Rising Roots",
         description = "Alert when a Rising Roots event starts: anima-infused roots sprout around the tree",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 3
     )
     default boolean forestryRisingRoots()
@@ -847,7 +860,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryStrugglingSapling",
         name = "Struggling Sapling",
         description = "Alert when a Struggling Sapling event starts: a sapling needs the right mulch",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 4
     )
     default boolean forestryStrugglingSapling()
@@ -859,7 +872,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryFloweringTree",
         name = "Flowering Tree",
         description = "Alert when a Flowering Tree event starts: flowering bushes need pollinating",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 5
     )
     default boolean forestryFloweringTree()
@@ -871,7 +884,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryLeprechaun",
         name = "Woodcutting Leprechaun",
         description = "Alert when a Woodcutting Leprechaun event starts: a leprechaun shows up by the trees",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 6
     )
     default boolean forestryLeprechaun()
@@ -883,7 +896,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryBeehive",
         name = "Beehive",
         description = "Alert when a Beehive event starts: a swarm needs a hive built",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 7
     )
     default boolean forestryBeehive()
@@ -895,7 +908,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryFriendlyEnt",
         name = "Friendly Ent",
         description = "Alert when a Friendly Ent event starts: entlings need pruning",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 8
     )
     default boolean forestryFriendlyEnt()
@@ -907,7 +920,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryPoachers",
         name = "Poachers",
         description = "Alert when a Poachers event starts: a fox is caught in a poacher's trap",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 9
     )
     default boolean forestryPoachers()
@@ -919,7 +932,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryPheasantControl",
         name = "Pheasant Control",
         description = "Alert when a Pheasant Control event starts: the Freaky Forester wants pheasant eggs",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 10
     )
     default boolean forestryPheasantControl()
@@ -931,7 +944,7 @@ public interface ConstsExpConfig extends Config
         keyName = "forestryEnchantmentRitual",
         name = "Enchantment Ritual",
         description = "Alert when an Enchantment Ritual event starts: a dryad's ritual needs the right circle",
-        section = forestrySection,
+        section = woodcuttingSection,
         position = 11
     )
     default boolean forestryEnchantmentRitual()

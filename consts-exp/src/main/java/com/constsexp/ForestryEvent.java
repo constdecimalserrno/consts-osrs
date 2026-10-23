@@ -85,7 +85,7 @@ enum ForestryEvent
         return label;
     }
 
-    /** The event's own checkbox in the Forestry section. */
+    /** The event's own checkbox in the Woodcutting section. */
     boolean isWanted(ConstsExpConfig config)
     {
         return wanted.test(config);
