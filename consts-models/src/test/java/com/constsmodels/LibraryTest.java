@@ -11,8 +11,13 @@ import static org.junit.Assert.fail;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.List;
 import net.runelite.client.util.Filepath;
+import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -104,6 +109,27 @@ public class LibraryTest
     }
 
     @Test
+    public void aFolderThatsALinkToAnotherIsUsedAsItIs() throws IOException
+    {
+        // A player's folder can be a link to one elsewhere, and Java 11 won't make a folder that's a link already
+        Path elsewhere = folder.newFolder("elsewhere").toPath();
+        Path link;
+        try
+        {
+            link = Files.createSymbolicLink(elsewhere.resolveSibling("link"), elsewhere);
+        }
+        catch (IOException | UnsupportedOperationException e)
+        {
+            // Windows makes links only in Developer Mode or for an administrator
+            throw new AssumptionViolatedException("this computer can't make a link", e);
+        }
+        ModelLibrary library = new ModelLibrary(Filepath.Unchecked.getRooted(link));
+        ModelLibrary.Capture cow = library.keep(TestMeshes.box(0, 0, 0, 10, 10, 10, RED), 1_000L);
+        assertTrue(Files.isRegularFile(elsewhere.resolve(cow.id + ".cmesh")));
+        assertTrue(Files.isRegularFile(elsewhere.resolve(cow.id + ".png")));
+    }
+
+    @Test
     public void twoCapturesInTheSameMillisecondBothStay() throws IOException
     {
         ModelLibrary library = new ModelLibrary(root);
@@ -112,6 +138,54 @@ public class LibraryTest
         ModelLibrary.Capture two = library.keep(box, 5_000L);
         assertFalse(one.id.equals(two.id));
         assertEquals(2, library.list().size());
+    }
+
+    @Test
+    public void aFileThatGoesWhileTheyreListedIsLeftOutNotTheRest()
+    {
+        Filepath cow = root.joinSegment("cow.cmesh");
+        Filepath goblin = root.joinSegment("goblin.cmesh");
+        List<Object> walk = List.of(cow, new UncheckedIOException(new IOException("gone")), root.joinSegment("cow.png"),
+            goblin);
+        Iterator<Filepath> entries = new Iterator<>()
+        {
+            private int at;
+
+            @Override
+            public boolean hasNext()
+            {
+                // As Files.walk does for a file deleted between being found and being read, then it goes on
+                if (at < walk.size() && walk.get(at) instanceof UncheckedIOException)
+                {
+                    throw (UncheckedIOException) walk.get(at++);
+                }
+                return at < walk.size();
+            }
+
+            @Override
+            public Filepath next()
+            {
+                return (Filepath) walk.get(at++);
+            }
+        };
+        assertEquals(List.of(cow, goblin), ModelLibrary.meshFiles(entries));
+
+        // A walk that never moves past its failure ends all the same
+        Iterator<Filepath> stuck = new Iterator<>()
+        {
+            @Override
+            public boolean hasNext()
+            {
+                throw new UncheckedIOException(new IOException("stuck"));
+            }
+
+            @Override
+            public Filepath next()
+            {
+                throw new AssertionError();
+            }
+        };
+        assertEquals(List.of(), ModelLibrary.meshFiles(stuck));
     }
 
     @Test

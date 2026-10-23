@@ -61,7 +61,13 @@ public class ConstsModelsPlugin extends Plugin
 {
     private static final Logger log = LoggerFactory.getLogger(ConstsModelsPlugin.class);
 
-    private static final String NOT_READY = "its folder isn't ready yet";
+    // What Java's errors mean when their message is only the file, or nothing. By class name, since the Hub's rules
+    // keep most of those file error classes out of a plugin
+    private static final Map<String, String> MEANINGS = Map.of(
+        "AccessDeniedException", "access denied",
+        "NoSuchFileException", "not found",
+        "FileAlreadyExistsException", "already exists",
+        "EOFException", "it ends too soon");
 
     @Inject
     private Client client;
@@ -84,11 +90,10 @@ public class ConstsModelsPlugin extends Plugin
     @Inject
     private ConstsModelsConfig config;
 
-    // The plugin's own folder, made at startup, and every capture kept in it to open again in any session; both null
-    // if it couldn't be made, and folderProblem says why. This session's meshes stay in memory too.
+    // The plugin's own folder, where every capture is kept to open again in any session. It's made at startup; if
+    // that fails it's null, and the next capture, or save with no folder chosen, tries again. This session's meshes
+    // stay in memory too.
     private volatile Filepath pluginFolder;
-    private volatile ModelLibrary library;
-    private volatile String folderProblem = NOT_READY;
     private final Map<String, Mesh> sessionMeshes = new ConcurrentHashMap<>();
 
     // A folder chosen in the sidebar, saved to instead until RuneLite closes: RuneLite hands one over for the session
@@ -164,34 +169,21 @@ public class ConstsModelsPlugin extends Plugin
             .build();
         clientToolbar.addNavigation(navButton);
 
-        // The plugin's folder, moved from where it was before 1.1 the first time, then the captures kept from other
-        // sessions, for the All models tab. Off the Swing thread, and before any capture is kept or saved: the
-        // executor runs one task at a time.
+        // The plugin's folder, with the captures kept from other sessions for the All models tab. Off the Swing thread,
+        // and before any capture is kept or saved: the executor runs one task at a time.
         executor.execute(() ->
         {
+            // Afresh at each start, so this sidebar gets its captures even if a task left from before set it again
+            pluginFolder = null;
             try
             {
-                Filepath folder = getPluginDirectory();
-                folder.createDirectories();
-                library = new ModelLibrary(folder.joinSegment("captures"));
-                pluginFolder = folder;
+                pluginFolder();
             }
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't make the plugin's folder", e);
-                folderProblem = "couldn't make its folder in .runelite/plugin-data (" + e.getMessage() + ")";
-                // No folder at all, even if an earlier start's task set one after shutDown
-                pluginFolder = null;
-                library = null;
-                chat("Captures can't be kept, and saves go only to a folder you choose: " + folderProblem + ".");
-                return;
+                chat("Captures can't be kept yet: " + reason(e) + ". Your next capture tries again.");
             }
-            List<ModelLibrary.Capture> kept = library.list();
-            SwingUtilities.invokeLater(() ->
-            {
-                panel.refresh();
-                panel.setLibrary(kept);
-            });
         });
     }
 
@@ -202,10 +194,8 @@ public class ConstsModelsPlugin extends Plugin
         eventBus.unregister(exportMenu);
         clientToolbar.removeNavigation(navButton);
         sessionMeshes.clear();
-        // Made again at the next start: until then, and for good if that fails, there's none to show or use
+        // Made again at the next start, or after it if that fails: until then there's none to show or use
         pluginFolder = null;
-        library = null;
-        folderProblem = NOT_READY;
         SwingUtilities.invokeLater(ModelViewer::closeAll);
     }
 
@@ -252,7 +242,7 @@ public class ConstsModelsPlugin extends Plugin
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't keep {}", mesh.name, e);
-                chat("Couldn't keep " + ConstsModelsPanel.displayName(mesh.name) + " in the sidebar: " + e.getMessage());
+                chat("Couldn't keep " + ConstsModelsPanel.displayName(mesh.name) + " in the sidebar: " + reason(e));
             }
         });
     }
@@ -276,7 +266,7 @@ public class ConstsModelsPlugin extends Plugin
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't open {}", capture.meshFile, e);
-                chat("Couldn't open " + ConstsModelsPanel.displayName(capture.name) + ": " + e.getMessage());
+                chat("Couldn't open " + ConstsModelsPanel.displayName(capture.name) + ": " + reason(e));
             }
         });
     }
@@ -332,15 +322,41 @@ public class ConstsModelsPlugin extends Plugin
         });
     }
 
-    /** The captures kept, or why there are none. Call it on the executor. */
+    /**
+     * The plugin's own folder. The first time, RuneLite moves the folder used before 1.1 there, and the captures kept
+     * in it go to the sidebar. One that couldn't be made is tried again the next time, and the exception says why.
+     * Call it on the executor.
+     */
+    private Filepath pluginFolder() throws IOException
+    {
+        Filepath folder = pluginFolder;
+        if (folder != null)
+        {
+            return folder;
+        }
+        try
+        {
+            folder = getPluginDirectory();
+            ModelLibrary.makeFolder(folder);
+        }
+        catch (IOException | RuntimeException e)
+        {
+            throw new IOException("couldn't make its folder in .runelite/plugin-data (" + reason(e) + ")", e);
+        }
+        pluginFolder = folder;
+        List<ModelLibrary.Capture> kept = library().list();
+        SwingUtilities.invokeLater(() ->
+        {
+            panel.refresh();
+            panel.setLibrary(kept);
+        });
+        return folder;
+    }
+
+    /** The captures kept, in the plugin's folder. Call it on the executor. */
     private ModelLibrary library() throws IOException
     {
-        ModelLibrary kept = library;
-        if (kept == null)
-        {
-            throw new IOException(folderProblem);
-        }
-        return kept;
+        return new ModelLibrary(pluginFolder().joinSegment("captures"));
     }
 
     /** Where files are saved: the folder chosen in the sidebar this session, else the plugin's own; null if neither. */
@@ -356,15 +372,15 @@ public class ConstsModelsPlugin extends Plugin
         chosen = folder;
     }
 
-    /** The folder to save in, made again if it's gone. Call it on the executor. */
+    /** The folder to save in, made again if it's gone: the one chosen this session, else the plugin's own. */
     private Filepath saveFolder() throws IOException
     {
-        Filepath folder = outputFolder();
+        Filepath folder = chosen;
         if (folder == null)
         {
-            throw new IOException(folderProblem);
+            folder = pluginFolder();
         }
-        folder.createDirectories();
+        ModelLibrary.makeFolder(folder);
         return folder;
     }
 
@@ -377,7 +393,7 @@ public class ConstsModelsPlugin extends Plugin
         Filepath folder = outputFolder();
         if (folder == null)
         {
-            chat("There's no folder to copy: " + folderProblem + ".");
+            chat("There's no folder to copy yet. Choose one, or capture something to make the plugin's own.");
             return;
         }
         try
@@ -406,7 +422,7 @@ public class ConstsModelsPlugin extends Plugin
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't save {} as {}", mesh.name, format, e);
-                chat("Couldn't save " + mesh.name + ": " + e.getMessage());
+                chat("Couldn't save " + mesh.name + ": " + reason(e));
             }
         });
     }
@@ -428,9 +444,24 @@ public class ConstsModelsPlugin extends Plugin
             catch (IOException | RuntimeException e)
             {
                 log.warn("Couldn't save a picture of {}", mesh.name, e);
-                chat("Couldn't save a picture of " + mesh.name + ": " + e.getMessage());
+                chat("Couldn't save a picture of " + mesh.name + ": " + reason(e));
             }
         });
+    }
+
+    /**
+     * What went wrong, for chat: the error's message, and what it means when that's only the file, as Java's file
+     * errors give it: "/x/Goblin.obj (access denied)". Every other message says why itself.
+     */
+    static String reason(Exception e)
+    {
+        String meaning = MEANINGS.get(e.getClass().getSimpleName());
+        String message = e.getMessage();
+        if (message == null || message.isEmpty())
+        {
+            return meaning != null ? meaning : e.getClass().getSimpleName();
+        }
+        return meaning != null ? message + " (" + meaning + ")" : message;
     }
 
     /** A file name for a capture: its name with anything a file system dislikes taken out, then the time. */

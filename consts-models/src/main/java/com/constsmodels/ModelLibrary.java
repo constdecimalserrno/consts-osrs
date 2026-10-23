@@ -4,12 +4,13 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 import net.runelite.client.util.Filepath;
@@ -83,7 +84,7 @@ final class ModelLibrary
     /** Keeps a capture: writes its mesh and its picture, and returns it. */
     Capture keep(Mesh mesh, long time) throws IOException
     {
-        folder.createDirectories();
+        makeFolder(folder);
         String id = unusedId(time);
         Filepath meshFile = folder.joinSegment(id + MESH);
         Filepath pictureFile = folder.joinSegment(id + PNG);
@@ -119,7 +120,7 @@ final class ModelLibrary
         List<Filepath> meshFiles;
         try (Stream<Filepath> files = folder.walk(1))
         {
-            meshFiles = files.filter(f -> f.getFileName().endsWith(MESH)).collect(Collectors.toList());
+            meshFiles = meshFiles(files.iterator());
         }
         catch (IOException | RuntimeException e)
         {
@@ -158,6 +159,51 @@ final class ModelLibrary
         }
         captures.sort(Comparator.comparingLong((Capture c) -> c.time).thenComparing(c -> c.id).reversed());
         return captures;
+    }
+
+    /** The capture files among a folder's entries. One that goes while they're read is left out, not the rest. */
+    static List<Filepath> meshFiles(Iterator<Filepath> entries)
+    {
+        List<Filepath> found = new ArrayList<>();
+        int failedInARow = 0;
+        while (true)
+        {
+            try
+            {
+                if (!entries.hasNext())
+                {
+                    return found;
+                }
+                Filepath entry = entries.next();
+                failedInARow = 0;
+                if (entry.getFileName().endsWith(MESH))
+                {
+                    found.add(entry);
+                }
+            }
+            catch (UncheckedIOException e)
+            {
+                // Java's walk moves on past the file that failed; should one ever not, stop rather than spin forever
+                if (++failedInARow >= 1000)
+                {
+                    log.warn("Gave up listing the captures", e);
+                    return found;
+                }
+                log.debug("A file went while the captures were listed", e);
+            }
+        }
+    }
+
+    /**
+     * Makes the folder unless it's there. One that's a link to a folder counts as there: Java 11's createDirectories
+     * refuses a link that's already there.
+     */
+    static void makeFolder(Filepath folder) throws IOException
+    {
+        if (!folder.isDirectory())
+        {
+            folder.createDirectories();
+        }
     }
 
     /** Deletes the file if it's there; one that won't go is left, and logged. */

@@ -22,8 +22,13 @@ import org.junit.Test;
 public class HubRulesTest
 {
     private static final List<String> FORBIDDEN = List.of("java.io.File", "java.io.*", "new File(", "FileInputStream",
-        "FileOutputStream", "java.nio.file", "RUNELITE_DIR", "LinkBrowser.open", "JFileChooser", "java.awt.Desktop",
-        "Desktop.getDesktop", "Runtime.getRuntime", "ProcessBuilder");
+        "FileOutputStream", "RandomAccessFile", "java.nio.file", "RUNELITE_DIR", "Filepath.Unchecked",
+        "LinkBrowser.open", "JFileChooser", "FileDialog", "java.awt.Desktop", "Desktop.getDesktop",
+        "Runtime.getRuntime", "ProcessBuilder");
+
+    /** What Filepath's own methods take or throw, so a plugin may name them though they're java.nio.file's. */
+    private static final List<String> ALLOWED = List.of("java.nio.file.StandardOpenOption",
+        "java.nio.file.FileVisitOption", "java.nio.file.NoSuchFileException");
 
     @Test
     public void filesGoThroughRuneLitesFilepathOnly() throws IOException
@@ -39,6 +44,10 @@ public class HubRulesTest
         for (Path source : sources)
         {
             String text = new String(Files.readAllBytes(source), StandardCharsets.UTF_8);
+            for (String allowed : ALLOWED)
+            {
+                text = text.replace(allowed, "");
+            }
             for (String api : FORBIDDEN)
             {
                 if (text.contains(api))

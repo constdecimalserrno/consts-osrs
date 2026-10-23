@@ -100,4 +100,19 @@ public class CoreTest
         assertEquals("NPC Goblin (level-2) " + stamp, ConstsModelsPlugin.fileName("NPC <col=ffff00>Goblin</col> (level-2)", when));
         assertEquals("Model " + stamp, ConstsModelsPlugin.fileName("../:*?", when));
     }
+
+    @Test
+    public void anErrorInChatSaysWhatWentWrongNotOnlyWhere()
+    {
+        // Java's file errors often give only the file
+        assertEquals("/p/Goblin.obj (access denied)",
+            ConstsModelsPlugin.reason(new java.nio.file.AccessDeniedException("/p/Goblin.obj")));
+        assertEquals("/p (not found)", ConstsModelsPlugin.reason(new java.nio.file.NoSuchFileException("/p")));
+        assertEquals("it ends too soon", ConstsModelsPlugin.reason(new java.io.EOFException()));
+        // A message that says why already stays as it is, the plugin's own included
+        assertEquals("/p/x.obj: No space left on device", ConstsModelsPlugin.reason(
+            new java.nio.file.FileSystemException("/p/x.obj", null, "No space left on device")));
+        assertEquals("there's nothing in it",
+            ConstsModelsPlugin.reason(new java.io.IOException("there's nothing in it")));
+    }
 }

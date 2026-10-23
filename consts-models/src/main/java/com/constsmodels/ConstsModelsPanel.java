@@ -610,7 +610,17 @@ class ConstsModelsPanel extends PluginPanel
         {
             chooser.setCurrentDirectory(current);
         }
-        List<Filepath> picked = chooser.showDialog(this);
+        List<Filepath> picked;
+        try
+        {
+            picked = chooser.showDialog(this);
+        }
+        catch (IllegalArgumentException e)
+        {
+            // A name typed in that the computer can't use, such as one with a colon on Windows: the folder stays
+            plugin.chat("Couldn't use that folder: " + ConstsModelsPlugin.reason(e) + ".");
+            return;
+        }
         if (picked != null && !picked.isEmpty())
         {
             plugin.setOutputFolder(picked.get(0));
