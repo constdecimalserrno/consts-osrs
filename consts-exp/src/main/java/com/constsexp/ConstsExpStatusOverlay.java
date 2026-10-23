@@ -24,9 +24,11 @@ import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.components.ComponentConstants;
 import net.runelite.client.ui.overlay.components.LayoutableRenderableEntity;
 import net.runelite.client.ui.overlay.tooltip.Tooltip;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
+import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.ImageUtil;
 
 /**
@@ -45,16 +47,19 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private static final Color LABEL_COLOR = new Color(215, 208, 196);
     private static final Color QUIET_COLOR = new Color(16, 13, 10, 153);
     private static final Color TAG_COLOR = new Color(0, 0, 0, 102);
-    // A near-black alert color (Potion's default) would vanish on the dark panel: its row is drawn in this instead.
-    private static final Color MUTED_INK = new Color(140, 130, 120);
+    // A quiet row is lightest over a white scene, where an alert's color shows least. Colors darker than the
+    // contrast every default but Potion's black already has there are lightened toward white until they have it.
+    private static final Color QUIET_ON_WHITE = new Color(66, 62, 58);
+    private static final double MIN_CONTRAST = 2.75;
+    private static final double INK_FLOOR = (luminance(QUIET_ON_WHITE) + 0.05) * MIN_CONTRAST - 0.05;
     private static final Map<AlertType, BufferedImage> ICONS = new EnumMap<>(AlertType.class);
     private static final BufferedImage HOURGLASS = ImageUtil.loadImageResource(ConstsExpPlugin.class, "animating.png");
     // The icons, tinted, by mask and color. ponytail: never emptied, as it only grows when a color setting changes.
     private static final Map<Map.Entry<BufferedImage, Color>, BufferedImage> TINTED = new HashMap<>();
     private static final String HELD_TOOLTIP = "The hourglass: you're animating, so Idle waits until you stop.";
     private static final String AGGRO_AREA_UNKNOWN_TOOLTIP = "Aggro ?: the unaggressive area isn't known yet. Teleport or"
-        + " enter a dungeon, then walk until the area settles and the ? goes away.</br>Or right-click the panel and Reset"
-        + " Aggro Timer to start it where you stand.";
+        + " enter a dungeon, then walk until the area settles and the ? goes away.</br>Or Shift + right-click the panel"
+        + " and Reset Aggro Timer to start it where you stand.";
     private static final String AGGRO_AREA_SETTLING_TOOLTIP = "Aggro ?: only part of the unaggressive area is known."
         + " Walk out of the lines until the area settles and the ? goes away.";
 
@@ -93,6 +98,17 @@ class ConstsExpStatusOverlay extends OverlayPanel
         }
     }
 
+    /**
+     * Never narrower than the standard 129 px the rows are laid out for, whether dragged smaller or saved that way
+     * by an older version. Wider is fine. RuneLite sets both through here.
+     */
+    @Override
+    public void setPreferredSize(Dimension size)
+    {
+        super.setPreferredSize(size == null ? null
+            : new Dimension(Math.max(ComponentConstants.STANDARD_WIDTH, size.width), size.height));
+    }
+
     @Override
     public Dimension render(Graphics2D graphics)
     {
@@ -115,7 +131,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
     {
         List<Row> rows = new ArrayList<>();
         rows.add(new TagRow(TITLE, Color.WHITE, String.valueOf(plugin.currentPreset()),
-            "Live AFK alert status, on the preset in the tag. Right-click to switch preset or reset the aggro timer."));
+            "Live AFK alert status, on the preset in the tag. Shift + right-click to switch preset or reset the aggro timer."));
 
         if (client.getGameState() != GameState.LOGGED_IN)
         {
@@ -162,7 +178,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
             {
                 long idleMs = plugin.getIdleDurationMillis();
                 value = formatClock(idleMs);
-                line = idleMs / (double) Math.max(1000L, config.idleThresholdMs());
+                line = idleMs / (double) plugin.getIdleThresholdMillis();
                 break;
             }
             case AGGRO:
@@ -178,9 +194,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
             case LOGOUT:
             {
                 // The value counts down to the 25-minute logout; the line fills toward the warning.
-                long remainingMs = plugin.getLogoutTimerRemainingMillis();
-                value = formatClock(remainingMs);
-                line = (ConstsExpPlugin.LOGOUT_TIMEOUT_MS - remainingMs) / (double) Math.max(60_000L, config.logoutWarningMs());
+                value = formatClock(plugin.getLogoutTimerRemainingMillis());
+                line = plugin.getMillisSinceUserInteraction() / (double) plugin.getLogoutWarningMillis();
                 break;
             }
             case FORESTRY:
@@ -195,11 +210,17 @@ class ConstsExpStatusOverlay extends OverlayPanel
         }
 
         // Idle waits while you animate: an hourglass on its row says so, without the animation's number.
-        boolean held = type == AlertType.IDLE && plugin.currentPreset().holdsIdleWhileAnimating(config)
-            && plugin.getCurrentAnimationId() != -1;
+        boolean held = type == AlertType.IDLE && plugin.isIdleHeldByAnimation();
         Color ink = ink(type.getFlashColor(config));
-        return new AlertRow(ICONS.get(type), type.getLabel(), value, ink, firing ? pulse(type, ink, now) : null,
-            Math.max(0, Math.min(1, line)), held, held ? tooltip(type) + "</br>" + HELD_TOOLTIP : tooltip(type));
+        Color fill = null;
+        if (firing)
+        {
+            // Lit, and in step with the screen flash while it flashes: dimmed to 45% in its dark half.
+            boolean dark = plugin.isFlashingScreen(type, now) && !plugin.isFlashPhaseOn(type, now);
+            fill = dark ? shade(ink, 0.45) : ink;
+        }
+        return new AlertRow(ICONS.get(type), type.getLabel(), value, ink, fill, line > 0 ? Math.min(1, line) : 0, held,
+            held ? tooltip(type) + "</br>" + HELD_TOOLTIP : tooltip(type));
     }
 
     private String tooltip(AlertType type)
@@ -214,13 +235,6 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private boolean isAggroAreaUncalibrated()
     {
         return plugin.usesAggroArea() && !plugin.getAggroArea().isCalibrated();
-    }
-
-    /** The alert's color, dimmed to 45% on alternate flash phases. */
-    private Color pulse(AlertType type, Color base, long now)
-    {
-        long interval = Math.max(80L, config.flashIntervalMs());
-        return type.isFlashPhaseOn(now, interval) ? base : shade(base, 0.45);
     }
 
     // The rows' bounds are within the panel; the overlay's bounds say where the renderer put the panel.
@@ -284,10 +298,29 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return luminance;
     }
 
-    /** The alert's color as the panel draws it. A near-black one (Potion's default) would vanish on the dark panel. */
+    /** The alert's color as the panel draws it: a dark one, Potion's black say, lightened until it shows. */
     private static Color ink(Color color)
     {
-        return luminance(color) < 0.01 ? MUTED_INK : color;
+        if (luminance(color) >= INK_FLOOR)
+        {
+            return color;
+        }
+        // The least lightening that clears the floor, in 255ths of the way to white.
+        int low = 0;
+        int high = 255;
+        while (low < high)
+        {
+            int mid = (low + high) / 2;
+            if (luminance(ColorUtil.colorLerp(color, Color.WHITE, mid / 255.0)) >= INK_FLOOR)
+            {
+                high = mid;
+            }
+            else
+            {
+                low = mid + 1;
+            }
+        }
+        return ColorUtil.colorLerp(color, Color.WHITE, low / 255.0);
     }
 
     /** Black or white, whichever stands out more on the fill. */
@@ -303,20 +336,29 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return FONT.createGlyphVector(FRC, text).getVisualBounds().getBounds();
     }
 
-    /** Text as RuneLite's TextComponent draws it: a black shadow 1 px down and right, then the text. */
+    /**
+     * Text as RuneLite's TextComponent draws it, a black shadow 1 px down and right, then the text. Black text on a
+     * light fill gets no shadow: it would only smear the strokes.
+     */
     private static void text(Graphics2D graphics, String text, int x, int y, Color color)
     {
         graphics.setFont(FONT);
-        graphics.setColor(Color.BLACK);
-        graphics.drawString(text, x + 1, y + 1);
+        if (!Color.BLACK.equals(color))
+        {
+            graphics.setColor(Color.BLACK);
+            graphics.drawString(text, x + 1, y + 1);
+        }
         graphics.setColor(color);
         graphics.drawString(text, x, y);
     }
 
-    /** A pixel icon in one color, with the text's shadow. */
+    /** A pixel icon in one color, with a shadow like the text's. */
     private static void icon(Graphics2D graphics, BufferedImage mask, int x, int y, Color color)
     {
-        graphics.drawImage(tinted(mask, Color.BLACK), x + 1, y + 1, null);
+        if (!Color.BLACK.equals(color))
+        {
+            graphics.drawImage(tinted(mask, Color.BLACK), x + 1, y + 1, null);
+        }
         graphics.drawImage(tinted(mask, color), x, y, null);
     }
 
@@ -387,8 +429,9 @@ class ConstsExpStatusOverlay extends OverlayPanel
             int tagY = labelInk.width + 3 + tagInk.width + 4 <= width ? location.y : location.y + 13;
             int right = location.x + width;
             text(graphics, label, location.x - labelInk.x, location.y + 12, labelColor);
+            // The full 14 px row, so the box covers descenders (Woodcutting's g) and their shadow.
             graphics.setColor(TAG_COLOR);
-            graphics.fillRect(right - tagInk.width - 4, tagY, tagInk.width + 4, 12);
+            graphics.fillRect(right - tagInk.width - 4, tagY, tagInk.width + 4, 14);
             text(graphics, tag, right - 2 - tagInk.x - tagInk.width, tagY + 12, INFO_COLOR);
             return size(tagY - location.y + 14);
         }
@@ -436,7 +479,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
             if (fill == null)
             {
                 graphics.setColor(shade(ink, 0.85));
-                graphics.fillRect(x, y + HEIGHT - 1, (int) Math.round(width * line), 1);
+                // Floored: full only once the alert is due.
+                graphics.fillRect(x, y + HEIGHT - 1, (int) (width * line), 1);
             }
 
             Color iconColor = foreground != null ? foreground : shade(ink, 0.9);

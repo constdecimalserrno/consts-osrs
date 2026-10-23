@@ -5,7 +5,7 @@ import java.util.EnumSet;
 import java.util.Set;
 
 /**
- * Named bundles of alerts, picked from the top of the config panel or by right-clicking the status panel.
+ * Named bundles of alerts, picked from the top of the config panel or by Shift + right-clicking the status panel.
  * A preset overrides the per-alert Enable toggles; Custom hands control back to them.
  */
 public enum Preset

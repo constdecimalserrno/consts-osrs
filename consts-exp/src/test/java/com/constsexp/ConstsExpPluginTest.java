@@ -236,6 +236,71 @@ public class ConstsExpPluginTest
         assertTrue("Custom with the option off alerts mid-animation", plugin.isAlertFiring(AlertType.IDLE));
     }
 
+    // The rules the status panel reads from the plugin
+
+    @Test
+    public void idleShouldBeHeldByAnAnimationWhereThePresetHoldsIt()
+    {
+        when(player.getAnimation()).thenReturn(867); // chopping
+        when(config.preset()).thenReturn(Preset.WOODCUTTING);
+        assertTrue("a preset holds Idle while you chop", plugin.isIdleHeldByAnimation());
+
+        when(player.getAnimation()).thenReturn(-1);
+        assertFalse("not animating, nothing holds it", plugin.isIdleHeldByAnimation());
+
+        when(config.preset()).thenReturn(Preset.CUSTOM);
+        when(config.idleRequireNoAnimation()).thenReturn(false);
+        when(player.getAnimation()).thenReturn(867);
+        assertFalse("Custom with Suppress While Animating off doesn't hold it", plugin.isIdleHeldByAnimation());
+    }
+
+    @Test
+    public void logoutShouldWarnOnTheClockThePanelReads() throws Exception
+    {
+        // Warn After at 30 minutes, past the 25-minute logout.
+        when(config.enableLogoutWarning()).thenReturn(true);
+        when(config.logoutWarningMs()).thenReturn(1_800_000);
+        assertEquals(1_800_000L, plugin.getLogoutWarningMillis());
+
+        setField("lastUserInteractionMillis", System.currentTimeMillis() - 1_620_000L);
+        long since = plugin.getMillisSinceUserInteraction();
+        assertTrue("27 minutes since the last click, was " + since, since >= 1_620_000L && since < 1_630_000L);
+        invokePrivate("evaluateAlerts");
+        assertFalse("not warned yet at 27 of 30 minutes", plugin.isAlertFiring(AlertType.LOGOUT));
+
+        setField("lastUserInteractionMillis", System.currentTimeMillis() - 1_800_000L);
+        invokePrivate("evaluateAlerts");
+        assertTrue("warned at 30 minutes", plugin.isAlertFiring(AlertType.LOGOUT));
+    }
+
+    @Test
+    public void theClickPauseShouldStopTheScreenFlashButNotTheAlert() throws Exception
+    {
+        when(config.enableScreenFlash()).thenReturn(true);
+        when(config.enableIdleAlert()).thenReturn(true);
+        when(config.idleThresholdMs()).thenReturn(6000);
+        when(player.getAnimation()).thenReturn(-1);
+        setField("lastActivityMillis", System.currentTimeMillis() - 60_000L);
+        invokePrivate("evaluateAlerts");
+        assertTrue("Idle flashes the screen", plugin.isFlashingScreen(AlertType.IDLE, System.currentTimeMillis()));
+
+        // Idle dismisses on click, so the Click Pause holds its flash; the alert itself carries on.
+        invokePrivate("onUserInteraction");
+        assertTrue("still firing, so still lit in the panel", plugin.isAlertFiring(AlertType.IDLE));
+        assertFalse("not flashing the screen", plugin.isFlashingScreen(AlertType.IDLE, System.currentTimeMillis()));
+    }
+
+    @Test
+    public void thePanelsPulseShouldBeTheScreenFlashsPhase()
+    {
+        // A hand-edited 60 ms interval: the screen flash takes it as it is (its floor is 50), so the panel does too.
+        when(config.flashIntervalMs()).thenReturn(60);
+        for (long now = 0; now < 480; now += 7)
+        {
+            assertEquals("at " + now + " ms", AlertType.IDLE.isFlashPhaseOn(now, 60), plugin.isFlashPhaseOn(AlertType.IDLE, now));
+        }
+    }
+
     @Test
     public void leavingCustomShouldSaveItsToggles()
     {

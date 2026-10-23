@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Toolkit;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -484,22 +483,28 @@ public class ConstsExpPlugin extends Plugin
 
     List<Color> getCurrentFlashColors()
     {
-        if (!config.enableScreenFlash() || !isTracking())
-        {
-            return Collections.emptyList();
-        }
-
         long now = System.currentTimeMillis();
-        long interval = Math.max(MIN_FLASH_INTERVAL_MS, config.flashIntervalMs());
         List<Color> colors = new ArrayList<>();
         for (AlertType type : AlertType.values())
         {
-            if (!isSilencedByClick(type) && isFlashing(type, now) && type.isFlashPhaseOn(now, interval))
+            if (isFlashingScreen(type, now) && isFlashPhaseOn(type, now))
             {
                 colors.add(type.getFlashColor(config));
             }
         }
         return colors;
+    }
+
+    /** Whether the alert flashes the screen now, in either half of its flash. The Click Pause holds it off. */
+    boolean isFlashingScreen(AlertType type, long now)
+    {
+        return config.enableScreenFlash() && isTracking() && !isSilencedByClick(type) && isFlashing(type, now);
+    }
+
+    /** The bright half of the alert's flash: its color on the screen, and its status panel row bright. */
+    boolean isFlashPhaseOn(AlertType type, long now)
+    {
+        return type.isFlashPhaseOn(now, Math.max(MIN_FLASH_INTERVAL_MS, config.flashIntervalMs()));
     }
 
     private boolean isFlashing(AlertType type, long now)
@@ -573,16 +578,14 @@ public class ConstsExpPlugin extends Plugin
             return;
         }
 
-        long now = System.currentTimeMillis();
         loops.get(AlertType.HEALTH).setFiring(isAlertEnabled(AlertType.HEALTH)
             && client.getBoostedSkillLevel(Skill.HITPOINTS) < config.healthThreshold());
         loops.get(AlertType.PRAYER).setFiring(isAlertEnabled(AlertType.PRAYER)
             && client.getBoostedSkillLevel(Skill.PRAYER) < config.prayerThreshold());
-        loops.get(AlertType.IDLE).setFiring(isAlertEnabled(AlertType.IDLE)
-            && !(currentPreset().holdsIdleWhileAnimating(config) && getCurrentAnimationId() != -1)
-            && now - lastActivityMillis >= config.idleThresholdMs());
+        loops.get(AlertType.IDLE).setFiring(isAlertEnabled(AlertType.IDLE) && !isIdleHeldByAnimation()
+            && getIdleDurationMillis() >= getIdleThresholdMillis());
         loops.get(AlertType.LOGOUT).setFiring(isAlertEnabled(AlertType.LOGOUT)
-            && now - lastUserInteractionMillis >= Math.max(60_000L, config.logoutWarningMs()));
+            && getMillisSinceUserInteraction() >= getLogoutWarningMillis());
         evaluateAggroTimer();
     }
 
@@ -989,7 +992,7 @@ public class ConstsExpPlugin extends Plugin
     }
 
     /**
-     * Right-click Reset Aggro Timer. In OSRS mode the tile you stand on becomes a fresh area center, as if you had just
+     * Reset Aggro Timer, on the status panel's Shift + right-click menu. In OSRS mode the tile you stand on becomes a fresh area center, as if you had just
      * left both areas; in Custom Minutes the interval starts over.
      */
     void resetAggroTimer()
@@ -1044,9 +1047,33 @@ public class ConstsExpPlugin extends Plugin
         return System.currentTimeMillis() - lastActivityMillis;
     }
 
+    /** Idle fires once you've been idle this long. */
+    long getIdleThresholdMillis()
+    {
+        return config.idleThresholdMs();
+    }
+
+    /** Idle waits while you animate: under every preset, and under Custom with Suppress While Animating. */
+    boolean isIdleHeldByAnimation()
+    {
+        return currentPreset().holdsIdleWhileAnimating(config) && getCurrentAnimationId() != -1;
+    }
+
+    /** Time since the last click or key press: the clock Logout's warning and the game's 25-minute logout run on. */
+    long getMillisSinceUserInteraction()
+    {
+        return System.currentTimeMillis() - lastUserInteractionMillis;
+    }
+
+    /** Logout warns once you've gone this long without a click or key press. */
+    long getLogoutWarningMillis()
+    {
+        return Math.max(60_000L, config.logoutWarningMs());
+    }
+
     long getLogoutTimerRemainingMillis()
     {
-        return Math.max(0L, LOGOUT_TIMEOUT_MS - (System.currentTimeMillis() - lastUserInteractionMillis));
+        return Math.max(0L, LOGOUT_TIMEOUT_MS - getMillisSinceUserInteraction());
     }
 
     long getPauseRemainingMillis()
