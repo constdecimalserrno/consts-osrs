@@ -312,11 +312,17 @@ class ConstsLeaderboardPanel extends PluginPanel
         row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         row.setBorder(new EmptyBorder(2, 8, 2, 8));
         row.setToolTipText("Look up " + name);
-        row.addMouseListener(clickable(row, () -> lookup(name, plugin.getWorldEndpoint())));
+        row.addMouseListener(clickable(row, () ->
+        {
+            if (!loading)
+            {
+                lookup(name, plugin.getWorldEndpoint());
+            }
+        }));
         return row;
     }
 
-    /* Clicks run the action; hovering shows a hand and lightens the background like RuneLite's own lists */
+    /* Left clicks run the action; hovering shows a hand and lightens the background like RuneLite's own lists */
     private static MouseAdapter clickable(JComponent c, Runnable onPress)
     {
         c.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -325,7 +331,10 @@ class ConstsLeaderboardPanel extends PluginPanel
             @Override
             public void mousePressed(MouseEvent e)
             {
-                onPress.run();
+                if (SwingUtilities.isLeftMouseButton(e))
+                {
+                    onPress.run();
+                }
             }
 
             @Override

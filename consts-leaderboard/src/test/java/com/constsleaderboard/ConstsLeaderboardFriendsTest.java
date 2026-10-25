@@ -4,10 +4,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -45,17 +48,29 @@ public class ConstsLeaderboardFriendsTest
 
     private static void click(JComponent c)
     {
-        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED, 0, 0, 1, 1, 1, false));
+        c.dispatchEvent(new MouseEvent(c, MouseEvent.MOUSE_PRESSED, 0, InputEvent.BUTTON1_DOWN_MASK, 1, 1, 1, false,
+            MouseEvent.BUTTON1));
     }
 
-    @Test
-    public void friendsStartOpen()
+    /* Swing, and the search box most of all, wants its own thread */
+    private static void onEdt(Runnable r) throws Exception
     {
-        assertTrue(panel().friendsList.isVisible());
+        SwingUtilities.invokeAndWait(r);
     }
 
     @Test
-    public void closingFriendsHidesThemAndIsRemembered()
+    public void friendsStartOpen() throws Exception
+    {
+        onEdt(() -> assertTrue(panel().friendsList.isVisible()));
+    }
+
+    @Test
+    public void closingFriendsHidesThemAndIsRemembered() throws Exception
+    {
+        onEdt(this::closeAndRemember);
+    }
+
+    private void closeAndRemember()
     {
         ConstsLeaderboardPanel panel = panel();
         click(panel.friendsHeader);
@@ -70,8 +85,7 @@ public class ConstsLeaderboardFriendsTest
     @Test
     public void eachFriendIsARowAndClickingOneLooksThemUp() throws Exception
     {
-        // The search box only takes text on the Swing thread
-        SwingUtilities.invokeAndWait(this::rowsLookUp);
+        onEdt(this::rowsLookUp);
     }
 
     private void rowsLookUp()
@@ -89,10 +103,19 @@ public class ConstsLeaderboardFriendsTest
 
         click((JLabel) panel.friendsList.getComponent(1));
         verify(hiscoreClient).lookupAsync("Bob", HiscoreEndpoint.NORMAL);
+
+        // Bob's lookup is still loading, so another click waits its turn
+        click(lynx);
+        verify(hiscoreClient, never()).lookupAsync(eq("Lynx Titan"), any());
     }
 
     @Test
-    public void loggedOutOrFriendlessSaysSo()
+    public void loggedOutOrFriendlessSaysSo() throws Exception
+    {
+        onEdt(this::emptySaysSo);
+    }
+
+    private void emptySaysSo()
     {
         ConstsLeaderboardPanel panel = panel();
         assertEquals("Log in to see your friends", ((JLabel) panel.friendsList.getComponent(0)).getText());
