@@ -16,9 +16,9 @@ import net.runelite.http.api.worlds.WorldRegion;
  * toggle whose result shows a tick later than the bar expected (or sooner) moves the cutoff to that click. Each world
  * region starts from a guess; Your Ping overrides it. Times are in ms, from the caller's clock.
  */
-final class TickPendulum
+public final class TickPendulum
 {
-    enum Rhythm
+    public enum Rhythm
     {
         SINGLE("Single click"),
         FLICK("Flick"),
