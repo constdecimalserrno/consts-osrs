@@ -370,6 +370,31 @@ public class ConstsExpPluginTest
     }
 
     @Test
+    public void resetShouldPutEveryCustomToggleBackEvenWhenThePresetResetsLast()
+    {
+        // The saved settings, after: in Custom, Cannon off, then Woodcutting.
+        Map<String, String> stored = new HashMap<>();
+        stored.put(ConstsExpConfig.PRESET_KEY, "WOODCUTTING");
+        stored.put("enableCannonAlert", "false");
+        stored.put(ConstsExpConfig.CUSTOM_SNAPSHOT_KEY, "enableCannonAlert=false");
+        when(configManager.getConfiguration(eq(ConstsExpConfig.GROUP), anyString()))
+            .thenAnswer(invocation -> stored.get(invocation.<String>getArgument(1)));
+        doAnswer(invocation -> stored.put(invocation.getArgument(1), invocation.getArgument(2)))
+            .when(configManager).setConfiguration(eq(ConstsExpConfig.GROUP), anyString(), anyString());
+        doAnswer(invocation -> stored.remove(invocation.<String>getArgument(1)))
+            .when(configManager).unsetConfiguration(eq(ConstsExpConfig.GROUP), anyString());
+
+        // Reset, in the bad order: Cannon goes back to on, then the preset back to Custom brings Custom's Cannon off back.
+        stored.put("enableCannonAlert", "true");
+        stored.put(ConstsExpConfig.PRESET_KEY, "CUSTOM");
+        plugin.onConfigChanged(presetChange("WOODCUTTING", "CUSTOM"));
+        plugin.resetConfiguration();
+
+        assertNull("Cannon is back to its default", stored.get("enableCannonAlert"));
+        assertNull("the saved Custom goes too", stored.get(ConstsExpConfig.CUSTOM_SNAPSHOT_KEY));
+    }
+
+    @Test
     public void presetToPresetShouldLeaveCustomAlone()
     {
         plugin.onConfigChanged(presetChange("WOODCUTTING", "MINING"));

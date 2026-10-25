@@ -556,6 +556,18 @@ public class ConstsExpPlugin extends Plugin
         }
     }
 
+    /**
+     * Reset, from either config panel, runs this after putting every setting back. That reset goes one setting at a
+     * time in no fixed order, so the preset's return to Custom can put the saved Custom toggles back over ones it already
+     * reset. Unset them all again, and the saved Custom with them.
+     */
+    @Override
+    public void resetConfiguration()
+    {
+        CUSTOM_TOGGLE_KEYS.forEach(key -> configManager.unsetConfiguration(ConstsExpConfig.GROUP, key));
+        configManager.unsetConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.CUSTOM_SNAPSHOT_KEY);
+    }
+
     // An unset preset is Custom, its default.
     private static boolean isCustom(String preset)
     {
