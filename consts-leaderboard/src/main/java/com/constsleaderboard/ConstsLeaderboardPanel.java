@@ -36,8 +36,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.GridBagConstraints;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
@@ -261,10 +261,9 @@ class ConstsLeaderboardPanel extends PluginPanel
         friendsHeader.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         friendsHeader.setBorder(new EmptyBorder(0, 8, 0, 8));
         friendsHeader.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 20, 30));
-        friendsHeader.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         friendsHeader.add(friendsTitle, BorderLayout.WEST);
         friendsHeader.add(friendsCount, BorderLayout.EAST);
-        friendsHeader.addMouseListener(hover(friendsHeader, () -> setFriendsOpen(!friendsList.isVisible())));
+        friendsHeader.addMouseListener(clickable(friendsHeader, () -> setFriendsOpen(!friendsList.isVisible())));
 
         c.insets = new Insets(0, 0, 0, 0);
         add(friendsHeader, c);
@@ -313,14 +312,14 @@ class ConstsLeaderboardPanel extends PluginPanel
         row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         row.setBorder(new EmptyBorder(2, 8, 2, 8));
         row.setToolTipText("Look up " + name);
-        row.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        row.addMouseListener(hover(row, () -> lookup(name, plugin.getWorldEndpoint())));
+        row.addMouseListener(clickable(row, () -> lookup(name, plugin.getWorldEndpoint())));
         return row;
     }
 
-    /* Clicks run the action; hovering lightens the background like RuneLite's own lists */
-    private static MouseAdapter hover(JComponent c, Runnable onPress)
+    /* Clicks run the action; hovering shows a hand and lightens the background like RuneLite's own lists */
+    private static MouseAdapter clickable(JComponent c, Runnable onPress)
     {
+        c.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return new MouseAdapter()
         {
             @Override
