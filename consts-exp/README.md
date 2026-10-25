@@ -2,7 +2,7 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, XP per hour for the skill you're training, a tick pendulum for tick-perfect clicking, a timer on each tree, and Stealing Artefacts' two guards. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, XP per hour for the skill you're training, a tick pendulum for tick-perfect clicking, a timer on each tree, Stealing Artefacts' two guards, and GOTR Autopilot for Guardians of the Rift. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event; under them, Woodcutting at 42.1k XP an hour](screenshots/status-panel.gif)
 
@@ -39,14 +39,14 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 The EXP icon in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset from the status panel's Shift + right-click menu and the **Preset** dropdown here shows it. The preset decides which alerts are on; an alert's own **Enabled** only counts under **Custom**. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines and no tree timer, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does, except XP per hour, which lasts until you log out.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines, no tree timer and no GOTR Autopilot, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does, except XP per hour, which lasts until you log out.
 
 Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open (Tick & XP opens with the XP table first); click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 
 | Tab | Sections |
 |---|---|
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
-| Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Thieving (Guard Lures) |
+| Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Thieving (Guard Lures), Runecraft (GOTR Autopilot) |
 | Tick & XP | The XP table, then XP per Hour (Enabled), Tick Pendulum (Enabled, Rhythm, Your Ping) |
 | General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
@@ -142,6 +142,17 @@ A pie on each tree empties as the tree nears falling, ported from Tree Despawn T
 
 In Port Piscarilius, two rows in the status panel, under the alerts, show whether the guards are lured: **East guard** and **SE guard**, each with a green tick once it's lured and a red cross while it isn't. A guard counts as lured while it stands on its post facing south (the east one) or west (the south-east one). Each row keeps what it last saw on the post, so it holds while you're in a target house and the guard is out of sight; a hop or a logout sets both back to a cross. That's the one part of pajlads' Stealing Artefacts that comes over: no target house, patrol highlights or Captain Khaled. It isn't an alert and never beeps. **Guard Lures** (Skills → Thieving, on by default) turns it off; the Master Switch hides it too. Run it instead of the Hub's Stealing Artefacts, not beside it.
 
+## GOTR Autopilot
+
+The Plugin Hub's [GOTR Autopilot](https://github.com/FabulousOtter/gotr-autopilot), folded in: in Guardians of the Rift it tells you what to do next. On by default, under **Skills** → **Runecraft**; it's the section's only setting, and it does nothing outside the minigame.
+
+- **A panel, top left:** the next step, as "Craft essence at the workbench" or "Enter the portal", in red when it's urgent, with the game clock, when the rift closes, the next portal, your banked points, your cell and your necklace's charges under it.
+- **What to click** is outlined, and the items to use in your inventory too, with a path drawn from you to it, over the agility shortcut when you have 56 Agility.
+- **The open altars' runes** float over their portal guardians, and "Starts in" counts down over the remains before a game. "Safe to exit" shows on the barrier once your points are in.
+- **The Great Guardian hides** while a cell is to be placed, so a click meant for a tile or barrier can't land on it.
+
+It plays upstream's **Mass** strategy, with every other choice at upstream's defaults, such as 120 fragments before the first run and 2 guardians built. Upstream's other strategies, notifications, hint arrow, chat messages, labels over the target and rune deposits are left out. Turn the Hub's GOTR Autopilot off, or both draw.
+
 ## Training guide
 
 Where each preset shines, what its alerts are telling you, and what to tune.
@@ -210,4 +221,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The tree timer is [Tree Despawn Timer](https://github.com/CreativeTechGuy/tree-despawn-timer) by Jason O'Neill (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill), from commit `9f9eb2b`, cut down to its pie: `TreeTimer.java`, `TreeTimerState.java`, `TreeTimerTree.java` and `ConstsExpTreeTimerOverlay.java` keep its license header and license, in the same NOTICE. The guard check is [Stealing Artefacts](https://github.com/pajlads/StealingArtefacts) by Christopher Bitler (MIT, Copyright 2020 Christopher Bitler), from commit `631227f`, cut down to its two guards: `GuardLures.java` keeps its license, in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The tree timer is [Tree Despawn Timer](https://github.com/CreativeTechGuy/tree-despawn-timer) by Jason O'Neill (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill), from commit `9f9eb2b`, cut down to its pie: `TreeTimer.java`, `TreeTimerState.java`, `TreeTimerTree.java` and `ConstsExpTreeTimerOverlay.java` keep its license header and license, in the same NOTICE. The guard check is [Stealing Artefacts](https://github.com/pajlads/StealingArtefacts) by Christopher Bitler (MIT, Copyright 2020 Christopher Bitler), from commit `631227f`, cut down to its two guards: `GuardLures.java` keeps its license, in the same NOTICE. GOTR Autopilot is the Plugin Hub's [GOTR Autopilot](https://github.com/FabulousOtter/gotr-autopilot) by FabulousOtter (BSD 2-Clause, Copyright (c) 2026, FabulousOtter), from commit `b8bea8f`, the one the Hub pins, cut down to run on its defaults: the files in `src/main/java/com/constsexp/gotr/` keep its license header and license, in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).

@@ -35,7 +35,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off silences consts-EXP: no alerts, no status panel, no area lines, no tree timer. The plugin itself stays on, so its EXP icon stays in the sidebar.",
+        description = "Off silences consts-EXP: no alerts, no status panel, no area lines, no tree timer, no GOTR Autopilot. The plugin itself stays on, so its EXP icon stays in the sidebar.",
         position = -1
     )
     default boolean masterSwitch()
@@ -159,37 +159,45 @@ public interface ConstsExpConfig extends Config
     String thievingSection = "thieving";
 
     @ConfigSection(
+        name = "Runecraft",
+        description = "GOTR Autopilot: the next step in Guardians of the Rift, a path to it and the timers",
+        position = 14,
+        closedByDefault = true
+    )
+    String runecraftSection = "runecraft";
+
+    @ConfigSection(
         name = "XP per Hour",
         description = "XP per hour for the skill you're training, in the status panel",
-        position = 14
+        position = 15
     )
     String xpSection = "xp";
 
     @ConfigSection(
         name = "Tick Pendulum",
         description = "A pendulum in the status panel: each swing is one tick's click window, and the lines in its middle glow when it's time to click",
-        position = 15
+        position = 16
     )
     String tickSection = "tick";
 
     @ConfigSection(
         name = "Timing",
         description = "Click pause, quiet after dismiss, give up after and startup delay",
-        position = 16
+        position = 17
     )
     String timingSection = "general";
 
     @ConfigSection(
         name = "Sounds",
         description = "What alerts sound like, and how often",
-        position = 17
+        position = 18
     )
     String soundsSection = "sounds";
 
     @ConfigSection(
         name = "Screen Flash",
         description = "The flash over the game screen while an alert fires",
-        position = 18
+        position = 19
     )
     String flashSection = "flash";
 
@@ -1115,6 +1123,21 @@ public interface ConstsExpConfig extends Config
         position = 0
     )
     default boolean guardLures()
+    {
+        return true;
+    }
+
+    // Runecraft. GOTR Autopilot (BSD 2-Clause, Copyright (c) 2026, FabulousOtter), in the gotr package. Not an alert: no
+    // preset touches it, and its switch is its only setting.
+
+    @ConfigItem(
+        keyName = "gotrAutopilot",
+        name = "GOTR Autopilot",
+        description = "In Guardians of the Rift, a panel with the next step and the game's timers, an outline on what to click and a path to it. It plays the Mass strategy",
+        section = runecraftSection,
+        position = 0
+    )
+    default boolean gotrAutopilot()
     {
         return true;
     }

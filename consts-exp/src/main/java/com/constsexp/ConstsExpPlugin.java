@@ -1,5 +1,6 @@
 package com.constsexp;
 
+import com.constsexp.gotr.GotrAutopilot;
 import com.google.inject.Provides;
 import java.awt.Color;
 import java.awt.Toolkit;
@@ -167,6 +168,9 @@ public class ConstsExpPlugin extends Plugin
     @Inject
     private SkillIconManager skillIconManager;
 
+    @Inject
+    private GotrAutopilot gotrAutopilot;
+
     // The sidebar button: the plugin's settings in a panel of their own.
     private ConfigSidePanel configPanel;
     private NavigationButton navButton;
@@ -259,6 +263,7 @@ public class ConstsExpPlugin extends Plugin
             {
                 startSession();
             }
+            followGotrAutopilot();
         });
     }
 
@@ -276,7 +281,8 @@ public class ConstsExpPlugin extends Plugin
             ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
             ConstsExpConfig.randomSection);
         panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
-            ConstsExpConfig.cargoSection, ConstsExpConfig.thievingSection);
+            ConstsExpConfig.cargoSection, ConstsExpConfig.thievingSection,
+            ConstsExpConfig.runecraftSection);
         panel.addSettingsTab("Tick & XP", new XpTable(plugin.getXpRates(), skillIconManager),
             ConstsExpConfig.xpSection, ConstsExpConfig.tickSection);
         panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
@@ -288,6 +294,7 @@ public class ConstsExpPlugin extends Plugin
     protected void shutDown()
     {
         endSession();
+        gotrAutopilot.setRunning(false);
         mouseManager.unregisterMouseListener(clickListener);
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
@@ -374,7 +381,14 @@ public class ConstsExpPlugin extends Plugin
         {
             resetAlertState();
             evaluateAlerts();
+            followGotrAutopilot();
         });
+    }
+
+    // GOTR Autopilot runs while its switch and the Master Switch are on.
+    private void followGotrAutopilot()
+    {
+        gotrAutopilot.setRunning(config.masterSwitch() && config.gotrAutopilot());
     }
 
     @Subscribe
