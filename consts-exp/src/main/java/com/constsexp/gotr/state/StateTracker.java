@@ -384,7 +384,7 @@ public class StateTracker
 		startAtTick = -1;
 		closingTick = -1;
 		gameEndTick = -1;
-		loadBreak();
+		loadSaved();
 		lastPortalSpawnTick = -1;
 		anyPortalThisGame = false;
 		altarVisitedThisGame = false;
@@ -424,7 +424,7 @@ public class StateTracker
 
 	public void primeFromClient()
 	{
-		loadBreak();
+		loadSaved();
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
@@ -1554,7 +1554,7 @@ public class StateTracker
 		return closingTick >= 0 ? closingTick + CLOSING_SECONDS * 10 / 6 : -1;
 	}
 
-	private void loadBreak()
+	private void loadSaved()
 	{
 		Integer saved = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, BREAK_KEY, Integer.class);
 		learnedBreakSeconds = saved == null ? -1 : saved;
@@ -1572,7 +1572,7 @@ public class StateTracker
 	@Subscribe
 	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
 	{
-		loadBreak();
+		loadSaved();
 	}
 
 	private void savePoints()
