@@ -48,6 +48,7 @@ import java.awt.image.BufferedImage;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
@@ -358,29 +359,23 @@ class ConstsLeaderboardPanel extends PluginPanel
     /* The arrow on the Friends bar: down when open, right when closed */
     private static ImageIcon arrow(boolean open)
     {
-        BufferedImage img = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = img.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(ColorScheme.LIGHT_GRAY_COLOR);
-        if (open)
-        {
-            g.fillPolygon(new int[]{0, 8, 4}, new int[]{2, 2, 7}, 3);
-        }
-        else
-        {
-            g.fillPolygon(new int[]{2, 2, 7}, new int[]{0, 8, 4}, 3);
-        }
-        g.dispose();
-        return new ImageIcon(img);
+        return icon(ColorScheme.LIGHT_GRAY_COLOR, g -> g.fillPolygon(open ? new int[]{0, 8, 4} : new int[]{2, 2, 7},
+            open ? new int[]{2, 2, 7} : new int[]{0, 8, 4}, 3));
     }
 
     private static ImageIcon dot(Color color)
+    {
+        return icon(color, g -> g.fillOval(1, 1, 6, 6));
+    }
+
+    /* An 8x8 icon drawn in one color */
+    private static ImageIcon icon(Color color, Consumer<Graphics2D> draw)
     {
         BufferedImage img = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setColor(color);
-        g.fillOval(1, 1, 6, 6);
+        draw.accept(g);
         g.dispose();
         return new ImageIcon(img);
     }
