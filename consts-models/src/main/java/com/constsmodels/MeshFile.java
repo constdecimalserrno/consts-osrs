@@ -43,14 +43,14 @@ final class MeshFile
         final String name;
         final long time;
         final int faces;
-        final boolean clips;
+        final boolean hasClips;
 
-        Header(String name, long time, int faces, boolean clips)
+        Header(String name, long time, int faces, boolean hasClips)
         {
             this.name = name;
             this.time = time;
             this.faces = faces;
-            this.clips = clips;
+            this.hasClips = hasClips;
         }
     }
 
@@ -144,7 +144,7 @@ final class MeshFile
                 c[f] = corner(data.readInt(), vertices);
                 color[f] = data.readInt();
             }
-            List<Clip> clips = header.clips ? clips(data, vertices) : List.of();
+            List<Clip> clips = header.hasClips ? clips(data, vertices) : List.of();
             return new Mesh(header.name, x, y, z, a, b, c, color, clips);
         }
     }

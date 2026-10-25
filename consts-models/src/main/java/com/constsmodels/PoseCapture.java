@@ -38,9 +38,9 @@ final class PoseCapture
     }
 
     /**
-     * The actor's pose animations, each one once, for a mesh of this many corners; none while the actor is busy with
-     * an action, which changes what its model shows, or has a graphic on it, which would stay frozen in every frame. A clip whose model doesn't have that many corners is left out.
-     * Call it on the client thread.
+     * The actor's pose animations, each one once, for a mesh of this many corners. None while the actor is busy with
+     * an action, which changes what its model shows, or has a graphic on it, which would stay frozen in every frame.
+     * A clip whose model doesn't have that many corners is left out. Call it on the client thread.
      */
     static List<Clip> capture(Client client, Actor actor, int corners)
     {
@@ -86,7 +86,7 @@ final class PoseCapture
         return clips;
     }
 
-    private static Clip clip(Actor actor, int id, Animation animation, String label, int corners, int most)
+    private static Clip clip(Actor actor, int id, Animation animation, String label, int corners, int mostFrames)
     {
         // A classic animation's frames are keyframes, each some ticks long; a maya animation's are its ticks
         int frames = animation.getNumFrames();
@@ -95,7 +95,7 @@ final class PoseCapture
         {
             return null;
         }
-        int every = (frames + most - 1) / most;
+        int every = (frames + mostFrames - 1) / mostFrames;
         int kept = (frames + every - 1) / every;
         int[] ticks = new int[kept];
         float[][] x = new float[kept][];

@@ -52,7 +52,8 @@ import org.slf4j.LoggerFactory;
  */
 @PluginDescriptor(
     name = "consts-Models",
-    description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, save it as OBJ, PLY or GLB, animations and all",
+    description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, "
+        + "save it as OBJ, PLY or GLB, animations and all",
     tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "glb", "gltf", "animation", "blender",
         "diorama", "scene"},
     // Its name on the Plugin Hub, and its folder in .runelite before 1.1, which RuneLite moves into plugin-data

@@ -31,8 +31,8 @@ final class GlbWriter
     private final StringBuilder accessors = new StringBuilder();
     private final StringBuilder views = new StringBuilder();
     private final List<ByteBuffer> chunks = new ArrayList<>();
-    private int count;
-    private int offset;
+    private int accessorCount;
+    private int byteOffset;
 
     private GlbWriter()
     {
@@ -144,20 +144,21 @@ final class GlbWriter
         {
             gltf.append(",\"animations\":[").append(animations).append(']');
         }
-        gltf.append(",\"buffers\":[{\"byteLength\":").append(offset).append("}]")
+        gltf.append(",\"buffers\":[{\"byteLength\":").append(byteOffset).append("}]")
             .append(",\"bufferViews\":[").append(views).append(']')
             .append(",\"accessors\":[").append(accessors).append("]}");
 
         byte[] text = gltf.toString().getBytes(StandardCharsets.UTF_8);
         int jsonLength = (text.length + 3) & ~3;
         ByteBuffer head = ByteBuffer.allocate(20 + jsonLength + 8).order(ByteOrder.LITTLE_ENDIAN);
-        head.putInt(0x46546C67).putInt(2).putInt(12 + 8 + jsonLength + 8 + offset);
+        // "glTF" version 2, then the "JSON" chunk and the "BIN" chunk's header
+        head.putInt(0x46546C67).putInt(2).putInt(12 + 8 + jsonLength + 8 + byteOffset);
         head.putInt(jsonLength).putInt(0x4E4F534A).put(text);
         while (head.position() < 20 + jsonLength)
         {
             head.put((byte) ' ');
         }
-        head.putInt(offset).putInt(0x004E4942);
+        head.putInt(byteOffset).putInt(0x004E4942);
         out.write(head.array());
         for (ByteBuffer chunk : chunks)
         {
@@ -198,8 +199,8 @@ final class GlbWriter
     private int accessor(ByteBuffer data, int target, int componentType, int elements, String type, String min,
         String max)
     {
-        int index = count++;
-        views.append(index == 0 ? "" : ",").append("{\"buffer\":0,\"byteOffset\":").append(offset)
+        int index = accessorCount++;
+        views.append(index == 0 ? "" : ",").append("{\"buffer\":0,\"byteOffset\":").append(byteOffset)
             .append(",\"byteLength\":").append(data.capacity());
         if (target != 0)
         {
@@ -215,7 +216,7 @@ final class GlbWriter
         }
         accessors.append('}');
         chunks.add(data);
-        offset += data.capacity();
+        byteOffset += data.capacity();
         return index;
     }
 
