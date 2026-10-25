@@ -289,7 +289,7 @@ public class ConstsExpPlugin extends Plugin
     protected void shutDown()
     {
         endSession();
-        clientThread.invokeLater(() -> gotrAutopilot.setRunning(false));
+        gotrAutopilot.setRunning(false);
         mouseManager.unregisterMouseListener(clickListener);
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);

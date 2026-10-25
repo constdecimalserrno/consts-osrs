@@ -84,12 +84,6 @@ public final class PlannerSettings
 		return true;
 	}
 
-	// Off: once the opening run is done, fragments come only from what is left and the portals.
-	public boolean isMineAfterOpening()
-	{
-		return true;
-	}
-
 	public int getGracePortalSeconds()
 	{
 		return 95;

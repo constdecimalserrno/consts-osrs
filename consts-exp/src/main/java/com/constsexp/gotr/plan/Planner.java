@@ -276,7 +276,7 @@ public class Planner
 			return Instruction.builder().step(Step.POWER_UP).headline("Power up the Great Guardian")
 				.detail("").target(Target.GREAT_GUARDIAN).items(STONE_ITEMS).build();
 		}
-		Instruction next = withoutMining(s, c, afterStones(s, c));
+		Instruction next = afterStones(s, c);
 		if (!holding)
 		{
 			return next;
@@ -830,26 +830,6 @@ public class Planner
 		return done;
 	}
 
-	private Instruction altarTrip(Snapshot s, PlannerSettings c, int essence)
-	{
-		AltarChoice choice = AltarChooser.choose(s, c);
-		if (choice == null)
-		{
-			String why = s.getActiveElemental() == null && s.getActiveCatalytic() == null
-				? "No altar is open yet" : "You cannot use either open altar";
-			return Instruction.builder().step(Step.WAIT_FOR_ALTAR).headline(why)
-				.detail("Wait in the centre")
-				.target(Target.CENTRE_WAIT).urgency(Urgency.INFO).build();
-		}
-		boolean weak = choice.getAltar().getCellTier() == CellTier.WEAK && choice.getCombination() == null;
-		int rot = s.getAltarSecondsRemaining();
-		if (weak && !choice.isViaTalisman() && rot >= 0 && rot <= c.getWeakAltarWaitSeconds())
-		{
-			return weakAltarWait(s, choice, rot);
-		}
-		return goToAltar(s, choice, choice.getReason());
-	}
-
 	private static Instruction goToAltar(Snapshot s, AltarChoice choice, String detail)
 	{
 		return Instruction.builder().step(Step.GO_TO_ALTAR)
@@ -857,34 +837,6 @@ public class Planner
 			.detail(detail)
 			.target(Target.ALTAR_PORTAL).altar(choice.getAltar())
 			.items(choice.isViaTalisman() ? ImmutableSet.of(choice.getAltar().getTalismanItemId()) : ImmutableSet.of()).build();
-	}
-
-	/**
-	 * With mining after the opening turned off, a walk back to the remains becomes crafting the
-	 * fragments left, a trip with the essence in hand, or a wait for the next portal's essence.
-	 */
-	private Instruction withoutMining(Snapshot s, PlannerSettings c, Instruction next)
-	{
-		if (c.isMineAfterOpening() || next.getStep() != Step.MINE_FRAGMENTS || !pastOpening(s))
-		{
-			return next;
-		}
-		if (s.getFragments() > 0 && s.capacity() > 0)
-		{
-			return craftEssence(s);
-		}
-		if (s.essenceTotal() > 0)
-		{
-			return altarTrip(s, c, s.essenceTotal());
-		}
-		int eta = s.getSecondsToNextPortal();
-		if (eta >= 0)
-		{
-			return Instruction.builder().step(Step.WAIT_FOR_PORTAL).headline("Portal opens in ~" + eta + "s")
-				.detail("Stay by the Great Guardian").urgency(Urgency.INFO).build();
-		}
-		return Instruction.builder().step(Step.IDLE_DEFEND).headline("Nothing left to craft")
-			.detail("Keep barriers and guardians up").urgency(Urgency.INFO).build();
 	}
 
 	// Past the opening: a portal has come, or the first load has been taken to an altar.

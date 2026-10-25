@@ -19,6 +19,7 @@ import com.constsexp.gotr.state.Snapshot;
 import com.constsexp.gotr.state.StateTracker;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -26,6 +27,7 @@ import net.runelite.client.callback.RenderCallback;
 import net.runelite.client.callback.RenderCallbackManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -95,6 +97,23 @@ public class GotrAutopilotTest
 		Snapshot lobby = Snapshot.builder().location(Location.LOBBY).phase(GamePhase.COUNTDOWN).build();
 		assertEquals(Step.IDLE_LOBBY, new Planner().plan(lobby, new PlannerSettings(false)).getStep());
 		assertEquals(Step.NOT_IN_GAME, new Planner().plan(Snapshot.OUTSIDE, new PlannerSettings(false)).getStep());
+	}
+
+	@Test
+	public void anAccountWithNoSavedPointsStartsUnknownNotWithTheLastAccounts() throws Exception
+	{
+		Constructor<StateTracker> make = StateTracker.class.getDeclaredConstructor(Client.class, ClientThread.class,
+			ItemManager.class, ConfigManager.class);
+		make.setAccessible(true);
+		StateTracker tracker = make.newInstance(mock(Client.class), mock(ClientThread.class), mock(ItemManager.class),
+			mock(ConfigManager.class));
+		set(tracker, "savedElementalPoints", 500);
+		set(tracker, "savedCatalyticPoints", 400);
+
+		tracker.onRuneScapeProfileChanged(new RuneScapeProfileChanged(null, "rsprofile.b"));
+
+		assertEquals(-1, get(tracker, "savedElementalPoints"));
+		assertEquals(-1, get(tracker, "savedCatalyticPoints"));
 	}
 
 	private static Object get(Object target, String name) throws Exception

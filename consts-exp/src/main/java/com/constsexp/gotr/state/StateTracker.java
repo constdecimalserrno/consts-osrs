@@ -96,6 +96,7 @@ import net.runelite.api.WorldView;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
+import net.runelite.client.events.RuneScapeProfileChanged;
 import net.runelite.client.game.ItemManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1071,8 +1072,8 @@ public class StateTracker
 				runePouch = true;
 				continue;
 			}
-			// Only the air and water runes count, for combination runes.
-			if (Altar.fromRune(id) != null)
+			// Only air and water runes count: the base rune for combination runes.
+			if (id == Altar.AIR.getRuneItemId() || id == Altar.WATER.getRuneItemId())
 			{
 				runeStacks.merge(id, qty, Integer::sum);
 			}
@@ -1561,11 +1562,17 @@ public class StateTracker
 		// the last known totals carry over between sessions.
 		Integer elemental = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, ELEMENTAL_POINTS_KEY, Integer.class);
 		Integer catalytic = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, CATALYTIC_POINTS_KEY, Integer.class);
-		if (elemental != null && catalytic != null)
-		{
-			savedElementalPoints = elemental;
-			savedCatalyticPoints = catalytic;
-		}
+		// Kept per account: an account with none saved starts unknown, not with the last one's.
+		boolean known = elemental != null && catalytic != null;
+		savedElementalPoints = known ? elemental : -1;
+		savedCatalyticPoints = known ? catalytic : -1;
+	}
+
+	// The account's saved values can only be read once RuneLite knows which account it is.
+	@Subscribe
+	public void onRuneScapeProfileChanged(RuneScapeProfileChanged event)
+	{
+		loadBreak();
 	}
 
 	private void savePoints()
