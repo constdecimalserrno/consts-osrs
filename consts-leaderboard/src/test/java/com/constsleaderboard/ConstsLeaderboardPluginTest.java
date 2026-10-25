@@ -9,9 +9,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
+import net.runelite.api.Friend;
+import net.runelite.api.FriendContainer;
 import net.runelite.api.GameState;
 import net.runelite.api.IconID;
 import net.runelite.api.Player;
@@ -100,5 +105,59 @@ public class ConstsLeaderboardPluginTest
             ConstsLeaderboardPlugin.findHiscoreEndpointFromPlayerName(IconID.HARDCORE_IRONMAN + "Zezima"));
         assertEquals(HiscoreEndpoint.SEASONAL,
             ConstsLeaderboardPlugin.findHiscoreEndpointFromPlayerName(IconID.LEAGUE + "Zezima"));
+    }
+
+    private static Friend friend(String name, int world)
+    {
+        Friend f = mock(Friend.class);
+        when(f.getName()).thenReturn(name);
+        when(f.getWorld()).thenReturn(world);
+        return f;
+    }
+
+    @Test
+    public void friendsListOnlineFirstThenByName()
+    {
+        Map<String, Boolean> friends = ConstsLeaderboardPlugin.friends(new Friend[]{
+            friend("zezima", 0), friend("Bob", 0), friend("Lynx Titan", 302), null, friend(null, 1), friend("alice", 420)});
+
+        Map<String, Boolean> expected = new LinkedHashMap<>();
+        expected.put("alice", true);
+        expected.put("Lynx Titan", true);
+        expected.put("Bob", false);
+        expected.put("zezima", false);
+        assertEquals(expected, friends);
+        assertEquals(new ArrayList<>(expected.keySet()), new ArrayList<>(friends.keySet()));
+    }
+
+    @Test
+    public void thePanelHearsYourFriendsWhenTheyChangeAndLosesThemAtLogout() throws Exception
+    {
+        ConstsLeaderboardPanel panel = mock(ConstsLeaderboardPanel.class);
+        Field field = ConstsLeaderboardPlugin.class.getDeclaredField("panel");
+        field.setAccessible(true);
+        field.set(plugin, panel);
+
+        FriendContainer container = mock(FriendContainer.class);
+        when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
+        when(client.getFriendContainer()).thenReturn(container);
+        Friend offline = friend("Bob", 0);
+        Friend online = friend("Bob", 302);
+        when(container.getMembers()).thenReturn(new Friend[]{offline});
+        plugin.onGameTick(new GameTick());
+        plugin.onGameTick(new GameTick());
+        when(container.getMembers()).thenReturn(new Friend[]{online});
+        plugin.onGameTick(new GameTick());
+
+        GameStateChanged logout = new GameStateChanged();
+        logout.setGameState(GameState.LOGIN_SCREEN);
+        plugin.onGameStateChanged(logout);
+        SwingUtilities.invokeAndWait(() -> { });
+
+        InOrder order = inOrder(panel);
+        order.verify(panel).setFriends(Map.of("Bob", false));
+        order.verify(panel).setFriends(Map.of("Bob", true));
+        order.verify(panel).setFriends(null);
+        verify(panel, times(3)).setFriends(any());
     }
 }
