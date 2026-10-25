@@ -18,6 +18,8 @@ import java.util.concurrent.CompletableFuture;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.MatteBorder;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreClient;
@@ -107,6 +109,46 @@ public class ConstsLeaderboardFriendsTest
         // Bob's lookup is still loading, so another click waits its turn
         click(lynx);
         verify(hiscoreClient, never()).lookupAsync(eq("Lynx Titan"), any());
+    }
+
+    @Test
+    public void youAreTheFirstRowAndClickingItShowsYourOwnSkills() throws Exception
+    {
+        onEdt(this::youFirst);
+    }
+
+    private void youFirst()
+    {
+        when(plugin.getLocalHiscoreEndpoint()).thenReturn(HiscoreEndpoint.IRONMAN);
+        ConstsLeaderboardPanel panel = panel();
+        Map<String, Boolean> friends = new LinkedHashMap<>();
+        friends.put("Bob", true);
+        panel.setFriends(friends);
+        panel.setMyName("Iron Wren");
+
+        assertEquals(2, panel.friendsList.getComponentCount());
+        JLabel you = (JLabel) panel.friendsList.getComponent(0);
+        assertEquals("Iron Wren", you.getText());
+        assertEquals(ConstsLeaderboardPanel.YOU_COLOR, you.getForeground());
+        assertTrue(((CompoundBorder) you.getBorder()).getOutsideBorder() instanceof MatteBorder);
+        assertEquals("1 online", panel.friendsCount.getText());
+
+        click(you);
+        verify(hiscoreClient).lookupAsync("Iron Wren", HiscoreEndpoint.IRONMAN);
+    }
+
+    @Test
+    public void loggedOutThereIsNoYouRow() throws Exception
+    {
+        onEdt(() ->
+        {
+            ConstsLeaderboardPanel panel = panel();
+            panel.setMyName("Iron Wren");
+            panel.setMyName(null);
+            panel.setFriends(null);
+            assertEquals(1, panel.friendsList.getComponentCount());
+            assertEquals("Log in to see your friends", ((JLabel) panel.friendsList.getComponent(0)).getText());
+        });
     }
 
     @Test

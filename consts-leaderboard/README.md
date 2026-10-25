@@ -4,7 +4,7 @@
 
 RuneLite plugin for Old School RuneScape ( OSRS ): any player's skills from the hiscores, in a sidebar panel. Levels stop at 99, the way the game counts them: a 99 shows in yellow, and the lowest skill in red. Nothing else: no bosses, no clues, no minigames.
 
-![The consts-Leaderboard panel on const athena, as of 20 October 2026: eleven 99s in yellow, Runecraft at 50 in red as the lowest, and a total level of 1995; under it, Friends open, three online with green dots and three offline with grey ones](screenshots/panel.png)
+![The consts-Leaderboard panel on const athena, as of 20 October 2026: eleven 99s in yellow, Runecraft at 50 in red as the lowest, and a total level of 1995; under it, Friends open: you first in orange with a bar under you, then three friends online with green dots and three offline with grey ones](screenshots/panel.png)
 
 ## What it does
 
@@ -12,7 +12,7 @@ RuneLite plugin for Old School RuneScape ( OSRS ): any player's skills from the 
 - **Search**: type a name in the sidebar and press Enter.
 - **Who's showing**: the bar under the search box names the player whose skills are showing. The button beside it, a head and shoulders, shows yours: the account you're logged in to, on its own hiscores (ironman, hardcore or ultimate when it is one). Hover it for your name and who's showing. Logged out, it's greyed out.
 - **Skills**: every skill with its icon and level, in the skills tab's order, then the total level. A level never goes past 99, however much experience is behind it. A 99 is yellow, and so is the total level once every skill is 99. The lowest skill is red, every one of them if several tie; once every skill is 99, nothing is red. A skill that isn't ranked shows `--` and doesn't count as the lowest.
-- **Friends**: under the skills, your friends list, online ones first with a green dot, the rest with a grey one. Click a name to look that friend up. Click the Friends bar to close it or open it again; it stays the way you left it. Logged out, it says to log in.
+- **Friends**: under the skills, your friends list. You come first, your name in orange with a bar under it: click it for your own skills, just like the head and shoulders button. Then your friends, online ones first with a green dot, the rest with a grey one. Click a name to look that friend up. Click the Friends bar to close it or open it again; it stays the way you left it. Logged out, it says to log in, and you're not on it.
 - **Hover** a skill for its rank, its experience and the experience left to the next level (0 at 99), with a bar for how far through the level it is. Hover the total level for the overall rank and experience.
 
 There are no settings: Friends remembers whether it's open on its own.
