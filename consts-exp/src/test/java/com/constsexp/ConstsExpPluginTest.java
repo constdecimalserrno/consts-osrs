@@ -384,10 +384,11 @@ public class ConstsExpPluginTest
         doAnswer(invocation -> stored.remove(invocation.<String>getArgument(1)))
             .when(configManager).unsetConfiguration(eq(ConstsExpConfig.GROUP), anyString());
 
-        // Reset, in the bad order: Cannon goes back to on, then the preset back to Custom brings Custom's Cannon off back.
-        stored.put("enableCannonAlert", "true");
-        stored.put(ConstsExpConfig.PRESET_KEY, "CUSTOM");
-        plugin.onConfigChanged(presetChange("WOODCUTTING", "CUSTOM"));
+        // Reset unsets each setting, here in the bad order: Cannon first, then the preset, whose return to Custom brings
+        // Custom's Cannon off back.
+        stored.remove("enableCannonAlert");
+        stored.remove(ConstsExpConfig.PRESET_KEY);
+        plugin.onConfigChanged(presetChange("WOODCUTTING", null));
         plugin.resetConfiguration();
 
         assertNull("Cannon is back to its default", stored.get("enableCannonAlert"));
