@@ -193,14 +193,10 @@ class ConfigSidePanel extends PluginPanel
     /** True while the loaders write to the widgets, so their listeners don't save what they were just shown. */
     private boolean loading;
 
-    /** name and description: the plugin's, as its PluginDescriptor gives them, for the title and its tooltip. */
-    ConfigSidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager, Config config, Plugin plugin,
-        String name, String description)
-    {
-        this(configManager, colorPickerManager, config, plugin, name, description, null);
-    }
-
-    /** switchKey: the boolean setting drawn as the master switch beside the title, or null for none. */
+    /**
+     * name and description: the plugin's, as its PluginDescriptor gives them, for the title and its tooltip. switchKey:
+     * the boolean setting drawn as the master switch beside the title, or null for none.
+     */
     ConfigSidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager, Config config, Plugin plugin,
         String name, String description, String switchKey)
     {

@@ -73,7 +73,7 @@ public class ConfigSidePanelTest
             new Class<?>[]{ConstsExpConfig.class}, (proxy, method, args) -> null);
         descriptor = configManager.getConfigDescriptor(config);
         panel = new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
-            ConstsExpPlugin.NAME, ConstsExpPlugin.DESCRIPTION);
+            ConstsExpPlugin.NAME, ConstsExpPlugin.DESCRIPTION, null);
     }
 
     @Test
