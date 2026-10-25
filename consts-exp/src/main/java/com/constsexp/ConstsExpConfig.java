@@ -13,8 +13,8 @@ import net.runelite.client.config.Units;
 
 /**
  * Sections in the order of the sidebar's tabs, where ConstsExpPlugin puts them: one per alert (Alerts), the skills'
- * (Skills), then Timing, Sounds and Screen Flash (General); only General's start open. RuneLite's Configuration panel
- * lists them in the same order with no tabs, so each name reads on its own.
+ * (Skills), Tick Pendulum (Tick & XP), then Timing, Sounds and Screen Flash (General); only Tick & XP's and General's
+ * start open. RuneLite's Configuration panel lists them in the same order with no tabs, so each name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
  * Salvage's with sailing, and two sections keep their old keys, Timing's general and Woodcutting's forestry.
@@ -34,7 +34,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its bell stays in the sidebar.",
+        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its EXP icon stays in the sidebar.",
         position = -1
     )
     default boolean masterSwitch()
@@ -150,25 +150,72 @@ public interface ConstsExpConfig extends Config
     String cargoSection = "cargo";
 
     @ConfigSection(
+        name = "Tick Pendulum",
+        description = "A pendulum in the status panel: each swing is one tick's click window, and the lines in its middle glow when it's time to click",
+        position = 13
+    )
+    String tickSection = "tick";
+
+    @ConfigSection(
         name = "Timing",
         description = "Click pause, quiet after dismiss, give up after and startup delay",
-        position = 13
+        position = 14
     )
     String timingSection = "general";
 
     @ConfigSection(
         name = "Sounds",
         description = "What alerts sound like, and how often",
-        position = 14
+        position = 15
     )
     String soundsSection = "sounds";
 
     @ConfigSection(
         name = "Screen Flash",
         description = "The flash over the game screen while an alert fires",
-        position = 15
+        position = 16
     )
     String flashSection = "flash";
+
+    // Tick & XP
+
+    @ConfigItem(
+        keyName = "tickPendulum",
+        name = "Enabled",
+        description = "Show the tick pendulum under the alerts in the status panel. Click while the ball is between the two lines; left of it, your ticks in a row; right, your ping",
+        section = tickSection,
+        position = 0
+    )
+    default boolean tickPendulum()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "pendulumRhythm",
+        name = "Rhythm",
+        description = "Single click: one click a swing (2-tick teaks, cooking). Flick: two clicks in the same swing (prayer flicking). Every other swing: only the swing your hitsplat shows in takes a click (2-tick harpooning)",
+        section = tickSection,
+        position = 1
+    )
+    default TickPendulum.Rhythm pendulumRhythm()
+    {
+        return TickPendulum.Rhythm.SINGLE;
+    }
+
+    @Range(max = 500)
+    @Units(Units.MILLISECONDS)
+    @ConfigItem(
+        keyName = "yourPing",
+        name = "Your Ping",
+        description = "0 learns your ping from your prayer and run toggles, starting each world from a guess. Set it to use your own ping instead",
+        section = tickSection,
+        position = 2
+    )
+    default int yourPing()
+    {
+        return 0;
+    }
 
     // General
 

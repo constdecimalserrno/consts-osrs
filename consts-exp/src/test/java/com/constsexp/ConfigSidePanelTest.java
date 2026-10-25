@@ -325,42 +325,48 @@ public class ConfigSidePanelTest
     }
 
     @Test
-    public void constsExpsPanelOpensOnAlertsThenSkillsAndGeneral()
+    public void constsExpsPanelOpensOnAlertsThenSkillsTickAndXpAndGeneral()
     {
         ConfigSidePanel exp = expPanel();
 
         MaterialTabGroup tabs = tabs(exp);
-        assertEquals(3, count(exp, MaterialTab.class));
+        assertEquals(4, count(exp, MaterialTab.class));
         assertEquals("Alerts", tabs.getTab(0).getText());
         assertEquals("Skills", tabs.getTab(1).getText());
-        assertEquals("General", tabs.getTab(2).getText());
+        assertEquals("Tick & XP", tabs.getTab(2).getText());
+        assertEquals("General", tabs.getTab(3).getText());
 
         assertEquals("Preset", labels(tabs.getTab(0).getContent()).get(0));
         assertEquals(List.of("Health", "Prayer", "Aggro", "Potion", "Cannon", "Idle", "Logout", "Inventory Full",
             "Random Event"), sections(tabs.getTab(0).getContent()));
         assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold"),
             sections(tabs.getTab(1).getContent()));
-        assertEquals(List.of("Timing", "Sounds", "Screen Flash"), sections(tabs.getTab(2).getContent()));
+        assertEquals(List.of("Tick Pendulum"), sections(tabs.getTab(2).getContent()));
+        assertEquals(List.of("Timing", "Sounds", "Screen Flash"), sections(tabs.getTab(3).getContent()));
 
         assertTrue(labels(exp).contains("Preset"));
         assertFalse(sections(exp).contains("Timing"));
     }
 
     @Test
-    public void constsExpsAlertsAndSkillsStartFoldedAndGeneralOpen()
+    public void constsExpsAlertsAndSkillsStartFoldedAndTickAndGeneralOpen()
     {
         MaterialTabGroup tabs = tabs(expPanel());
         List<String> alerts = rows(tabs.getTab(0).getContent(), true);
         List<String> skills = rows(tabs.getTab(1).getContent(), true);
-        List<String> general = rows(tabs.getTab(2).getContent(), true);
+        List<String> tick = rows(tabs.getTab(2).getContent(), true);
+        List<String> general = rows(tabs.getTab(3).getContent(), true);
         assertTrue(alerts.size() > 1);
         assertFalse(skills.isEmpty());
+        assertEquals(List.of("tickPendulum", "pendulumRhythm", "yourPing"), tick);
         assertFalse(general.isEmpty());
 
-        // Every alert's and skill's setting sits under a folded header, Preset aside; every General setting shows.
+        // Every alert's and skill's setting sits under a folded header, Preset aside; every Tick & XP and General
+        // setting shows.
         assertEquals(List.of(ConstsExpConfig.PRESET_KEY), rows(tabs.getTab(0).getContent(), false));
         assertEquals(List.of(), rows(tabs.getTab(1).getContent(), false));
-        assertEquals(general, rows(tabs.getTab(2).getContent(), false));
+        assertEquals(tick, rows(tabs.getTab(2).getContent(), false));
+        assertEquals(general, rows(tabs.getTab(3).getContent(), false));
     }
 
     @Test

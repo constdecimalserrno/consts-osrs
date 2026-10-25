@@ -32,6 +32,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.SoundEffectID;
@@ -40,7 +41,9 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.gameval.NpcID;
@@ -51,6 +54,7 @@ import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.events.ConfigChanged;
@@ -123,6 +127,40 @@ public class ConstsExpPluginTest
     public void tearDown() throws Exception
     {
         invokePrivate("shutdownScheduler");
+    }
+
+    // Tick pendulum
+
+    @Test
+    public void theTickPendulumCountsClicksOnlyWhileItsOn() throws Exception
+    {
+        setField("worldService", mock(WorldService.class));
+        plugin.onGameTick(new GameTick());
+        plugin.onMenuOptionClicked(click("Walk here"));
+        assertEquals(0, plugin.getPendulum().run());
+
+        when(config.tickPendulum()).thenReturn(true);
+        when(config.pendulumRhythm()).thenReturn(TickPendulum.Rhythm.SINGLE);
+        plugin.onGameTick(new GameTick());
+        plugin.onMenuOptionClicked(click("Walk here"));
+        assertEquals(1, plugin.getPendulum().run());
+    }
+
+    @Test
+    public void prayerAndRunTogglesAreTheLabelledClicks()
+    {
+        assertTrue(ConstsExpPlugin.isLabelled("Activate"));
+        assertTrue(ConstsExpPlugin.isLabelled("Deactivate"));
+        assertTrue(ConstsExpPlugin.isLabelled("Toggle Run"));
+        assertFalse(ConstsExpPlugin.isLabelled("Walk here"));
+        assertFalse(ConstsExpPlugin.isLabelled("Chop down"));
+    }
+
+    private static MenuOptionClicked click(String option)
+    {
+        MenuEntry entry = mock(MenuEntry.class);
+        when(entry.getOption()).thenReturn(option);
+        return new MenuOptionClicked(entry);
     }
 
     // Presets

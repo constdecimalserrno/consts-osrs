@@ -11,6 +11,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -33,15 +34,20 @@ import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.HitsplatApplied;
 import net.runelite.api.events.InteractingChanged;
+import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
@@ -53,11 +59,13 @@ import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
+import net.runelite.http.api.worlds.World;
+import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
     name = "consts-EXP",
     description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity and Forestry events.",
-    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset"}
+    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum"}
 )
 public class ConstsExpPlugin extends Plugin
 {
@@ -101,6 +109,8 @@ public class ConstsExpPlugin extends Plugin
         "mr. mordaut", "mr mordaut", "mysterious old man", "molly", "niles", "pillory guard", "postie pete",
         "prince", "princess", "prison pete", "quiz master", "rick turpentine", "sandwich lady", "security guard",
         "sergeant damien", "strange plant", "tilt");
+    // The clicks the tick pendulum learns your ping from: prayer and run toggles, whose results the server's vars show.
+    private static final Set<String> LABELLED_OPTIONS = Set.of("Activate", "Deactivate", "Toggle Run");
 
     @Inject
     private Client client;
@@ -138,6 +148,9 @@ public class ConstsExpPlugin extends Plugin
     @Inject
     private EventBus eventBus;
 
+    @Inject
+    private WorldService worldService;
+
     // The sidebar button: the plugin's settings in a panel of their own.
     private ConfigSidePanel configPanel;
     private NavigationButton navButton;
@@ -166,6 +179,10 @@ public class ConstsExpPlugin extends Plugin
 
     // The game's unaggressive area, followed every tick whatever the preset, so it is right whenever Aggro turns on.
     private final AggroArea aggroArea = new AggroArea();
+
+    private final TickPendulum pendulum = new TickPendulum();
+    // The world the pendulum has its player count and region from; -1 until the world list has it.
+    private int pendulumWorld = -1;
     private volatile long nextAggroAlertMillis;
     private volatile long aggroFlashUntilMillis;
     private volatile boolean aggroAlertPending;
@@ -221,8 +238,8 @@ public class ConstsExpPlugin extends Plugin
     }
 
     /**
-     * The sidebar panel: the title and Master Switch over three tabs of settings, Alerts, which it opens on, Skills and
-     * General.
+     * The sidebar panel: the title and Master Switch over four tabs of settings, Alerts, which it opens on, Skills,
+     * Tick & XP and General.
      */
     static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
         ConstsExpConfig config, Plugin plugin)
@@ -235,6 +252,7 @@ public class ConstsExpPlugin extends Plugin
             ConstsExpConfig.randomSection);
         panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
             ConstsExpConfig.cargoSection);
+        panel.addSettingsTab("Tick & XP", ConstsExpConfig.tickSection);
         panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
             ConstsExpConfig.flashSection);
         return panel;
@@ -320,6 +338,62 @@ public class ConstsExpPlugin extends Plugin
         updateActivityFromHybridSignals();
         updateAggroArea();
         evaluateAlerts();
+        if (config.tickPendulum())
+        {
+            tickPendulum(System.currentTimeMillis());
+        }
+    }
+
+    @Subscribe
+    public void onMenuOptionClicked(MenuOptionClicked event)
+    {
+        if (config.masterSwitch() && config.tickPendulum())
+        {
+            pendulum.click(System.currentTimeMillis(), isLabelled(event.getMenuOption()), pendulumWatched());
+        }
+    }
+
+    @Subscribe
+    public void onHitsplatApplied(HitsplatApplied event)
+    {
+        if (config.tickPendulum() && event.getActor() == client.getLocalPlayer())
+        {
+            pendulum.hitsplat();
+        }
+    }
+
+    static boolean isLabelled(String option)
+    {
+        return LABELLED_OPTIONS.contains(option);
+    }
+
+    TickPendulum getPendulum()
+    {
+        return pendulum;
+    }
+
+    private void tickPendulum(long now)
+    {
+        if (client.getWorld() != pendulumWorld)
+        {
+            WorldResult worlds = worldService.getWorlds();
+            World world = worlds != null ? worlds.findWorld(client.getWorld()) : null;
+            if (world != null)
+            {
+                pendulum.world(world.getPlayers(), world.getRegion(), now);
+                pendulumWorld = world.getId();
+            }
+        }
+        pendulum.settings(config.pendulumRhythm(), config.yourPing(), now);
+        pendulum.tick(now, pendulumWatched());
+    }
+
+    /** What a labelled click changes, as the server has it: the prayers on, quick prayers, run. */
+    private int pendulumWatched()
+    {
+        return Objects.hash(client.getServerVarpValue(VarPlayerID.PRAYER0),
+            client.getServerVarpValue(VarPlayerID.PRAYER1), client.getServerVarbitValue(VarbitID.QUICKPRAYER_ACTIVE),
+            client.getServerVarpValue(VarPlayerID.OPTION_RUN));
     }
 
     @Subscribe
