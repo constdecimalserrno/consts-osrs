@@ -193,13 +193,13 @@ public class ConstsExpPluginTest
         plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_000, 60, 60));
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_035, 60, 60));
-        assertNull(plugin.getXpRates().shown());
+        assertTrue(plugin.getXpRates().skills().isEmpty());
 
         when(client.getSkillExperience(Skill.MINING)).thenReturn(50_035);
         plugin.onGameTick(new GameTick());
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_070, 60, 60));
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_105, 60, 60));
-        assertEquals(Skill.MINING, plugin.getXpRates().shown());
+        assertEquals(List.of(Skill.MINING), plugin.getXpRates().skills());
         assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
 
         // A hop keeps it, and waits for a tick again; the login screen clears it.
@@ -208,7 +208,7 @@ public class ConstsExpPluginTest
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_105, 60, 60));
         assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
         plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
-        assertNull(plugin.getXpRates().shown());
+        assertTrue(plugin.getXpRates().skills().isEmpty());
 
         // Off and on again, maybe on another account: it starts again.
         plugin.getXpRates().gain(Skill.MINING, 35, 0);
@@ -217,7 +217,7 @@ public class ConstsExpPluginTest
         setField("clientToolbar", mock(ClientToolbar.class));
         setField("eventBus", mock(EventBus.class));
         plugin.shutDown();
-        assertNull(plugin.getXpRates().shown());
+        assertTrue(plugin.getXpRates().skills().isEmpty());
     }
 
     @Test
@@ -229,11 +229,11 @@ public class ConstsExpPluginTest
 
         when(config.xpDropAfterMinutes()).thenReturn(0);
         plugin.onGameTick(new GameTick());
-        assertEquals("0: never", Skill.MINING, plugin.getXpRates().shown());
+        assertEquals("0: never", List.of(Skill.MINING), plugin.getXpRates().skills());
 
         when(config.xpDropAfterMinutes()).thenReturn(60);
         plugin.onGameTick(new GameTick());
-        assertNull(plugin.getXpRates().shown());
+        assertTrue(plugin.getXpRates().skills().isEmpty());
     }
 
     // Tick pendulum

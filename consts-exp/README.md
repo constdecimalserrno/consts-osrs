@@ -2,7 +2,7 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, XP per hour for the skill you're training, a tick pendulum for tick-perfect clicking, a timer on each tree, Stealing Artefacts' two guards, and GOTR Autopilot for Guardians of the Rift. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, XP per hour for every skill you're training, a tick pendulum for tick-perfect clicking, a timer on each tree, Stealing Artefacts' two guards, and GOTR Autopilot for Guardians of the Rift. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event; under them, Woodcutting at 42.1k XP an hour](screenshots/status-panel.gif)
 
@@ -104,11 +104,11 @@ The crew message arrives as a filtered (spam) game message; consts-EXP listens o
 
 ![The status panel on the Mining preset: Idle at 0:04, and under it a Mining row with the pickaxe icon at 24.1k XP an hour](screenshots/xp-per-hour.png)
 
-On by default (**Tick & XP** → **XP per Hour** → **Enabled**). Once you gain XP, a row under the alerts shows your XP per hour in the skill you're training: the last one to gain XP. Hitpoints and Slayer come with combat XP, so they only show when no other skill has gained any. Hover the row for the XP gained and the time behind the rate.
+On by default (**Tick & XP** → **XP per Hour** → **Enabled**). Each skill you gain XP in gets its own row under the alerts, in the order you started them, with its XP per hour. Hover a row for the XP gained and the time behind the rate.
 
 - **The rate** is the XP since the skill's first drop over the time since that drop, so steady drops give their true rate from the second one on. It keeps falling while you're away, which is what the reset is for.
 - **The Tick & XP tab** opens with a table of the skills you're training, newest first: its icon, XP/h, XP gained and time, and a **Reset** for each. A skill joins the table at its first XP drop. **Reset all** under it clears the table.
-- **Reset** takes a skill off the table, for after a break; its next drop brings it back, from zero. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to clear every skill from the game. If the skill the status panel shows goes, the panel shows the last one left to gain XP, or hides the row.
+- **Reset** takes a skill off the table, for after a break; its next drop brings it back, from zero. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to clear every skill from the game. A skill that leaves the table leaves the status panel too.
 - **Drop After** (**XP per Hour**, 60 minutes by default) takes off a skill with no XP drop for that long. Set it to 0 to keep every skill until you reset it or log out.
 - **Logging out** clears it; hopping worlds and loading screens don't.
 

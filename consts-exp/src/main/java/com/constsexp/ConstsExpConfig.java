@@ -206,7 +206,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = "xpPerHour",
         name = "Enabled",
-        description = "Show XP per hour for the skill you're training under the alerts in the status panel: the last skill to gain XP, Hitpoints and Slayer only if no other has. Shift + right-click the panel and Reset XP/h to clear it after a break; it starts again from zero at the next drop",
+        description = "Show XP per hour under the alerts in the status panel: a row for each skill that gained XP, until Drop After passes with no drop. Shift + right-click the panel and Reset XP/h to clear them; a skill comes back at its next drop",
         section = xpSection,
         position = 0
     )

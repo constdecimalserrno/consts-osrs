@@ -11,6 +11,7 @@ import java.awt.Rectangle;
 import java.awt.font.FontRenderContext;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -35,7 +36,7 @@ import net.runelite.client.util.ImageUtil;
 
 /**
  * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
- * value), Stealing Artefacts' two guards in Port Piscarilius, XP per hour for the skill you're training, the tick
+ * value), Stealing Artefacts' two guards in Port Piscarilius, XP per hour for each skill you're training, the tick
  * pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a
  * timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color, and pulses with the
  * screen flash. Text is RuneScape's small font whatever RuneLite's interface font is: the 129 px rows are laid out
@@ -170,10 +171,15 @@ class ConstsExpStatusOverlay extends OverlayPanel
             rows.add(guardRow("SE guard", guards.isSouthEastLured()));
         }
 
-        Skill training = plugin.getXpRates().shown();
-        if (config.xpPerHour() && training != null)
+        // A row for every skill on the list, in the order each started; each leaves with Reset or Drop After.
+        if (config.xpPerHour())
         {
-            rows.add(xpRow(training, now));
+            List<Skill> skills = plugin.getXpRates().skills();
+            Collections.reverse(skills);
+            for (Skill skill : skills)
+            {
+                rows.add(xpRow(skill, now));
+            }
         }
 
         // Above the pause countdown, so the pause row a click brings never moves it.
@@ -265,14 +271,14 @@ class ConstsExpStatusOverlay extends OverlayPanel
             GUARD_TOOLTIP);
     }
 
-    /** XP per hour for the skill you're training, with its own icon. */
+    /** XP per hour for one skill on the list, with its own icon. */
     private XpRow xpRow(Skill skill, long now)
     {
         XpRates rates = plugin.getXpRates();
         BufferedImage icon = skillIcons.computeIfAbsent(skill,
             s -> ImageUtil.resizeImage(skillIconManager.getSkillImage(s, true), XpRow.ICON, XpRow.ICON));
         return new XpRow(icon, skill.getName(), XpRates.format(rates.perHour(skill, now)) + "/h",
-            "XP/h for " + skill.getName() + ", the last skill to gain XP: "
+            "XP/h for " + skill.getName() + ": "
                 + String.format(Locale.ROOT, "%,d", rates.gained(skill)) + " XP in "
                 + XpRates.formatTime(rates.elapsed(skill, now)) + ".</br>Shift + right-click and Reset XP/h after a break.");
     }

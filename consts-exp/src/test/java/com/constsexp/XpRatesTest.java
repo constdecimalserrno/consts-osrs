@@ -1,7 +1,6 @@
 package com.constsexp;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 import java.util.List;
 import net.runelite.api.Skill;
@@ -17,7 +16,6 @@ public class XpRatesTest
     @Test
     public void nothingTrainedShowsNothing()
     {
-        assertNull(rates.shown());
         assertEquals(List.of(), rates.skills());
         assertEquals(0, rates.perHour(Skill.MINING, T0));
     }
@@ -69,37 +67,8 @@ public class XpRatesTest
         rates.clear();
         assertEquals(List.of(), rates.skills());
         assertEquals(0, rates.gained(Skill.MINING));
-        assertNull("the status panel's row hides", rates.shown());
     }
 
-    @Test
-    public void theShownSkillFallsBackToTheNewestLeftWhenItLeaves()
-    {
-        rates.gain(Skill.ATTACK, 40, T0);
-        rates.gain(Skill.HITPOINTS, 13, T0);
-        rates.gain(Skill.FISHING, 50, T0 + MINUTE);
-        rates.gain(Skill.MINING, 100, T0 + 2 * MINUTE);
-
-        rates.reset(Skill.MINING);
-        assertEquals(Skill.FISHING, rates.shown());
-        rates.reset(Skill.FISHING);
-        assertEquals(Skill.ATTACK, rates.shown());
-        rates.reset(Skill.ATTACK);
-        assertEquals("hitpoints once nothing else is left", Skill.HITPOINTS, rates.shown());
-        rates.reset(Skill.HITPOINTS);
-        assertNull(rates.shown());
-    }
-
-    @Test
-    public void theShownSkillFollowsTheDropsOrderNotTheClock()
-    {
-        // Two skills in the same ms (longrange), then the clock steps back.
-        rates.gain(Skill.RANGED, 40, T0);
-        rates.gain(Skill.DEFENCE, 40, T0);
-        assertEquals(Skill.DEFENCE, rates.shown());
-        rates.gain(Skill.RANGED, 40, T0 - MINUTE);
-        assertEquals(Skill.RANGED, rates.shown());
-    }
 
     @Test
     public void aSkillWithNoDropForTheIdleTimeLeavesTheList()
@@ -115,7 +84,6 @@ public class XpRatesTest
         rates.dropIdle(hour, T0 + hour);
         assertEquals("an hour since mining's last drop; fishing's was 30 minutes ago", List.of(Skill.FISHING),
             rates.skills());
-        assertEquals(Skill.FISHING, rates.shown());
 
         rates.dropIdle(0, T0 + 10 * hour);
         assertEquals("0 drops nothing", List.of(Skill.FISHING), rates.skills());
@@ -127,25 +95,7 @@ public class XpRatesTest
         rates.gain(Skill.MINING, 100, T0);
 
         rates.clear();
-        assertNull(rates.shown());
         assertEquals(List.of(), rates.skills());
-    }
-
-    @Test
-    public void theShownSkillIsTheLastToGainXpButHitpointsAndSlayerOnlyWhenNothingElseHas()
-    {
-        rates.gain(Skill.HITPOINTS, 13, T0);
-        assertEquals("only hitpoints so far", Skill.HITPOINTS, rates.shown());
-
-        rates.gain(Skill.ATTACK, 40, T0);
-        rates.gain(Skill.HITPOINTS, 13, T0 + 600);
-        rates.gain(Skill.SLAYER, 30, T0 + 1200);
-        assertEquals("combat XP comes with hitpoints and slayer", Skill.ATTACK, rates.shown());
-
-        rates.gain(Skill.MINING, 5, T0 + 1800);
-        assertEquals(Skill.MINING, rates.shown());
-        assertEquals("newest first, by first drop", List.of(Skill.MINING, Skill.SLAYER, Skill.ATTACK, Skill.HITPOINTS),
-            rates.skills());
     }
 
     @Test
