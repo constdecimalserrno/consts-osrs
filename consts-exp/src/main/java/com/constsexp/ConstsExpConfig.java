@@ -987,6 +987,20 @@ public interface ConstsExpConfig extends Config
         return true;
     }
 
+    // From Tree Despawn Timer (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill); see TreeTimer.java. Not an alert: no
+    // preset touches it.
+    @ConfigItem(
+        keyName = "showTreeTimer",
+        name = "Tree Timer",
+        description = "A pie on each tree that empties as it nears falling, whatever the preset. A tree that was already being chopped when you got there shows none, since its time can't be known",
+        section = woodcuttingSection,
+        position = 12
+    )
+    default boolean showTreeTimer()
+    {
+        return true;
+    }
+
     // Sailing
 
     @ConfigItem(
