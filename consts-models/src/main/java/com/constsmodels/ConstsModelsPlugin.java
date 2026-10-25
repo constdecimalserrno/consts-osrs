@@ -15,6 +15,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
+import net.runelite.api.Actor;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -42,8 +43,8 @@ import org.slf4j.LoggerFactory;
 /**
  * consts-Models: export any model in the game, or a whole area, to look at or to use elsewhere. Right-click anything
  * and pick Export Model, or use the sidebar to capture yourself or the area around you. Each capture opens in a
- * viewer to turn and inspect, and saves as OBJ or PLY for 3D software, into a folder you choose. Built on the Model
- * Exporter plugin by Bram91.
+ * viewer to turn and inspect, and saves as OBJ, PLY or GLB (a player's or NPC's animations too) for 3D software, into
+ * a folder you choose. Built on the Model Exporter plugin by Bram91.
  *
  * <p>Its files go through RuneLite's {@link Filepath}, as the Plugin Hub asks. Captures are kept in the plugin's own
  * folder, .runelite/plugin-data/consts-models, and models and pictures are saved there too unless a folder is chosen
@@ -51,8 +52,9 @@ import org.slf4j.LoggerFactory;
  */
 @PluginDescriptor(
     name = "consts-Models",
-    description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, save it as OBJ or PLY",
-    tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "blender", "diorama", "scene"},
+    description = "Export any model or the area around you: right-click Export Model, turn it in a viewer, save it as OBJ, PLY or GLB, animations and all",
+    tags = {"model", "models", "export", "exporter", "3d", "obj", "ply", "glb", "gltf", "animation", "blender",
+        "diorama", "scene"},
     // Its name on the Plugin Hub, and its folder in .runelite before 1.1, which RuneLite moves into plugin-data
     internalName = "consts-models",
     legacyDataDirectory = "consts-models"
@@ -209,10 +211,18 @@ public class ConstsModelsPlugin extends Plugin
         }
     }
 
-    /** A model as a mesh, named for what it is ("NPC Goblin"). Call it on the client thread. */
+    /**
+     * A model as a mesh, named for what it is ("NPC Goblin"). A player, NPC or pet comes with its pose animations
+     * (idle, turns, walks and run) unless it's busy with an action. Call it on the client thread.
+     */
     Mesh capture(Renderable renderable, String name)
     {
-        return ModelCapture.capture(ModelCapture.modelOf(renderable), name, textures);
+        Mesh mesh = ModelCapture.capture(ModelCapture.modelOf(renderable), name, textures);
+        if (renderable instanceof Actor && !mesh.isEmpty())
+        {
+            mesh = mesh.withClips(PoseCapture.capture(client, (Actor) renderable, mesh.vertexCount()));
+        }
+        return mesh;
     }
 
     /** A model loaded from the game's cache, like an item's, as a mesh. Call it on the client thread. */

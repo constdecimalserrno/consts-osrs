@@ -352,11 +352,13 @@ final class ViewerPanel extends JPanel
         showView();
     }
 
-    /** "12,345 triangles": how many the model has. */
+    /** "12,345 triangles": how many the model has, and its animations if it has any ("12 triangles, 3 animations"). */
     static String sizeText(Mesh mesh)
     {
         int faces = mesh.faceCount();
-        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles");
+        int clips = mesh.clips.size();
+        return String.format("%,d %s", faces, faces == 1 ? "triangle" : "triangles")
+            + (clips == 0 ? "" : ", " + clips + (clips == 1 ? " animation" : " animations"));
     }
 
     private static String describe(ExportFormat format)
@@ -369,6 +371,8 @@ final class ViewerPanel extends JPanel
         {
             case OBJ:
                 return "OBJ: shape and colors, for Blender and other 3D software";
+            case GLB:
+                return "GLB (glTF): shape, colors and any animations, for Blender and other 3D software";
             default:
                 return "PLY: shape with a color on every corner";
         }

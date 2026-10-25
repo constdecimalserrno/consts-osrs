@@ -6,7 +6,9 @@ public enum ExportFormat
     /** Shape with colors in a material file, for Blender and other 3D software. */
     OBJ("OBJ", "obj"),
     /** Shape with a color on every corner. */
-    PLY("PLY", "ply");
+    PLY("PLY", "ply"),
+    /** Binary glTF: shape, colors and an actor's animations, which Blender plays. */
+    GLB("GLB", "glb");
 
     private final String label;
     private final String extension;

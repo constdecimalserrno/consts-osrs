@@ -1,6 +1,8 @@
 package com.constsmodels;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * A model's pieces: the parts of it that don't touch, each the triangles joined corner to corner once corners at the
@@ -96,7 +98,7 @@ final class Pieces
         return kept;
     }
 
-    /** The mesh of only these of its triangles, by number, with only the corners they use. */
+    /** The mesh of only these of its triangles, by number, with only the corners they use, its clips too. */
     static Mesh only(Mesh mesh, int[] faces)
     {
         int[] index = new int[mesh.vertexCount()];
@@ -133,7 +135,27 @@ final class Pieces
                 z[index[v]] = mesh.z[v];
             }
         }
-        return new Mesh(mesh.name, x, y, z, a, b, c, color);
+        List<Clip> clips = new ArrayList<>();
+        for (Clip clip : mesh.clips)
+        {
+            float[][] cx = new float[clip.frameCount()][vertices];
+            float[][] cy = new float[clip.frameCount()][vertices];
+            float[][] cz = new float[clip.frameCount()][vertices];
+            for (int f = 0; f < clip.frameCount(); f++)
+            {
+                for (int v = 0; v < index.length; v++)
+                {
+                    if (index[v] >= 0)
+                    {
+                        cx[f][index[v]] = clip.x[f][v];
+                        cy[f][index[v]] = clip.y[f][v];
+                        cz[f][index[v]] = clip.z[f][v];
+                    }
+                }
+            }
+            clips.add(new Clip(clip.label, clip.animation, clip.ticks, clip.loopFrom, cx, cy, cz));
+        }
+        return new Mesh(mesh.name, x, y, z, a, b, c, color, clips);
     }
 
     /**

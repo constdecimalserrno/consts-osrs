@@ -9,8 +9,8 @@ import java.util.Date;
 import net.runelite.client.util.Filepath;
 
 /**
- * Writes a mesh to a file as the game has it, in the game's units: OBJ with its colors in an MTL beside it, or PLY with
- * a color on every corner, for 3D software.
+ * Writes a mesh to a file as the game has it, in the game's units: OBJ with its colors in an MTL beside it, PLY with
+ * a color on every corner, or GLB with an actor's animations too, for 3D software.
  */
 final class MeshExporter
 {
@@ -42,6 +42,12 @@ final class MeshExporter
                     try (OutputStream out = new BufferedOutputStream(file.openOutputStream(), 1 << 16))
                     {
                         PlyWriter.write(mesh, out);
+                    }
+                    break;
+                case GLB:
+                    try (OutputStream out = new BufferedOutputStream(file.openOutputStream(), 1 << 16))
+                    {
+                        GlbWriter.write(mesh, out);
                     }
                     break;
                 default:
