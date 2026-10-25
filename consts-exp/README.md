@@ -2,9 +2,9 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, a tick pendulum for tick-perfect clicking, and GOTR Autopilot for Guardians of the Rift. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, XP per hour for the skill you're training, a tick pendulum for tick-perfect clicking, a timer on each tree, and GOTR Autopilot for Guardians of the Rift. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
-![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
+![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event; under them, Woodcutting at 42.1k XP an hour](screenshots/status-panel.gif)
 
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full row lights up](screenshots/inventory-full.jpg)
 
@@ -39,15 +39,15 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 The EXP icon in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset from the status panel's Shift + right-click menu and the **Preset** dropdown here shows it. The preset decides which alerts are on; an alert's own **Enabled** only counts under **Custom**. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines and no GOTR Autopilot, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines, no tree timer and no GOTR Autopilot, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does, except XP per hour, which lasts until you log out.
 
-Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open; click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
+Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open (Tick & XP opens with the XP table first); click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 
 | Tab | Sections |
 |---|---|
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
-| Skills | Woodcutting (the Forestry alert, with a checkbox per event), Sailing: Salvage, Sailing: Cargo Hold, Runecraft (GOTR Autopilot) |
-| Tick & XP | Tick Pendulum (Enabled, Rhythm, Your Ping) |
+| Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Runecraft (GOTR Autopilot) |
+| Tick & XP | The XP table, then XP per Hour (Enabled), Tick Pendulum (Enabled, Rhythm, Your Ping) |
 | General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
 Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
@@ -100,11 +100,22 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 
 The crew message arrives as a filtered (spam) game message; consts-EXP listens on that channel.
 
+## XP per hour
+
+![The status panel on the Mining preset: Idle at 0:04, and under it a Mining row with the pickaxe icon at 24.1k XP an hour](screenshots/xp-per-hour.png)
+
+On by default (**Tick & XP** → **XP per Hour** → **Enabled**). Once you gain XP, a row under the alerts shows your XP per hour in the skill you're training: the last one to gain XP. Hitpoints and Slayer come with combat XP, so they only show when no other skill has gained any. Hover the row for the XP gained and the time behind the rate.
+
+- **The rate** is the XP since the skill's first drop over the time since that drop, so steady drops give their true rate from the second one on. It keeps falling while you're away, which is what the reset is for.
+- **The Tick & XP tab** opens with a table of every skill trained since you logged in, newest first: its icon, XP/h, XP gained and time, and a **Reset** for each. **Reset all** under it resets every skill.
+- **Reset** sets a skill back to zero, for after a break; its clock starts again at its next drop. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to reset every skill from the game.
+- **Logging out** clears it; hopping worlds and loading screens don't.
+
 ## Tick pendulum
 
 ![The tick pendulum under the Idle row: 12 ticks in a row on the left, the ball between the two orange lines with the zone glowing, and ~60 ms of ping on the right](screenshots/tick-pendulum.png)
 
-Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabled**. It sits in the status panel under the alerts, as wide as their bars.
+Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabled**. It sits in the status panel under the alerts and XP per hour, as wide as their bars.
 
 - **The ball** crosses the track once a tick, left to right, then back. Each swing is one tick's click window: every click made during it is read by the server on the same tick.
 - **Click while the ball is between the two orange lines.** The space between them glows while it's time. The middle of the swing is the safest click, as far as it gets from both cutoffs.
@@ -117,6 +128,16 @@ Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabl
 
 **Your ping.** RuneLite can't tell a plugin your ping, so the pendulum learns where the click cutoff is from your prayer and run toggles. When one shows its result a tick later than the pendulum expected, or sooner, the cutoff moves to that click. Each world region starts from a guess (60 ms, plus the server's time for the world's player count), and keeps what it learned for the session. Skilling clicks don't teach it anything. If you know your ping, set **Your Ping**, and the pendulum follows that instead.
 
+## Tree timer
+
+A pie on each tree empties as the tree nears falling, ported from Tree Despawn Timer by Jason O'Neill. It isn't an alert and never beeps. It shows whenever **Tree Timer** (Skills → Woodcutting, on by default) is on, whatever the preset, unless the Master Switch is off. Run it instead of that plugin, not beside it, or each tree gets two.
+
+- **How it counts.** Under Forestry a tree has hidden health. It only starts going down once someone takes a first log. Then it drops by one every game tick (0.6 s) while anyone chops the tree, and climbs back by one every tick while nobody does. Chopping alone, the timer waits for your first log; anyone else chopping is taken to have had theirs. A full tree lasts as long as the OSRS Wiki says: an oak 27 s, a yew 1:54, a magic tree 3:54, a redwood 4:24.
+- **The pie** turns from green to yellow, orange and red as the tree runs low.
+- **When it shows nothing.** If the tree was already being chopped when you got there, how long it has left can't be known, so it gets no pie at all. Trees in Miscellania and Etceteria never get one: the kingdom's trees there can't be cut down.
+- **Trees**: oak, willow, teak, maple, hollow, mahogany, arctic pine, yew, camphor, magic, ironwood, redwood and rosewood.
+- It's an estimate. A tree can fall with a little pie left, or stand a moment past empty until someone takes another log; either way it shouldn't be off by more than a few seconds. Hopping worlds or logging in starts every tree over.
+
 ## GOTR Autopilot
 
 The Plugin Hub's [GOTR Autopilot](https://github.com/FabulousOtter/gotr-autopilot), folded in: in Guardians of the Rift it tells you what to do next. On by default, under **Skills** → **Runecraft**; it's the section's only setting, and it does nothing outside the minigame.
@@ -126,7 +147,7 @@ The Plugin Hub's [GOTR Autopilot](https://github.com/FabulousOtter/gotr-autopilo
 - **The open altars' runes** float over their portal guardians, and "Starts in" counts down over the remains before a game. "Safe to exit" shows on the barrier once your points are in.
 - **The Great Guardian hides** while a cell is to be placed, so a click meant for a tile or barrier can't land on it.
 
-It plays upstream's **Mass** strategy, with every other choice at upstream's defaults, such as 120 fragments before the first run and 2 guardians built. Upstream's notifications, hint arrow, chat messages, labels over the target and rune deposits are left out. Turn the Hub's GOTR Autopilot off, or both draw.
+It plays upstream's **Mass** strategy, with every other choice at upstream's defaults, such as 120 fragments before the first run and 2 guardians built. Upstream's other strategies, notifications, hint arrow, chat messages, labels over the target and rune deposits are left out. Turn the Hub's GOTR Autopilot off, or both draw.
 
 ## Training guide
 
@@ -153,7 +174,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 ### Woodcutting
 
 - **Where:** Chop where other people chop: Forestry events turn up more often with company, and pay out anima-infused bark for Forestry rewards. Long-lived trees like teaks, mahogany or redwoods keep you going.
-- **What the alerts mean:** Forestry flashes lime and names the event, so you can tell a Leprechaun from an Ent at a glance. Idle fires when your tree falls; Inv Full when it is time to bank.
+- **What the alerts mean:** Forestry flashes lime and names the event, so you can tell a Leprechaun from an Ent at a glance. Idle fires when your tree falls; Inv Full when it is time to bank. The pie on each tree is the [tree timer](#tree-timer): when yours runs low, pick the next tree.
 - **Tune:** Untick the Forestry events you would rather chop through. One alert per event, however many entlings show up.
 
 ### Fishing
@@ -188,7 +209,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out stops running alerts and starts the timers over, except Aggro in OSRS mode: its area and time left are saved per account and carry on if you log back in where you logged out.
 - **Sound**: the system beep by default. **Sound** (General → Sounds) swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
-- **Status panel**: the title, with the active preset as a tag beside it, or on a line of its own when it doesn't fit, as both Salvaging presets do. Then one row per enabled alert: its icon, name and value (hover for details). A quiet row stays dark, with a thin line under it: Idle's fills toward its threshold, Logout's toward its warning and Aggro's toward running out, and Health's and Prayer's show your level. A firing row lights up in its color, and pulses with the screen flash while it flashes. A color too dark to show well on the panel, like Potion's default black or a deep blue, is lightened toward white there; the screen flash keeps it as it is. An hourglass on Idle's row means it's waiting for your animation to stop. The pause countdown shows under the alerts. Shift + right-click the panel for its menu. It's drawn in RuneScape's small font, whatever RuneLite's interface font is set to.
+- **Status panel**: the title, with the active preset as a tag beside it, or on a line of its own when it doesn't fit, as both Salvaging presets do. Then one row per enabled alert: its icon, name and value (hover for details). A quiet row stays dark, with a thin line under it: Idle's fills toward its threshold, Logout's toward its warning and Aggro's toward running out, and Health's and Prayer's show your level. A firing row lights up in its color, and pulses with the screen flash while it flashes. A color too dark to show well on the panel, like Potion's default black or a deep blue, is lightened toward white there; the screen flash keeps it as it is. An hourglass on Idle's row means it's waiting for your animation to stop. Under the alerts come XP per hour, the tick pendulum when it's on, and the pause countdown. Shift + right-click the panel for its menu. It's drawn in RuneScape's small font, whatever RuneLite's interface font is set to.
 
 ## Running it
 
@@ -196,4 +217,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. GOTR Autopilot is the Plugin Hub's [GOTR Autopilot](https://github.com/FabulousOtter/gotr-autopilot) by FabulousOtter (BSD 2-Clause, Copyright (c) 2026, FabulousOtter), at the commit the Hub pins, cut down to run on its defaults: the files in `src/main/java/com/constsexp/gotr/` keep its license header, and its license is in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The tree timer is [Tree Despawn Timer](https://github.com/CreativeTechGuy/tree-despawn-timer) by Jason O'Neill (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill), from commit `9f9eb2b`, cut down to its pie: `TreeTimer.java`, `TreeTimerState.java`, `TreeTimerTree.java` and `ConstsExpTreeTimerOverlay.java` keep its license header and license, in the same NOTICE. GOTR Autopilot is the Plugin Hub's [GOTR Autopilot](https://github.com/FabulousOtter/gotr-autopilot) by FabulousOtter (BSD 2-Clause, Copyright (c) 2026, FabulousOtter), from commit `b8bea8f`, the one the Hub pins, cut down to run on its defaults: the files in `src/main/java/com/constsexp/gotr/` keep its license header and license, in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).

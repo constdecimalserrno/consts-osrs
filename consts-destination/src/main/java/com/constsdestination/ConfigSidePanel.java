@@ -121,8 +121,9 @@ import org.slf4j.LoggerFactory;
  * which the panel opens on, then the plugin's.
  *
  * <p>And it can split its settings into tabs (addSettingsTab), each holding the sections it names, in place of
- * Settings. The settings outside any section, and any section no tab names, go on the first; Reset goes at the end of
- * the last. Each keeps its scrollbar showing, so the rows keep one width from one settings tab to the next.
+ * Settings, under a panel of the plugin's own if it gives one. The settings outside any section, and any section no
+ * tab names, go on the first; Reset goes at the end of the last. Each keeps its scrollbar showing, so the rows keep
+ * one width from one settings tab to the next.
  *
  * <p>With neither kind of tab there are no tabs, only the settings.
  *
@@ -175,7 +176,7 @@ class ConfigSidePanel extends PluginPanel
      * Every setting in one scrolling list: the whole panel below the title, or the Settings tab. Out of settingsTabs,
      * and empty, once the plugin adds settings tabs.
      */
-    private final SettingsTab settings = new SettingsTab(SETTINGS_TAB, List.of(),
+    private final SettingsTab settings = new SettingsTab(SETTINGS_TAB, null, List.of(),
         ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
     /** Settings alone, or the plugin's settings tabs in its place, in the order they were added. */
     private final List<SettingsTab> settingsTabs = new ArrayList<>(List.of(settings));
@@ -278,11 +279,18 @@ class ConfigSidePanel extends PluginPanel
      */
     void addSettingsTab(String title, String... sectionKeys)
     {
+        addSettingsTab(title, null, sectionKeys);
+    }
+
+    /** As addSettingsTab, with a panel of the plugin's own on top of the tab, such as a live table; null for none. */
+    void addSettingsTab(String title, JComponent top, String... sectionKeys)
+    {
         if (settingsTabs.remove(settings))
         {
             settings.rows.removeAll();
         }
-        settingsTabs.add(new SettingsTab(title, List.of(sectionKeys), ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS));
+        settingsTabs.add(new SettingsTab(title, top, List.of(sectionKeys),
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS));
         showTabs();
         rebuild();
     }
@@ -357,7 +365,14 @@ class ConfigSidePanel extends PluginPanel
 
     void rebuild()
     {
-        settingsTabs.forEach(tab -> tab.rows.removeAll());
+        for (SettingsTab tab : settingsTabs)
+        {
+            tab.rows.removeAll();
+            if (tab.top != null)
+            {
+                tab.rows.add(tab.top);
+            }
+        }
         loaders.clear();
 
         final Map<String, JPanel> sectionWidgets = new HashMap<>();
@@ -893,18 +908,23 @@ class ConfigSidePanel extends PluginPanel
         }
     }
 
-    /** Settings, scrolling, on a tab of their own: the sections named. scrollbar: when the scrollbar shows. */
+    /**
+     * Settings, scrolling, on a tab of their own: the plugin's top panel, if any, then the sections named. scrollbar:
+     * when the scrollbar shows.
+     */
     private static class SettingsTab
     {
         final String title;
+        final JComponent top;
         final List<String> sections;
         /** The settings and sections, one under another. */
         final JPanel rows = new FixedWidthPanel();
         final JScrollPane view;
 
-        SettingsTab(String title, List<String> sections, int scrollbar)
+        SettingsTab(String title, JComponent top, List<String> sections, int scrollbar)
         {
             this.title = title;
+            this.top = top;
             this.sections = sections;
             rows.setBorder(new EmptyBorder(8, 10, 10, 10));
             rows.setLayout(new DynamicGridLayout(0, 1, 0, 5));

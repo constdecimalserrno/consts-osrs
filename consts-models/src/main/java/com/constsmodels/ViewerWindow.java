@@ -22,8 +22,8 @@ final class ViewerWindow extends JFrame
         panel = new ViewerPanel(mesh, actions);
         setContentPane(panel);
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        // Wide enough for the bar's buttons
-        setMinimumSize(new Dimension(640, 420));
+        // Wide enough for the bar's buttons, and an animation's controls beside them
+        setMinimumSize(new Dimension(Math.max(640, panel.minimumWidth()), 420));
         addWindowListener(new WindowAdapter()
         {
             @Override
@@ -35,7 +35,7 @@ final class ViewerWindow extends JFrame
             @Override
             public void windowClosed(WindowEvent e)
             {
-                panel.canvas().stop();
+                panel.stop();
             }
         });
         pack();
@@ -46,7 +46,7 @@ final class ViewerWindow extends JFrame
         int height = Math.min(getHeight(), screen.height * 4 / 5);
         setSize(Math.max(width, getMinimumSize().width), Math.max(height, getMinimumSize().height));
 
-        panel.canvas().start();
+        panel.start();
     }
 
     /** "consts-Models: NPC Goblin", with any of the game's color tags taken out of the name. */

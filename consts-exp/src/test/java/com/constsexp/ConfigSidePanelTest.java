@@ -39,6 +39,7 @@ import net.runelite.client.config.ConfigItemDescriptor;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.ConfigSectionDescriptor;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.PluginPanel;
 import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
@@ -174,7 +175,8 @@ public class ConfigSidePanelTest
 
     private ConfigSidePanel expPanel()
     {
-        return ConstsExpPlugin.sidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin());
+        return ConstsExpPlugin.sidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
+            new SkillIconManager());
     }
 
     private ConfigSidePanel withMasterSwitch()
@@ -281,6 +283,22 @@ public class ConfigSidePanelTest
     }
 
     @Test
+    public void aSettingsTabCanOpenWithAPanelOfThePluginsOwnThatARebuildKeeps()
+    {
+        ConfigSidePanel tabbed = withMasterSwitch();
+        tabbed.addSettingsTab("One", ConstsExpConfig.healthSection);
+        tabbed.addSettingsTab("Two", new JLabel("live table"), ConstsExpConfig.soundsSection);
+        MaterialTabGroup tabs = tabs(tabbed);
+
+        assertEquals("live table", labels(tabs.getTab(1).getContent()).get(0));
+        assertEquals(List.of(sectionName(ConstsExpConfig.soundsSection)), sections(tabs.getTab(1).getContent()));
+        assertFalse(labels(tabs.getTab(0).getContent()).contains("live table"));
+
+        tabbed.rebuild();
+        assertEquals("live table", labels(tabs.getTab(1).getContent()).get(0));
+    }
+
+    @Test
     public void settingsTabsGiveTheirRowsTheSameWidthWhetherTheyScrollOrNot()
     {
         ConfigSidePanel tabbed = withMasterSwitch();
@@ -341,7 +359,10 @@ public class ConfigSidePanelTest
             "Random Event"), sections(tabs.getTab(0).getContent()));
         assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold", "Runecraft"),
             sections(tabs.getTab(1).getContent()));
-        assertEquals(List.of("Tick Pendulum"), sections(tabs.getTab(2).getContent()));
+        assertEquals(List.of("XP per Hour", "Tick Pendulum"), sections(tabs.getTab(2).getContent()));
+        // Tick & XP opens with the live XP table, over its sections.
+        assertNotNull(find(tabs.getTab(2).getContent(), XpTable.class, t -> true));
+        assertTrue(labels(tabs.getTab(2).getContent()).get(0).startsWith("Gain XP"));
         assertEquals(List.of("Timing", "Sounds", "Screen Flash"), sections(tabs.getTab(3).getContent()));
 
         assertTrue(labels(exp).contains("Preset"));
@@ -358,7 +379,7 @@ public class ConfigSidePanelTest
         List<String> general = rows(tabs.getTab(3).getContent(), true);
         assertTrue(alerts.size() > 1);
         assertFalse(skills.isEmpty());
-        assertEquals(List.of("tickPendulum", "pendulumRhythm", "yourPing"), tick);
+        assertEquals(List.of("xpPerHour", "tickPendulum", "pendulumRhythm", "yourPing"), tick);
         assertFalse(general.isEmpty());
 
         // Every alert's and skill's setting sits under a folded header, Preset aside; every Tick & XP and General

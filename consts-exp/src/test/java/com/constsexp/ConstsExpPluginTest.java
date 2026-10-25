@@ -37,12 +37,14 @@ import net.runelite.api.GameState;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
+import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectID;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.MenuOptionClicked;
@@ -91,6 +93,7 @@ public class ConstsExpPluginTest
         setField("config", config);
         setField("configManager", configManager);
         setField("clientThread", clientThread);
+        setField("treeTimer", new TreeTimer(client));
         setField("sessionActive", true);
         setField("gotrAutopilot", mock(GotrAutopilot.class));
 
@@ -130,6 +133,42 @@ public class ConstsExpPluginTest
     public void tearDown() throws Exception
     {
         invokePrivate("shutdownScheduler");
+    }
+
+    // XP per hour
+
+    @Test
+    public void xpPerHourCountsEachDropFromTheFirstTickClearsAtTheLoginScreenAndAtShutDown() throws Exception
+    {
+        // At login the client may still read 0 XP; the login's burst of real values before the first tick isn't drops.
+        plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_000, 60, 60));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_035, 60, 60));
+        assertNull(plugin.getXpRates().shown());
+
+        when(client.getSkillExperience(Skill.MINING)).thenReturn(50_035);
+        plugin.onGameTick(new GameTick());
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_070, 60, 60));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_105, 60, 60));
+        assertEquals(Skill.MINING, plugin.getXpRates().shown());
+        assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
+
+        // A hop keeps it, and waits for a tick again; the login screen clears it.
+        plugin.onGameStateChanged(gameState(GameState.HOPPING));
+        plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_105, 60, 60));
+        assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
+        plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
+        assertNull(plugin.getXpRates().shown());
+
+        // Off and on again, maybe on another account: it starts again.
+        plugin.getXpRates().gain(Skill.MINING, 35, 0);
+        setField("overlayManager", mock(OverlayManager.class));
+        setField("mouseManager", mock(MouseManager.class));
+        setField("clientToolbar", mock(ClientToolbar.class));
+        setField("eventBus", mock(EventBus.class));
+        plugin.shutDown();
+        assertNull(plugin.getXpRates().shown());
     }
 
     // Tick pendulum
@@ -1189,6 +1228,7 @@ public class ConstsExpPluginTest
         setField("flashOverlay", mock(ConstsExpFlashOverlay.class));
         setField("statusOverlay", mock(ConstsExpStatusOverlay.class));
         setField("aggroAreaOverlay", mock(ConstsExpAggroAreaOverlay.class));
+        setField("treeTimerOverlay", mock(ConstsExpTreeTimerOverlay.class));
         setField("clientToolbar", mock(ClientToolbar.class));
         setField("colorPickerManager", mock(ColorPickerManager.class));
         setField("eventBus", mock(EventBus.class));
