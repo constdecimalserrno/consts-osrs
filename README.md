@@ -4,7 +4,7 @@ RuneLite plugins for Old School RuneScape ( OSRS ), by const. One Gradle build, 
 
 | Plugin | What it does |
 |---|---|
-| [consts-EXP](consts-exp/) | The all-in-one XP helper. Today that's OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel, plus a tick pendulum for tick-perfect clicks and a timer on each tree, from Tree Despawn Timer. |
+| [consts-EXP](consts-exp/) | The all-in-one XP helper. Today that's OSRS AFK alerts with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, Forestry events included: beeps, screen flashes and a status panel, plus XP per hour, a tick pendulum for tick-perfect clicks and a timer on each tree, from Tree Despawn Timer. |
 | [consts-Destination](consts-destination/) | Lights up the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, lets a left-click go past loot and campfires, and draws your tile packs, sets of marked tiles you make or paste in. Folds in RuneLite's Interact Highlight and Tile Packs. |
 | [consts-Leaderboard](consts-leaderboard/) | Any player's skills from the hiscores in a sidebar panel: right-click and Lookup, click a friend, or one button for your own. Levels stop at 99: a 99 is yellow, the lowest skill red. Cut down from RuneLite's HiScore. |
 | [consts-Models](consts-models/) | Export any model in the game, or the area around you: right-click Export Model, turn it in a viewer, play and step a player's or NPC's animations, take out the pieces you don't want, and save it as OBJ, PLY or GLB with its animations, for Blender and other 3D software. Built on the Plugin Hub's Model Exporter. |

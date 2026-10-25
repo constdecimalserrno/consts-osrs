@@ -13,8 +13,9 @@ import net.runelite.client.config.Units;
 
 /**
  * Sections in the order of the sidebar's tabs, where ConstsExpPlugin puts them: one per alert (Alerts), the skills'
- * (Skills), Tick Pendulum (Tick & XP), then Timing, Sounds and Screen Flash (General); only Tick & XP's and General's
- * start open. RuneLite's Configuration panel lists them in the same order with no tabs, so each name reads on its own.
+ * (Skills), XP per Hour and Tick Pendulum (Tick & XP), then Timing, Sounds and Screen Flash (General); only Tick &
+ * XP's and General's start open. RuneLite's Configuration panel lists them in the same order with no tabs, so each
+ * name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
  * Salvage's with sailing, and two sections keep their old keys, Timing's general and Woodcutting's forestry.
@@ -150,34 +151,53 @@ public interface ConstsExpConfig extends Config
     String cargoSection = "cargo";
 
     @ConfigSection(
+        name = "XP per Hour",
+        description = "XP per hour for the skill you're training, in the status panel",
+        position = 13
+    )
+    String xpSection = "xp";
+
+    @ConfigSection(
         name = "Tick Pendulum",
         description = "A pendulum in the status panel: each swing is one tick's click window, and the lines in its middle glow when it's time to click",
-        position = 13
+        position = 14
     )
     String tickSection = "tick";
 
     @ConfigSection(
         name = "Timing",
         description = "Click pause, quiet after dismiss, give up after and startup delay",
-        position = 14
+        position = 15
     )
     String timingSection = "general";
 
     @ConfigSection(
         name = "Sounds",
         description = "What alerts sound like, and how often",
-        position = 15
+        position = 16
     )
     String soundsSection = "sounds";
 
     @ConfigSection(
         name = "Screen Flash",
         description = "The flash over the game screen while an alert fires",
-        position = 16
+        position = 17
     )
     String flashSection = "flash";
 
     // Tick & XP
+
+    @ConfigItem(
+        keyName = "xpPerHour",
+        name = "Enabled",
+        description = "Show XP per hour for the skill you're training under the alerts in the status panel: the last skill to gain XP, Hitpoints and Slayer only if no other has. Shift + right-click the panel and Reset XP/h to set it back to zero after a break",
+        section = xpSection,
+        position = 0
+    )
+    default boolean xpPerHour()
+    {
+        return true;
+    }
 
     @ConfigItem(
         keyName = "tickPendulum",
