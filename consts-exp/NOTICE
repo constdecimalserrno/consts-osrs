@@ -1,6 +1,6 @@
-consts-EXP is MIT licensed (see LICENSE), except for three files ported from
-RuneLite, which keep their original license. Two are from its NPC Aggression
-Timer plugin:
+consts-EXP is MIT licensed (see LICENSE), except for files ported from other
+plugins, which keep their original licenses. Two are from RuneLite's NPC
+Aggression Timer plugin:
 
   src/main/java/com/constsexp/AggroArea.java
   src/main/java/com/constsexp/ConstsExpAggroAreaOverlay.java
@@ -9,6 +9,15 @@ and one, the sidebar's settings panel, is from its Configuration panel
 (ConfigPanel):
 
   src/main/java/com/constsexp/ConfigSidePanel.java
+
+and four, the tree timer, are from Tree Despawn Timer
+(https://github.com/CreativeTechGuy/tree-despawn-timer, commit
+9f9eb2b35db64cb6032d9d3e713afb2a3bd89176), by Jason O'Neill:
+
+  src/main/java/com/constsexp/TreeTimer.java
+  src/main/java/com/constsexp/TreeTimerState.java
+  src/main/java/com/constsexp/TreeTimerTree.java
+  src/main/java/com/constsexp/ConstsExpTreeTimerOverlay.java
 
 Their licenses follow, in that order.
 
@@ -59,3 +68,30 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+---
+
+BSD 2-Clause License
+
+Copyright (c) 2023, Jason O'Neill
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

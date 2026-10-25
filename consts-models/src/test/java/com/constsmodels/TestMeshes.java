@@ -1,6 +1,7 @@
 package com.constsmodels;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** Shapes and checks for the exporter tests. */
@@ -132,5 +133,35 @@ final class TestMeshes
     static float longest(float[] size)
     {
         return Math.max(size[0], Math.max(size[1], size[2]));
+    }
+
+    /**
+     * The mesh with two clips: Idle, two frames that move every corner east by 10 per frame, 21 ticks each, and Walk,
+     * three frames that lift every corner by 5 per frame, looping from frame 1.
+     */
+    static Mesh animated(Mesh mesh)
+    {
+        return mesh.withClips(List.of(clip(mesh, "Idle", 808, new int[]{21, 21}, 0, 10, 0),
+            clip(mesh, "Walk", 819, new int[]{6, 6, 6}, 1, 0, 5)));
+    }
+
+    private static Clip clip(Mesh mesh, String label, int id, int[] ticks, int loopFrom, float east, float up)
+    {
+        int n = ticks.length;
+        float[][] x = new float[n][];
+        float[][] y = new float[n][];
+        float[][] z = new float[n][];
+        for (int f = 0; f < n; f++)
+        {
+            x[f] = mesh.x.clone();
+            y[f] = mesh.y.clone();
+            z[f] = mesh.z.clone();
+            for (int v = 0; v < mesh.vertexCount(); v++)
+            {
+                x[f][v] += east * f;
+                z[f][v] += up * f;
+            }
+        }
+        return new Clip(label, id, ticks, loopFrom, x, y, z);
     }
 }

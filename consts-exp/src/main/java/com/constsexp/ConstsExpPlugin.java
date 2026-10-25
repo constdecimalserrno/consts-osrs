@@ -28,6 +28,7 @@ import net.runelite.api.Player;
 import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectVolume;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.GameObjectDespawned;
@@ -39,6 +40,8 @@ import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.PlayerDespawned;
+import net.runelite.api.events.PlayerSpawned;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
@@ -65,8 +68,8 @@ import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
     name = "consts-EXP",
-    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity and Forestry events.",
-    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum"}
+    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events and a timer on each tree.",
+    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "tree", "timer", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum"}
 )
 public class ConstsExpPlugin extends Plugin
 {
@@ -139,6 +142,14 @@ public class ConstsExpPlugin extends Plugin
 
     @Inject
     private ConstsExpAggroAreaOverlay aggroAreaOverlay;
+
+    @Inject
+    private ConstsExpTreeTimerOverlay treeTimerOverlay;
+
+    // Every tree's time left, from Tree Despawn Timer. Followed whatever the settings, so it is right whenever the
+    // Tree Timer turns on.
+    @Inject
+    private TreeTimer treeTimer;
 
     @Inject
     private ClientToolbar clientToolbar;
@@ -224,6 +235,8 @@ public class ConstsExpPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
+        overlayManager.add(treeTimerOverlay);
+        treeTimer.start();
         configPanel = sidePanel(configManager, colorPickerManager, config, this, skillIconManager);
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
@@ -275,12 +288,14 @@ public class ConstsExpPlugin extends Plugin
         overlayManager.remove(flashOverlay);
         overlayManager.remove(statusOverlay);
         overlayManager.remove(aggroAreaOverlay);
+        overlayManager.remove(treeTimerOverlay);
         clientToolbar.removeNavigation(navButton);
         eventBus.unregister(configPanel);
         navButton = null;
         configPanel = null;
         shutdownScheduler();
         aggroArea.clear();
+        treeTimer.clear();
         // Off and on again may be another account.
         xpRates.clear();
         xpArmed = false;
@@ -291,6 +306,7 @@ public class ConstsExpPlugin extends Plugin
     {
         GameState state = event.getGameState();
         followAggroAreaAcrossLogins(state);
+        treeTimer.onGameStateChanged(state);
         if (state == GameState.LOGIN_SCREEN)
         {
             // Logged out: XP/h starts again at the next login, on whichever account. Hops and loading keep it.
@@ -352,6 +368,7 @@ public class ConstsExpPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick event)
     {
+        treeTimer.onGameTick();
         if (!xpArmed)
         {
             // The XP the drops count from, as the client has it on the first tick.
@@ -432,6 +449,25 @@ public class ConstsExpPlugin extends Plugin
     public void onStatChanged(StatChanged event)
     {
         updateActivityFromXp(event.getSkill(), event.getXp());
+        treeTimer.onStatChanged(event.getSkill(), event.getXp());
+    }
+
+    @Subscribe
+    public void onAnimationChanged(AnimationChanged event)
+    {
+        treeTimer.onAnimationChanged(event.getActor());
+    }
+
+    @Subscribe
+    public void onPlayerSpawned(PlayerSpawned event)
+    {
+        treeTimer.onPlayerSpawned(event.getPlayer());
+    }
+
+    @Subscribe
+    public void onPlayerDespawned(PlayerDespawned event)
+    {
+        treeTimer.onPlayerDespawned(event.getPlayer());
     }
 
     @Subscribe
@@ -481,12 +517,14 @@ public class ConstsExpPlugin extends Plugin
     public void onGameObjectSpawned(GameObjectSpawned event)
     {
         forestryMarkerAppeared(ForestryEvent.forObject(event.getGameObject().getId()));
+        treeTimer.onGameObjectSpawned(event.getGameObject());
     }
 
     @Subscribe
     public void onGameObjectDespawned(GameObjectDespawned event)
     {
         forestryMarkerGone(ForestryEvent.forObject(event.getGameObject().getId()));
+        treeTimer.onGameObjectDespawned(event.getGameObject());
     }
 
     @Subscribe
@@ -586,6 +624,19 @@ public class ConstsExpPlugin extends Plugin
                 }
             }
         }
+    }
+
+    /**
+     * The Reset button, in either config panel, runs this after putting every setting back. That reset goes one
+     * setting at a time in no fixed order, so the preset's return to Custom can put the saved Custom toggles back over
+     * ones it already reset. Unset them all again, and the saved Custom with them. A single setting's right-click Reset
+     * doesn't run this, so resetting just the preset still brings your Custom back.
+     */
+    @Override
+    public void resetConfiguration()
+    {
+        CUSTOM_TOGGLE_KEYS.forEach(key -> configManager.unsetConfiguration(ConstsExpConfig.GROUP, key));
+        configManager.unsetConfiguration(ConstsExpConfig.GROUP, ConstsExpConfig.CUSTOM_SNAPSHOT_KEY);
     }
 
     // An unset preset is Custom, its default.

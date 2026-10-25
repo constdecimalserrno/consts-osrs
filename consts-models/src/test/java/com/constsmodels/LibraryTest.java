@@ -10,12 +10,14 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
+import java.util.zip.GZIPOutputStream;
 import net.runelite.client.util.Filepath;
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
@@ -58,6 +60,90 @@ public class LibraryTest
         assertArrayEquals(box.b, back.b);
         assertArrayEquals(box.c, back.c);
         assertArrayEquals(box.color, back.color);
+    }
+
+    @Test
+    public void aCaptureFileKeepsTheClips() throws IOException
+    {
+        Mesh animated = TestMeshes.animated(TestMeshes.box(1, 2, 3, 40, 50, 60, RED));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        MeshFile.write(animated, 1234L, out);
+
+        assertEquals(animated.faceCount(), MeshFile.readHeader(new ByteArrayInputStream(out.toByteArray())).faces);
+        Mesh back = MeshFile.read(new ByteArrayInputStream(out.toByteArray()));
+        assertEquals(2, back.clips.size());
+        for (int i = 0; i < 2; i++)
+        {
+            Clip clip = animated.clips.get(i);
+            Clip read = back.clips.get(i);
+            assertEquals(clip.label, read.label);
+            assertEquals(clip.animation, read.animation);
+            assertArrayEquals(clip.ticks, read.ticks);
+            assertEquals(clip.loopFrom, read.loopFrom);
+            for (int f = 0; f < clip.frameCount(); f++)
+            {
+                assertArrayEquals(clip.x[f], read.x[f], 0f);
+                assertArrayEquals(clip.y[f], read.y[f], 0f);
+                assertArrayEquals(clip.z[f], read.z[f], 0f);
+            }
+        }
+    }
+
+    @Test
+    public void aCaptureKeptBeforeClipsStillOpens() throws IOException
+    {
+        // CMD1, as 1.1 wrote it: one triangle and nothing after it
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (DataOutputStream data = new DataOutputStream(new GZIPOutputStream(out)))
+        {
+            data.writeInt(0x434D4431);
+            data.writeUTF("NPC Cow");
+            data.writeLong(99L);
+            data.writeInt(1);
+            data.writeInt(3);
+            for (int i = 0; i < 9; i++)
+            {
+                data.writeFloat(i);
+            }
+            data.writeInt(0);
+            data.writeInt(1);
+            data.writeInt(2);
+            data.writeInt(RED);
+        }
+        assertEquals("NPC Cow", MeshFile.readHeader(new ByteArrayInputStream(out.toByteArray())).name);
+        Mesh back = MeshFile.read(new ByteArrayInputStream(out.toByteArray()));
+        assertEquals(1, back.faceCount());
+        assertEquals(5f, back.z[1], 0f);
+        assertTrue(back.clips.isEmpty());
+    }
+
+    @Test
+    public void aCaptureAskingForEndlessFramesIsDamaged() throws IOException
+    {
+        // CMD2 with no corners and a clip of two billion frames: refused, not a try at the memory
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (DataOutputStream data = new DataOutputStream(new GZIPOutputStream(out)))
+        {
+            data.writeInt(0x434D4432);
+            data.writeUTF("NPC Cow");
+            data.writeLong(99L);
+            data.writeInt(0);
+            data.writeInt(0);
+            data.writeInt(1);
+            data.writeUTF("Idle");
+            data.writeInt(808);
+            data.writeInt(0);
+            data.writeInt(2_000_000_000);
+        }
+        try
+        {
+            MeshFile.read(new ByteArrayInputStream(out.toByteArray()));
+            fail();
+        }
+        catch (IOException expected)
+        {
+            assertEquals("it's damaged", expected.getMessage());
+        }
     }
 
     @Test

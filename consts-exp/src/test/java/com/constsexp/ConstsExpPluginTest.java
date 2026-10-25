@@ -91,6 +91,7 @@ public class ConstsExpPluginTest
         setField("config", config);
         setField("configManager", configManager);
         setField("clientThread", clientThread);
+        setField("treeTimer", new TreeTimer(client));
         setField("sessionActive", true);
 
         when(config.masterSwitch()).thenReturn(true);
@@ -405,6 +406,32 @@ public class ConstsExpPluginTest
         verify(configManager).setConfiguration(ConstsExpConfig.GROUP, "enableHealthAlert", "false");
         verify(configManager).unsetConfiguration(ConstsExpConfig.GROUP, "enableCannonAlert");
         verify(configManager, never()).setConfiguration(ConstsExpConfig.GROUP, "notAToggle", "true");
+    }
+
+    @Test
+    public void resetShouldPutEveryCustomToggleBackEvenWhenThePresetResetsLast()
+    {
+        // The saved settings, after: in Custom, Cannon off, then Woodcutting.
+        Map<String, String> stored = new HashMap<>();
+        stored.put(ConstsExpConfig.PRESET_KEY, "WOODCUTTING");
+        stored.put("enableCannonAlert", "false");
+        stored.put(ConstsExpConfig.CUSTOM_SNAPSHOT_KEY, "enableCannonAlert=false");
+        when(configManager.getConfiguration(eq(ConstsExpConfig.GROUP), anyString()))
+            .thenAnswer(invocation -> stored.get(invocation.<String>getArgument(1)));
+        doAnswer(invocation -> stored.put(invocation.getArgument(1), invocation.getArgument(2)))
+            .when(configManager).setConfiguration(eq(ConstsExpConfig.GROUP), anyString(), anyString());
+        doAnswer(invocation -> stored.remove(invocation.<String>getArgument(1)))
+            .when(configManager).unsetConfiguration(eq(ConstsExpConfig.GROUP), anyString());
+
+        // Reset unsets each setting, here in the bad order: Cannon first, then the preset, whose return to Custom brings
+        // Custom's Cannon off back.
+        stored.remove("enableCannonAlert");
+        stored.remove(ConstsExpConfig.PRESET_KEY);
+        plugin.onConfigChanged(presetChange("WOODCUTTING", null));
+        plugin.resetConfiguration();
+
+        assertNull("Cannon is back to its default", stored.get("enableCannonAlert"));
+        assertNull("the saved Custom goes too", stored.get(ConstsExpConfig.CUSTOM_SNAPSHOT_KEY));
     }
 
     @Test
@@ -1156,6 +1183,7 @@ public class ConstsExpPluginTest
         setField("flashOverlay", mock(ConstsExpFlashOverlay.class));
         setField("statusOverlay", mock(ConstsExpStatusOverlay.class));
         setField("aggroAreaOverlay", mock(ConstsExpAggroAreaOverlay.class));
+        setField("treeTimerOverlay", mock(ConstsExpTreeTimerOverlay.class));
         setField("clientToolbar", mock(ClientToolbar.class));
         setField("colorPickerManager", mock(ColorPickerManager.class));
         setField("eventBus", mock(EventBus.class));
