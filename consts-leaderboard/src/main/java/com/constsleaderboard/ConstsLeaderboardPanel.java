@@ -5,7 +5,7 @@
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's HiScore plugin into
  *   consts-Leaderboard; skills and the total level only, levels stop at 99, a 99 shows in yellow and the lowest
  *   skill in red, a bar naming whose skills are showing and a button for your own, in place of the hiscore tabs;
- *   a Friends dropdown that looks a friend up)
+ *   a Friends dropdown that looks a friend up, with you at its top)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -79,7 +79,7 @@ import org.slf4j.LoggerFactory;
  * The sidebar: a name to look up, a bar naming whose skills are showing with a button beside it for yours, then the skills and the total level the way the HiScore
  * plugin shows them, except that levels stop at 99, a 99 is yellow and the lowest skill is red. Hovering one gives
  * its rank, its experience and what's left to the next level. Under them, your friends, in a dropdown that opens and
- * closes: click one to look them up.
+ * closes: you first, then a click looks one up.
  */
 class ConstsLeaderboardPanel extends PluginPanel
 {
@@ -100,6 +100,9 @@ class ConstsLeaderboardPanel extends PluginPanel
     /* Where the panel keeps whether Friends is open: a hidden key, not a setting */
     static final String CONFIG_GROUP = "constsleaderboard";
     static final String FRIENDS_OPEN = "friendsOpen";
+
+    /** RuneLite's own orange, for your row at the top of Friends: no level or friend uses it. */
+    static final Color YOU_COLOR = ColorScheme.BRAND_ORANGE;
 
     /* A friend's dot: green online, grey offline */
     private static final ImageIcon ONLINE_DOT = dot(ColorScheme.PROGRESS_COMPLETE_COLOR);
@@ -135,6 +138,9 @@ class ConstsLeaderboardPanel extends PluginPanel
 
     /* The account you're logged in to, or null when logged out */
     private String myName;
+
+    /* Your friends, as last set, so your name can join them when you log in */
+    private Map<String, Boolean> friends;
 
     /* The skills' labels, then the total level's */
     private final Map<HiscoreSkill, JLabel> skillLabels = new LinkedHashMap<>();
@@ -216,7 +222,6 @@ class ConstsLeaderboardPanel extends PluginPanel
         header.add(meButton, BorderLayout.EAST);
 
         showName(NOBODY, ColorScheme.LIGHT_GRAY_COLOR);
-        setMyName(null);
 
         add(header, c);
         c.gridy++;
@@ -272,14 +277,26 @@ class ConstsLeaderboardPanel extends PluginPanel
         add(friendsList, c);
         c.gridy++;
 
-        setFriends(null);
+        // Last: it fills the Friends list, so the list must exist
+        setMyName(null);
         showFriendsOpen(!"false".equals(configManager.getConfiguration(CONFIG_GROUP, FRIENDS_OPEN)));
     }
 
     /** Your friends, name to online, in the order to list them; null when logged out. */
     void setFriends(Map<String, Boolean> friends)
     {
+        this.friends = friends;
+        showFriends();
+    }
+
+    /* You first once your friends have loaded, then your friends */
+    private void showFriends()
+    {
         friendsList.removeAll();
+        if (myName != null && friends != null)
+        {
+            friendsList.add(youRow());
+        }
         if (friends == null || friends.isEmpty())
         {
             JLabel none = new JLabel(friends == null ? "Log in to see your friends" : "No friends yet");
@@ -299,6 +316,23 @@ class ConstsLeaderboardPanel extends PluginPanel
         }
         friendsList.revalidate();
         friendsList.repaint();
+    }
+
+    /* Your name in your own color, a bar under it; clicking it does what the head and shoulders button does */
+    private JLabel youRow()
+    {
+        JLabel row = new JLabel(myName, meButton.getIcon(), SwingConstants.LEFT);
+        row.setFont(FontManager.getRunescapeFont());
+        row.setForeground(YOU_COLOR);
+        row.setIconTextGap(2);
+        row.setOpaque(true);
+        row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        row.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, ColorScheme.MEDIUM_GRAY_COLOR),
+            new EmptyBorder(2, 4, 2, 8)));
+        row.setToolTipText("Show your own skills");
+        row.addMouseListener(clickable(row, this::showMe));
+        return row;
     }
 
     /* A friend's dot and name; clicking it looks them up, the way the search box does */
@@ -437,6 +471,7 @@ class ConstsLeaderboardPanel extends PluginPanel
         myName = name == null ? null : sanitize(name);
         meButton.setEnabled(myName != null);
         meButton.setToolTipText(meTooltip(myName, shownName.getText()));
+        showFriends();
     }
 
     private void showName(String text, Color color)
