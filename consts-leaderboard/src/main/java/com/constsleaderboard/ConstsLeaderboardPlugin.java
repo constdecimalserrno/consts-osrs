@@ -1,7 +1,8 @@
 /*
  * Copyright (c) 2017, Adam <Adam@sigterm.info>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's HiScore plugin into
- *   consts-Leaderboard; the Lookup options are always on, no bounty target lookup, its own sidebar icon)
+ *   consts-Leaderboard; the Lookup options are always on, no bounty target lookup, its own sidebar icon, your
+ *   friends handed to the panel)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,13 +28,18 @@
 package com.constsleaderboard;
 
 import java.awt.image.BufferedImage;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
+import net.runelite.api.Friend;
+import net.runelite.api.FriendContainer;
 import net.runelite.api.GameState;
 import net.runelite.api.IconID;
 import net.runelite.api.MenuAction;
@@ -93,6 +99,9 @@ public class ConstsLeaderboardPlugin extends Plugin
     // The account you're logged in to, as the panel last heard it; null when logged out
     private String localName;
 
+    // Your friends, as the panel last heard them: name to online; null when logged out
+    private Map<String, Boolean> friends;
+
     @Override
     protected void startUp() throws Exception
     {
@@ -118,6 +127,7 @@ public class ConstsLeaderboardPlugin extends Plugin
         clientToolbar.removeNavigation(navButton);
         playerIndexName.clear();
         localName = null;
+        friends = null;
 
         menuManager.get().removePlayerMenuItem(LOOKUP);
     }
@@ -127,6 +137,13 @@ public class ConstsLeaderboardPlugin extends Plugin
     {
         Player local = client.getLocalPlayer();
         updateLocalName(local == null ? null : local.getName());
+
+        // Only while logged in, so a loading screen doesn't blank the list; the login screen clears it
+        FriendContainer container = client.getFriendContainer();
+        if (client.getGameState() == GameState.LOGGED_IN && container != null)
+        {
+            updateFriends(friends(container.getMembers()));
+        }
     }
 
     @Subscribe
@@ -135,7 +152,31 @@ public class ConstsLeaderboardPlugin extends Plugin
         if (event.getGameState() == GameState.LOGIN_SCREEN)
         {
             updateLocalName(null);
+            updateFriends(null);
         }
+    }
+
+    private void updateFriends(Map<String, Boolean> now)
+    {
+        if (Objects.equals(now, friends))
+        {
+            return;
+        }
+
+        friends = now;
+        SwingUtilities.invokeLater(() -> panel.setFriends(now));
+    }
+
+    /** Your friends' names, each to whether they're online: the online ones first, then by name, ignoring case. */
+    static Map<String, Boolean> friends(Friend[] members)
+    {
+        Map<String, Boolean> friends = new LinkedHashMap<>();
+        Arrays.stream(members)
+            .filter(f -> f != null && f.getName() != null)
+            .sorted(Comparator.comparing((Friend f) -> f.getWorld() <= 0)
+                .thenComparing(Friend::getName, String.CASE_INSENSITIVE_ORDER))
+            .forEach(f -> friends.put(f.getName(), f.getWorld() > 0));
+        return friends;
     }
 
     private void updateLocalName(String name)
