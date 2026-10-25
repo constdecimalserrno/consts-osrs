@@ -24,6 +24,8 @@ public class ViewerPanelTest
     {
         assertEquals("12 triangles", ViewerPanel.sizeText(OrbitCameraTest.box(0, 0, 0, 400, 200, 100, 0xFFFFFF)));
         assertEquals("1 triangle", ViewerPanel.sizeText(CoreTest.triangle(0xFF0000)));
+        // An actor's animations, which GLB saves
+        assertEquals("1 triangle, 2 animations", ViewerPanel.sizeText(TestMeshes.animated(CoreTest.triangle(0xFF0000))));
     }
 
     @Test

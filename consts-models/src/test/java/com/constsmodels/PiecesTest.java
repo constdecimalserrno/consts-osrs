@@ -40,6 +40,21 @@ public class PiecesTest
     }
 
     @Test
+    public void takingAPieceOutKeepsTheClipsOnTheCornersLeft()
+    {
+        Mesh scene = TestMeshes.animated(scene());
+        Pieces pieces = Pieces.of(scene);
+        Mesh left = Pieces.only(scene, pieces.kept(new boolean[]{true, false, false}));
+        assertEquals(2, left.clips.size());
+        Clip idle = left.clips.get(0);
+        assertEquals(left.vertexCount(), idle.vertexCount());
+        assertEquals("Idle", idle.label);
+        // The first corner left is the blue box's first, 10 east of where it stands at frame 1
+        assertEquals(left.x[0] + 10, idle.x[1][0], 0f);
+        assertEquals(left.y[0], idle.y[1][0], 0f);
+    }
+
+    @Test
     public void takingAPieceOutLeavesTheRest()
     {
         Mesh scene = scene();

@@ -1,12 +1,16 @@
 package com.constsmodels;
 
+import java.util.Collections;
+import java.util.List;
+
 /**
  * A captured model as plain triangles: what the viewer draws and the exporters write. Every part of consts-Models
  * passes these around.
  *
  * <p>Units are the game's (128 to a tile). Axes are east, north, up: x east, y north, z up, so a model stands on the
  * xy plane. Triangles wind counterclockwise seen from outside, as the game's faces do once turned into these axes.
- * Each triangle has one color, 0xRRGGBB. A mesh never changes once built.
+ * Each triangle has one color, 0xRRGGBB. A captured actor has its animations too, as {@link Clip}s over the same
+ * corners; anything else has none. A mesh never changes once built.
  */
 final class Mesh
 {
@@ -25,7 +29,15 @@ final class Mesh
     /** Each triangle's color, 0xRRGGBB. */
     final int[] color;
 
+    /** The actor's animations, each moving these corners; empty for anything else. */
+    final List<Clip> clips;
+
     Mesh(String name, float[] x, float[] y, float[] z, int[] a, int[] b, int[] c, int[] color)
+    {
+        this(name, x, y, z, a, b, c, color, Collections.emptyList());
+    }
+
+    Mesh(String name, float[] x, float[] y, float[] z, int[] a, int[] b, int[] c, int[] color, List<Clip> clips)
     {
         if (x.length != y.length || x.length != z.length)
         {
@@ -35,6 +47,13 @@ final class Mesh
         {
             throw new IllegalArgumentException("triangle arrays differ in length");
         }
+        for (Clip clip : clips)
+        {
+            if (clip.vertexCount() != x.length)
+            {
+                throw new IllegalArgumentException("a clip moves " + clip.vertexCount() + " corners of " + x.length);
+            }
+        }
         this.name = name;
         this.x = x;
         this.y = y;
@@ -43,6 +62,7 @@ final class Mesh
         this.b = b;
         this.c = c;
         this.color = color;
+        this.clips = List.copyOf(clips);
     }
 
     int vertexCount()
@@ -83,6 +103,11 @@ final class Mesh
 
     Mesh withName(String name)
     {
-        return new Mesh(name, x, y, z, a, b, c, color);
+        return new Mesh(name, x, y, z, a, b, c, color, clips);
+    }
+
+    Mesh withClips(List<Clip> clips)
+    {
+        return new Mesh(name, x, y, z, a, b, c, color, clips);
     }
 }
