@@ -89,6 +89,7 @@ public class ConstsExpPluginTest
         setField("config", config);
         setField("configManager", configManager);
         setField("clientThread", clientThread);
+        setField("treeTimer", new TreeTimer(client));
         setField("sessionActive", true);
 
         when(config.masterSwitch()).thenReturn(true);
@@ -1144,6 +1145,7 @@ public class ConstsExpPluginTest
         setField("flashOverlay", mock(ConstsExpFlashOverlay.class));
         setField("statusOverlay", mock(ConstsExpStatusOverlay.class));
         setField("aggroAreaOverlay", mock(ConstsExpAggroAreaOverlay.class));
+        setField("treeTimerOverlay", mock(ConstsExpTreeTimerOverlay.class));
         setField("clientToolbar", mock(ClientToolbar.class));
         setField("colorPickerManager", mock(ColorPickerManager.class));
         setField("eventBus", mock(EventBus.class));

@@ -34,7 +34,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its EXP icon stays in the sidebar.",
+        description = "Off silences consts-EXP: no alerts, no status panel, no area lines, no tree timer. The plugin itself stays on, so its EXP icon stays in the sidebar.",
         position = -1
     )
     default boolean masterSwitch()
@@ -983,6 +983,20 @@ public interface ConstsExpConfig extends Config
         position = 11
     )
     default boolean forestryEnchantmentRitual()
+    {
+        return true;
+    }
+
+    // From Tree Despawn Timer (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill); see TreeTimer.java. Not an alert: no
+    // preset touches it.
+    @ConfigItem(
+        keyName = "showTreeTimer",
+        name = "Tree Timer",
+        description = "A pie on each tree that empties as it nears falling, whatever the preset (the Master Switch hides it too). A tree that was already being chopped when you got there shows none, since its time can't be known",
+        section = woodcuttingSection,
+        position = 12
+    )
+    default boolean showTreeTimer()
     {
         return true;
     }
