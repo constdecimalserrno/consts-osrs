@@ -1,6 +1,8 @@
 package com.constsexp;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics2D;
@@ -32,9 +34,10 @@ import net.runelite.client.util.ImageUtil;
 
 /**
  * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
- * value), and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a timer gets close,
- * or shows Health's and Prayer's level; a firing row lights up in its color, and pulses with the screen flash. Text is
- * RuneScape's small font whatever RuneLite's interface font is: the 129 px rows are laid out for it.
+ * value), the tick pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it
+ * that fills as a timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color, and
+ * pulses with the screen flash. Text is RuneScape's small font whatever RuneLite's interface font is: the 129 px rows
+ * are laid out for it.
  */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
@@ -128,7 +131,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return dimension;
     }
 
-    /** The panel's rows at {@code now}: the title, then each enabled alert, then the pause countdown. */
+    /** The panel's rows at {@code now}: the title, each enabled alert, the tick pendulum, then the pause countdown. */
     List<Row> rows(long now)
     {
         List<Row> rows = new ArrayList<>();
@@ -142,6 +145,12 @@ class ConstsExpStatusOverlay extends OverlayPanel
             {
                 rows.add(alertRow(type, now));
             }
+        }
+
+        // Above the pause countdown, so the pause row a click brings never moves it.
+        if (config.tickPendulum())
+        {
+            rows.add(new PendulumRow(plugin.getPendulum(), now));
         }
 
         long pauseRemainingMs = plugin.getPauseRemainingMillis();
@@ -486,6 +495,176 @@ class ConstsExpStatusOverlay extends OverlayPanel
                 icon(graphics, HOURGLASS, valueX + valueInk.x - 3 - HOURGLASS.getWidth(), y + 3, iconColor);
             }
             return size(HEIGHT);
+        }
+    }
+
+    /**
+     * The tick pendulum: the count of ticks in a row on a chip at the left, the track, and the
+     * ping on a chip at the right, across the row's full width. The ball crosses the track once a swing, one swing a
+     * tick; the space between the two orange lines glows while it's time to click, and each click washes the track
+     * green (on pace) or red (not).
+     */
+    static final class PendulumRow extends Row
+    {
+        static final Color BALL = new Color(0x3cc8ff);
+        private static final Color BAR = new Color(30, 33, 40, 230);
+        private static final Color CAP = new Color(0x8c8c8c);
+        private static final Color LINE = new Color(0xff8c1a);
+        private static final Color FLASH = new Color(255, 247, 168, 204);
+        private static final Color DIM = new Color(0x9a9a9a);
+        private static final Color RED = new Color(0xff3a3a);
+        private static final Color YELLOW = new Color(0xffff00);
+        private static final Color GOOD = new Color(0x4bcd5a);
+        private static final Color PERFECT = new Color(0xa6ff8f);
+        private static final Color ORANGE = new Color(0xff981f);
+        private static final Map<TickPendulum.Verdict, Color> WASH = new EnumMap<>(Map.of(
+            TickPendulum.Verdict.PERFECT, PERFECT, TickPendulum.Verdict.GOOD, GOOD,
+            TickPendulum.Verdict.HALF, new Color(0xc8c8c8), TickPendulum.Verdict.BAD, new Color(0xd25f5f)));
+        private static final int HEIGHT = 12;
+        private static final int COUNT_WIDTH = 23;
+        private static final int PING_WIDTH = 30;
+        private static final int GAP = 2;
+        private static final int TRACK_HEIGHT = 8;
+        private static final int DOT = 6;
+        // How long each cue lasts, in ms: a click's wash, the count's hop and its red drop, the ping dot's swell.
+        private static final int WASH_MS = 200;
+        private static final int HOP_MS = 120;
+        private static final int DROP_MS = 300;
+        private static final int SWELL_MS = 250;
+        private static final Rectangle DIGIT = textBounds("0");
+        private static final String TOOLTIP = "Tick pendulum: click while the ball is between the two lines; a click"
+            + " there is perfect.</br>Left: your ticks in a row. Right: your ping, with ~ while it's learned from your"
+            + " prayer and run toggles.";
+
+        private final TickPendulum pendulum;
+        private final long now;
+
+        PendulumRow(TickPendulum pendulum, long now)
+        {
+            super(TOOLTIP);
+            this.pendulum = pendulum;
+            this.now = now;
+        }
+
+        @Override
+        public Dimension render(Graphics2D graphics)
+        {
+            pendulum.advance(now);
+            int x = location.x;
+            int top = location.y + 3;
+            int x0 = x + COUNT_WIDTH + GAP;
+            int length = width - COUNT_WIDTH - PING_WIDTH - 2 * GAP;
+            int travel = length - DOT;
+            int mid = x0 + length / 2;
+            TickPendulum.Swing swing = pendulum.swing(now);
+            boolean toRight = TickPendulum.toRight(swing.n);
+
+            fill(graphics, BAR, x0, top, length, TRACK_HEIGHT);
+            long washAge = now - pendulum.washAt();
+            if (washAge >= 0 && washAge < WASH_MS)
+            {
+                // Faint for a flick's first click, bright when perfect.
+                TickPendulum.Verdict wash = pendulum.wash();
+                double alpha = wash == TickPendulum.Verdict.HALF ? 0.35
+                    : wash == TickPendulum.Verdict.PERFECT ? 0.85 : 0.6;
+                fill(graphics, alpha(WASH.get(wash), alpha * (1 - washAge / (double) WASH_MS)), x0, top, length,
+                    TRACK_HEIGHT);
+            }
+            fill(graphics, CAP, x0, top, 1, TRACK_HEIGHT);
+            fill(graphics, CAP, x0 + length - 1, top, 1, TRACK_HEIGHT);
+
+            // Every other swing: the off swing is dimmed, its lines and the ball.
+            boolean wanted = pendulum.clickSwing(swing.n);
+            Composite composite = graphics.getComposite();
+            if (!wanted)
+            {
+                graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.35f));
+            }
+            // The zone's lines sit where the ball's center is as the zone starts and ends, never closer in than the
+            // ball plus 2 px a side.
+            int a = Math.min(ballX(TickPendulum.TICK / 2 - pendulum.zoneMs() / 2, true, x0, travel) + DOT / 2 - 1,
+                mid - 1 - (DOT + 4) / 2);
+            int b = 2 * mid - 1 - a;
+            if (wanted && pendulum.inZone(swing.el))
+            {
+                fill(graphics, FLASH, a + 1, top, b - a - 1, TRACK_HEIGHT);
+            }
+            fill(graphics, LINE, a, top - 1, 1, TRACK_HEIGHT + 2);
+            fill(graphics, LINE, b, top - 1, 1, TRACK_HEIGHT + 2);
+            int ball = ballX(swing.el, toRight, x0, travel);
+            fill(graphics, BALL, ball + 1, top + 1, DOT - 2, 1);
+            fill(graphics, BALL, ball, top + 2, DOT, TRACK_HEIGHT - 4);
+            fill(graphics, BALL, ball + 1, top + TRACK_HEIGHT - 2, DOT - 2, 1);
+            graphics.setComposite(composite);
+
+            int baseline = top - 1 + (TRACK_HEIGHT + 2 - DIGIT.height) / 2 - DIGIT.y;
+            drawCount(graphics, x, top, x0 - 3, baseline);
+            drawPing(graphics, x0 + length + GAP, x + width, top, baseline);
+            return size(HEIGHT);
+        }
+
+        /** Right-aligned against the track: a dim 0 until a click counts, a hop as it goes up, red as it drops. */
+        private void drawCount(Graphics2D graphics, int x, int top, int right, int baseline)
+        {
+            int run = pendulum.run();
+            Color color = run > 0 ? Color.WHITE : DIM;
+            int lift = 0;
+            if (run > 0 && now - pendulum.upAt() < HOP_MS)
+            {
+                color = YELLOW;
+                lift = 1;
+            }
+            else if (run == 0 && now - pendulum.dropAt() < DROP_MS)
+            {
+                color = RED;
+            }
+            fill(graphics, BAR, x, top - 1, right + 1 - x, TRACK_HEIGHT + 2);
+            String count = String.valueOf(run);
+            Rectangle ink = textBounds(count);
+            text(graphics, count, right - ink.x - ink.width, baseline - lift, color);
+            if (now - pendulum.pipAt() < TickPendulum.TICK)
+            {
+                // The perfect pip, for a tick.
+                fill(graphics, PERFECT, right, top - 2, 2, 2);
+            }
+        }
+
+        /**
+         * The ping, "~" while it's learned, and a dot on the corner colored like World Hopper's ping (green under 80
+         * ms, yellow to 150, orange above) that swells for a moment as the learner corrects it.
+         */
+        private void drawPing(Graphics2D graphics, int x, int right, int top, int baseline)
+        {
+            int ping = pendulum.ping();
+            fill(graphics, BAR, x, top - 1, right - x, TRACK_HEIGHT + 2);
+            text(graphics, (pendulum.learned() ? "~" : "") + ping, x + 2, baseline, Color.WHITE);
+            Color dot = ping < 80 ? GOOD : ping <= 150 ? YELLOW : ORANGE;
+            if (pendulum.learned() && now - pendulum.fixAt() < SWELL_MS)
+            {
+                fill(graphics, dot, x - 2, top - 3, 3, 3);
+            }
+            else
+            {
+                fill(graphics, dot, x - 1, top - 2, 2, 2);
+            }
+        }
+
+        /** The ball's left edge {@code ms} into a swing; both directions round the same way, so marks mirror. */
+        private static int ballX(double ms, boolean toRight, int x0, int travel)
+        {
+            int d = (int) Math.round(ms / TickPendulum.TICK * travel);
+            return toRight ? x0 + d : x0 + travel - d;
+        }
+
+        private static void fill(Graphics2D graphics, Color color, int x, int y, int w, int h)
+        {
+            graphics.setColor(color);
+            graphics.fillRect(x, y, w, h);
+        }
+
+        private static Color alpha(Color color, double alpha)
+        {
+            return new Color(color.getRed(), color.getGreen(), color.getBlue(), (int) Math.round(255 * alpha));
         }
     }
 }
