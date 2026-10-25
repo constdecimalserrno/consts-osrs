@@ -39,7 +39,7 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 The EXP icon in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset from the status panel's Shift + right-click menu and the **Preset** dropdown here shows it. The preset decides which alerts are on; an alert's own **Enabled** only counts under **Custom**. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel and no area lines, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel and no area lines, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does, except XP per hour, which lasts until you log out.
 
 Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open (Tick & XP opens with the XP table first); click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 

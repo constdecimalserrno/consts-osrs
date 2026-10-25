@@ -14,7 +14,8 @@ import net.runelite.client.config.Units;
 /**
  * Sections in the order of the sidebar's tabs, where ConstsExpPlugin puts them: one per alert (Alerts), the skills'
  * (Skills), XP per Hour and Tick Pendulum (Tick & XP), then Timing, Sounds and Screen Flash (General); only Tick &
- * XP's and General's start open. RuneLite's Configuration panel lists them in the same order with no tabs, so each name reads on its own.
+ * XP's and General's start open. RuneLite's Configuration panel lists them in the same order with no tabs, so each
+ * name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
  * Salvage's with sailing, and two sections keep their old keys, Timing's general and Woodcutting's forestry.
@@ -151,7 +152,7 @@ public interface ConstsExpConfig extends Config
 
     @ConfigSection(
         name = "XP per Hour",
-        description = "XP per hour for the skill you're training, in the status panel. Above, every skill trained since you logged in",
+        description = "XP per hour for the skill you're training, in the status panel",
         position = 13
     )
     String xpSection = "xp";

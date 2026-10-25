@@ -100,7 +100,16 @@ final class XpRates
     synchronized long perHour(Skill skill, long now)
     {
         long elapsed = elapsed(skill, now);
-        return elapsed > 0 ? (rates.get(skill).gained - rates.get(skill).firstXp) * 3_600_000L / elapsed : 0;
+        Rate rate = rates.get(skill);
+        return elapsed > 0 ? (rate.gained - rate.firstXp) * 3_600_000L / elapsed : 0;
+    }
+
+    /** A rate's time: 32:10, or 1:02:03 past an hour. */
+    static String formatTime(long millis)
+    {
+        long s = Math.max(0, millis / 1_000);
+        return s < 3_600 ? String.format(Locale.ROOT, "%d:%02d", s / 60, s % 60)
+            : String.format(Locale.ROOT, "%d:%02d:%02d", s / 3_600, s / 60 % 60, s % 60);
     }
 
     /** XP short enough for a 129 px row: 850, 24.3k, 312k, 1.21M. */

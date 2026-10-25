@@ -122,7 +122,8 @@ import org.slf4j.LoggerFactory;
  *
  * <p>And it can split its settings into tabs (addSettingsTab), each holding the sections it names, in place of
  * Settings, under a panel of the plugin's own if it gives one. The settings outside any section, and any section no
- * tab names, go on the first; Reset goes at the end of the last. Each keeps its scrollbar showing, so the rows keep one width from one settings tab to the next.
+ * tab names, go on the first; Reset goes at the end of the last. Each keeps its scrollbar showing, so the rows keep
+ * one width from one settings tab to the next.
  *
  * <p>With neither kind of tab there are no tabs, only the settings.
  *

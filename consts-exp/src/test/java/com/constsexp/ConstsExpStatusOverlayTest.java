@@ -20,8 +20,10 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Collectors;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
@@ -177,7 +179,7 @@ public class ConstsExpStatusOverlayTest
         BufferedImage row = render(overlay.rows(NOW).get(1));
 
         // Mining's pickaxe has colors no tinted mask has: more than two distinct opaque colors in the icon's slot.
-        java.util.Set<Integer> colors = new java.util.HashSet<>();
+        Set<Integer> colors = new HashSet<>();
         for (int y = 0; y < 15; y++)
         {
             for (int x = 0; x < 13; x++)

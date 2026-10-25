@@ -186,6 +186,9 @@ public class ConstsExpPlugin extends Plugin
 
     private final TickPendulum pendulum = new TickPendulum();
     private final XpRates xpRates = new XpRates();
+    // False from a login or hop until its first tick: until then the client's XP may still read 0, so the login's
+    // StatChanged burst would look like drops.
+    private boolean xpArmed;
     // The world the pendulum has its player count and region from; -1 until the world list has it.
     private int pendulumWorld = -1;
     private volatile long nextAggroAlertMillis;
@@ -278,6 +281,9 @@ public class ConstsExpPlugin extends Plugin
         configPanel = null;
         shutdownScheduler();
         aggroArea.clear();
+        // Off and on again may be another account.
+        xpRates.clear();
+        xpArmed = false;
     }
 
     @Subscribe
@@ -289,6 +295,10 @@ public class ConstsExpPlugin extends Plugin
         {
             // Logged out: XP/h starts again at the next login, on whichever account. Hops and loading keep it.
             xpRates.clear();
+        }
+        if (state != GameState.LOADING)
+        {
+            xpArmed = false;
         }
         if (state == GameState.LOGGED_IN)
         {
@@ -342,6 +352,12 @@ public class ConstsExpPlugin extends Plugin
     @Subscribe
     public void onGameTick(GameTick event)
     {
+        if (!xpArmed)
+        {
+            // The XP the drops count from, as the client has it on the first tick.
+            seedSkillXp();
+            xpArmed = true;
+        }
         if (!config.masterSwitch())
         {
             return;
@@ -783,7 +799,10 @@ public class ConstsExpPlugin extends Plugin
         if (previousXp != null && currentXp > previousXp)
         {
             markActivityNow();
-            xpRates.gain(skill, currentXp - previousXp, System.currentTimeMillis());
+            if (xpArmed)
+            {
+                xpRates.gain(skill, currentXp - previousXp, System.currentTimeMillis());
+            }
         }
     }
 
@@ -845,7 +864,11 @@ public class ConstsExpPlugin extends Plugin
             lastPlayerWorldPoint = localPlayer.getWorldLocation();
             lastPlayerAnimation = localPlayer.getAnimation();
         }
+        seedSkillXp();
+    }
 
+    private void seedSkillXp()
+    {
         for (Skill skill : Skill.values())
         {
             int xp = isTrainableSkill(skill) ? client.getSkillExperience(skill) : -1;

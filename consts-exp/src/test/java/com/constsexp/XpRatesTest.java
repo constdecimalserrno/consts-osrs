@@ -106,5 +106,7 @@ public class XpRatesTest
         assertEquals("100k", XpRates.format(99_990));
         assertEquals("312k", XpRates.format(312_400));
         assertEquals("1.21M", XpRates.format(1_214_000));
+        assertEquals("32:10", XpRates.formatTime(1_930_000));
+        assertEquals("1:02:03", XpRates.formatTime(3_723_000));
     }
 }

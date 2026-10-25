@@ -85,7 +85,7 @@ final class XpTable extends JPanel
             JLabel[] row = cells.get(i);
             row[0].setText(XpRates.format(rates.perHour(skill, now)));
             row[1].setText(XpRates.format(rates.gained(skill)));
-            row[2].setText(ConstsExpStatusOverlay.formatClock(rates.elapsed(skill, now)));
+            row[2].setText(XpRates.formatTime(rates.elapsed(skill, now)));
         }
     }
 

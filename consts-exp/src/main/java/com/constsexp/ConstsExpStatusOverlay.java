@@ -35,10 +35,10 @@ import net.runelite.client.util.ImageUtil;
 
 /**
  * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
- * value), XP per hour for the skill you're training, the tick pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it
- * that fills as a timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color, and
- * pulses with the screen flash. Text is RuneScape's small font whatever RuneLite's interface font is: the 129 px rows
- * are laid out for it.
+ * value), XP per hour for the skill you're training, the tick pendulum when it's on, and the pause countdown. A quiet
+ * row stays dark, with a thin line under it that fills as a timer gets close, or shows Health's and Prayer's level; a
+ * firing row lights up in its color, and pulses with the screen flash. Text is RuneScape's small font whatever
+ * RuneLite's interface font is: the 129 px rows are laid out for it.
  */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
@@ -245,7 +245,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
             held ? tooltip(type) + "</br>" + HELD_TOOLTIP : tooltip(type));
     }
 
-    /** XP per hour for the skill you're training, in game yellow, with its own icon. */
+    /** XP per hour for the skill you're training, with its own icon. */
     private XpRow xpRow(Skill skill, long now)
     {
         XpRates rates = plugin.getXpRates();
@@ -254,7 +254,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return new XpRow(icon, skill.getName(), XpRates.format(rates.perHour(skill, now)) + "/h",
             "XP/h for " + skill.getName() + ", the last skill to gain XP: "
                 + String.format(Locale.ROOT, "%,d", rates.gained(skill)) + " XP in "
-                + formatClock(rates.elapsed(skill, now)) + ".</br>Shift + right-click and Reset XP/h after a break.");
+                + XpRates.formatTime(rates.elapsed(skill, now)) + ".</br>Shift + right-click and Reset XP/h after a break.");
     }
 
     private String tooltip(AlertType type)
@@ -538,6 +538,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
 
         XpRow(BufferedImage skillIcon, String label, String value, String tooltip)
         {
+            // Never lit and no line, so the ink only has to be some color.
             super(null, label, value, INFO_COLOR, null, 0, false, tooltip);
             this.skillIcon = skillIcon;
         }

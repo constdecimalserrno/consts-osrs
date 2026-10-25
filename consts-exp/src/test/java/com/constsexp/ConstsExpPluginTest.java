@@ -134,21 +134,36 @@ public class ConstsExpPluginTest
     // XP per hour
 
     @Test
-    public void xpPerHourCountsEachDropButNotALoginsFirstValuesAndClearsAtTheLoginScreen()
+    public void xpPerHourCountsEachDropFromTheFirstTickClearsAtTheLoginScreenAndAtShutDown() throws Exception
     {
-        // The login's first values for each skill aren't drops.
+        // At login the client may still read 0 XP; the login's burst of real values before the first tick isn't drops.
+        plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_000, 60, 60));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_035, 60, 60));
         assertNull(plugin.getXpRates().shown());
 
-        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_035, 60, 60));
+        when(client.getSkillExperience(Skill.MINING)).thenReturn(50_035);
+        plugin.onGameTick(new GameTick());
         plugin.onStatChanged(new StatChanged(Skill.MINING, 50_070, 60, 60));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_105, 60, 60));
         assertEquals(Skill.MINING, plugin.getXpRates().shown());
         assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
 
-        // A hop keeps it; the login screen clears it.
+        // A hop keeps it, and waits for a tick again; the login screen clears it.
         plugin.onGameStateChanged(gameState(GameState.HOPPING));
+        plugin.onGameStateChanged(gameState(GameState.LOGGED_IN));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_105, 60, 60));
         assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
         plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
+        assertNull(plugin.getXpRates().shown());
+
+        // Off and on again, maybe on another account: it starts again.
+        plugin.getXpRates().gain(Skill.MINING, 35, 0);
+        setField("overlayManager", mock(OverlayManager.class));
+        setField("mouseManager", mock(MouseManager.class));
+        setField("clientToolbar", mock(ClientToolbar.class));
+        setField("eventBus", mock(EventBus.class));
+        plugin.shutDown();
         assertNull(plugin.getXpRates().shown());
     }
 
