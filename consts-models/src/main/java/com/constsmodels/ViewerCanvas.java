@@ -287,13 +287,14 @@ final class ViewerCanvas extends JComponent
 
     /**
      * Shows this mesh, where the view is looking now, its triangles in these colors (one for each), or null for its
-     * own. The view keeps looking where it was, so taking a piece out doesn't move it.
+     * own. The view keeps looking where it was, so taking a piece out or the next frame of an animation doesn't move
+     * it. While the mouse is moving the model, it's drawn as small as moving pictures are.
      */
     void show(Mesh mesh, int[] colors)
     {
         this.shown = mesh;
         this.colors = colors;
-        draw(true);
+        draw(last == null);
     }
 
     /**
