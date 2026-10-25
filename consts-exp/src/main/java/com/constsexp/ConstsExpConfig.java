@@ -215,6 +215,20 @@ public interface ConstsExpConfig extends Config
         return true;
     }
 
+    @Range(max = 1440)
+    @Units(Units.MINUTES)
+    @ConfigItem(
+        keyName = "xpDropAfterMinutes",
+        name = "Drop After",
+        description = "A skill with no XP drop for this long leaves the XP per hour list. 0 keeps it until you reset it or log out",
+        section = xpSection,
+        position = 1
+    )
+    default int xpDropAfterMinutes()
+    {
+        return 60;
+    }
+
     @ConfigItem(
         keyName = "tickPendulum",
         name = "Enabled",

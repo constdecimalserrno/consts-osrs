@@ -41,7 +41,7 @@ public class XpRatesTest
     }
 
     @Test
-    public void aResetSetsTheSkillBackToZeroAndStartsItsClockAgain()
+    public void aResetTakesTheSkillOffTheListUntilItsNextDrop()
     {
         rates.gain(Skill.MINING, 100, T0);
         rates.gain(Skill.MINING, 100, T0 + MINUTE);
@@ -51,24 +51,63 @@ public class XpRatesTest
         assertEquals(0, rates.gained(Skill.MINING));
         assertEquals(0, rates.perHour(Skill.MINING, T0 + 2 * MINUTE));
         assertEquals(0, rates.elapsed(Skill.MINING, T0 + 2 * MINUTE));
-        assertEquals("the skill keeps its row, at zero", List.of(Skill.FISHING, Skill.MINING), rates.skills());
+        assertEquals("the skill leaves the list", List.of(Skill.FISHING), rates.skills());
         assertEquals("other skills are left alone", 50, rates.gained(Skill.FISHING));
 
         rates.gain(Skill.MINING, 100, T0 + 10 * MINUTE);
         rates.gain(Skill.MINING, 100, T0 + 11 * MINUTE);
+        assertEquals("back on top, from zero", List.of(Skill.MINING, Skill.FISHING), rates.skills());
         assertEquals(6_000, rates.perHour(Skill.MINING, T0 + 11 * MINUTE));
     }
 
     @Test
-    public void resetAllSetsEverySkillBackToZero()
+    public void resetAllEmptiesTheList()
     {
         rates.gain(Skill.MINING, 100, T0);
         rates.gain(Skill.FISHING, 50, T0);
 
-        rates.resetAll();
+        rates.clear();
+        assertEquals(List.of(), rates.skills());
         assertEquals(0, rates.gained(Skill.MINING));
-        assertEquals(0, rates.gained(Skill.FISHING));
-        assertEquals("the shown skill stays, at zero", Skill.FISHING, rates.shown());
+        assertNull("the status panel's row hides", rates.shown());
+    }
+
+    @Test
+    public void theShownSkillFallsBackToTheNewestLeftWhenItLeaves()
+    {
+        rates.gain(Skill.ATTACK, 40, T0);
+        rates.gain(Skill.HITPOINTS, 13, T0);
+        rates.gain(Skill.FISHING, 50, T0 + MINUTE);
+        rates.gain(Skill.MINING, 100, T0 + 2 * MINUTE);
+
+        rates.reset(Skill.MINING);
+        assertEquals(Skill.FISHING, rates.shown());
+        rates.reset(Skill.FISHING);
+        assertEquals(Skill.ATTACK, rates.shown());
+        rates.reset(Skill.ATTACK);
+        assertEquals("hitpoints once nothing else is left", Skill.HITPOINTS, rates.shown());
+        rates.reset(Skill.HITPOINTS);
+        assertNull(rates.shown());
+    }
+
+    @Test
+    public void aSkillWithNoDropForTheIdleTimeLeavesTheList()
+    {
+        long hour = 60 * MINUTE;
+        rates.gain(Skill.MINING, 100, T0);
+        rates.gain(Skill.FISHING, 50, T0);
+        rates.gain(Skill.FISHING, 50, T0 + 30 * MINUTE);
+
+        rates.dropIdle(hour, T0 + hour - 1);
+        assertEquals("not an hour yet", List.of(Skill.FISHING, Skill.MINING), rates.skills());
+
+        rates.dropIdle(hour, T0 + hour);
+        assertEquals("an hour since mining's last drop; fishing's was 30 minutes ago", List.of(Skill.FISHING),
+            rates.skills());
+        assertEquals(Skill.FISHING, rates.shown());
+
+        rates.dropIdle(0, T0 + 10 * hour);
+        assertEquals("0 drops nothing", List.of(Skill.FISHING), rates.skills());
     }
 
     @Test

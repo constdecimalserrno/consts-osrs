@@ -48,19 +48,20 @@ public class XpTableTest
     }
 
     @Test
-    public void eachRowResetsItsOwnSkillAndResetAllResetsEvery()
+    public void eachRowResetTakesOffItsOwnSkillAndResetAllClearsTheList()
     {
         rates.gain(Skill.MINING, 100, T0);
         rates.gain(Skill.FISHING, 50, T0);
         table.refresh(T0);
 
         buttons("Reset").get(1).doClick();
-        assertEquals(0, rates.gained(Skill.MINING));
-        assertEquals(50, rates.gained(Skill.FISHING));
-        assertEquals("the row shows it at once", "0", texts().get(7));
+        assertEquals(List.of(Skill.FISHING), rates.skills());
+        assertEquals("the row goes at once", List.of("Fishing"),
+            icons().stream().map(JLabel::getToolTipText).collect(Collectors.toList()));
 
         button("Reset all").doClick();
-        assertEquals(0, rates.gained(Skill.FISHING));
+        assertEquals(List.of(), rates.skills());
+        assertTrue(texts().toString(), texts().stream().anyMatch(t -> t.startsWith("Gain XP")));
     }
 
     private List<String> texts()

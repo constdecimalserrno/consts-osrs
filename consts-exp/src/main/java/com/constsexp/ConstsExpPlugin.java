@@ -404,6 +404,7 @@ public class ConstsExpPlugin extends Plugin
             seedSkillXp();
             xpArmed = true;
         }
+        xpRates.dropIdle(config.xpDropAfterMinutes() * 60_000L, System.currentTimeMillis());
         // Before the Master Switch's return, so the rows never outlive it.
         guardLuresShown = config.masterSwitch() && config.guardLures() && readGuardLures();
         if (!config.masterSwitch())
