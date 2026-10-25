@@ -13,7 +13,6 @@ import com.constsexp.gotr.overlay.SceneOverlay;
 import com.constsexp.gotr.plan.Planner;
 import com.constsexp.gotr.plan.PlannerSettings;
 import com.constsexp.gotr.plan.Step;
-import com.constsexp.gotr.plan.Strategy;
 import com.constsexp.gotr.state.GamePhase;
 import com.constsexp.gotr.state.Location;
 import com.constsexp.gotr.state.Snapshot;
@@ -91,9 +90,8 @@ public class GotrAutopilotTest
 	}
 
 	@Test
-	public void thePlannerRunsTheMassStrategy()
+	public void thePlannerSaysWhatToDoInTheLobbyAndNothingOutside()
 	{
-		assertEquals(Strategy.MASS, new PlannerSettings(false).getStrategy());
 		Snapshot lobby = Snapshot.builder().location(Location.LOBBY).phase(GamePhase.COUNTDOWN).build();
 		assertEquals(Step.IDLE_LOBBY, new Planner().plan(lobby, new PlannerSettings(false)).getStep());
 		assertEquals(Step.NOT_IN_GAME, new Planner().plan(Snapshot.OUTSIDE, new PlannerSettings(false)).getStep());

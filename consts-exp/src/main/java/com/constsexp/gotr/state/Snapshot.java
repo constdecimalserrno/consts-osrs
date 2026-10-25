@@ -312,16 +312,6 @@ public final class Snapshot
 		return secondsToNextGame;
 	}
 
-	public int getElementalEnergy()
-	{
-		return elementalEnergy;
-	}
-
-	public int getCatalyticEnergy()
-	{
-		return catalyticEnergy;
-	}
-
 	public int getPower()
 	{
 		return power;
@@ -403,26 +393,6 @@ public final class Snapshot
 	public int getEssence()
 	{
 		return essence;
-	}
-
-	public int getElementalStones()
-	{
-		return elementalStones;
-	}
-
-	public int getCatalyticStones()
-	{
-		return catalyticStones;
-	}
-
-	public int getPolyElementalStones()
-	{
-		return polyElementalStones;
-	}
-
-	public int getPolyCatalyticStones()
-	{
-		return polyCatalyticStones;
 	}
 
 	@Nullable
@@ -582,11 +552,6 @@ public final class Snapshot
 	public double getCraftPerTick()
 	{
 		return craftPerTick;
-	}
-
-	public double getHugePerTick()
-	{
-		return hugePerTick;
 	}
 
 	public int getSecondsToClose()

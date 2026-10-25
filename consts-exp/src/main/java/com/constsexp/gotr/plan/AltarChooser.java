@@ -71,11 +71,8 @@ class AltarChooser
 			CombinationRune combo = combinationAt(altar, s, c);
 			int perEssence = combo != null ? 3 : 2;
 			AltarChoice choice = new AltarChoice(altar, combo, viaTalisman, perEssence, "");
-			double score = c.getStrategy() == Strategy.MASS ? massScore(choice, s, c, essence) : 0;
-			boolean win = best == null || (c.getStrategy() == Strategy.MASS
-				? score > bestScore
-				: better(choice, best, s, c, essence));
-			if (win)
+			double score = massScore(choice, s, c, essence);
+			if (best == null || score > bestScore)
 			{
 				best = choice;
 				bestScore = score;
@@ -131,38 +128,6 @@ class AltarChooser
 		return combo;
 	}
 
-	private static boolean better(AltarChoice a, AltarChoice b, Snapshot s, PlannerSettings c, int essence)
-	{
-		int tierA = effectiveTier(a);
-		int tierB = effectiveTier(b);
-		boolean aStrong = tierA >= CellTier.STRONG.getRank() && imbalanceAfter(a, s, c, essence) <= c.getMaxImbalance();
-		boolean bStrong = tierB >= CellTier.STRONG.getRank() && imbalanceAfter(b, s, c, essence) <= c.getMaxImbalance();
-		if (aStrong != bStrong)
-		{
-			return aStrong;
-		}
-		if (aStrong)
-		{
-			if (tierA != tierB)
-			{
-				return tierA > tierB;
-			}
-			return projected(a.getAltar().getAlignment(), s, c) < projected(b.getAltar().getAlignment(), s, c);
-		}
-		// Neither is a safe high-tier pick: craft the type we are short of.
-		int needA = projected(a.getAltar().getAlignment(), s, c);
-		int needB = projected(b.getAltar().getAlignment(), s, c);
-		if (needA != needB)
-		{
-			return needA < needB;
-		}
-		if (tierA != tierB)
-		{
-			return tierA > tierB;
-		}
-		return a.getEnergyPerEssence() > b.getEnergyPerEssence();
-	}
-
 	// Score the trip's yield against imbalance and travel time.
 	static double massScore(AltarChoice choice, Snapshot s, PlannerSettings c, int essence)
 	{
@@ -206,12 +171,6 @@ class AltarChooser
 		double walkTicks = walk == null ? 25 : walk;
 		double backTicks = back == null ? 20 : back;
 		return ((walkTicks + backTicks) / 2.0 + altar.getInsideTiles() + 4) * 0.6;
-	}
-
-	private static int effectiveTier(AltarChoice choice)
-	{
-		int tier = choice.getAltar().getCellTier().getRank();
-		return choice.getCombination() != null ? Math.min(CellTier.OVERCHARGED.getRank(), tier + 1) : tier;
 	}
 
 	static int projected(Alignment alignment, Snapshot s, PlannerSettings c)

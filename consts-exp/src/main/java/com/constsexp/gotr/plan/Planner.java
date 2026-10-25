@@ -34,7 +34,6 @@ import com.constsexp.gotr.state.Location;
 import com.constsexp.gotr.state.PouchState;
 import com.constsexp.gotr.state.Snapshot;
 import com.google.common.collect.ImmutableSet;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -77,7 +76,6 @@ public class Planner
 	private static final int PORTAL_INTERVAL_SECONDS = 140;
 	private static final int PORTAL_VISIT_SECONDS = 40;
 	private static final String NO_CHISEL = "no chisel to make a guardian";
-	private static final String KEEP_WEAK = "Never recharge it: the 60% explosion then does it little harm";
 
 	public Instruction plan(Snapshot s, PlannerSettings c)
 	{
@@ -186,41 +184,6 @@ public class Planner
 	private Instruction spendCellBeforeGame(Snapshot s, PlannerSettings c, String when)
 	{
 		Set<Integer> cell = ImmutableSet.of(s.getChargedCell().getCellItemId());
-		if (c.getStrategy() == Strategy.SOLO)
-		{
-			if (s.getGuardiansActive() == 0 && s.isChisel())
-			{
-				return Instruction.builder().step(Step.PRE_BUILD_GUARDIAN).headline("Make a weak elemental guardian")
-					.detail("Use the cell on the east essence pile")
-					.target(Target.ESSENCE_PILE_ELEMENTAL).items(cell).build();
-			}
-			WorldPoint tile = soloTile(s);
-			// A cell left from the last trip is lost with the round: in the closing window a
-			// guardian is what the wiki suggests for it, once the barrier stands.
-			boolean closing = s.getPhase() == GamePhase.CLOSING || s.getPhase() == GamePhase.ENDED;
-			if (closing && tile == null && s.getGuardiansActive() < s.getGuardiansMax() && s.isChisel())
-			{
-				Alignment alignment = shortAlignment(s, c);
-				return Instruction.builder().step(Step.PRE_BUILD_GUARDIAN)
-					.headline("Make a " + s.getChargedCell().getLabel().toLowerCase() + " " + alignment.getLabel().toLowerCase() + " guardian")
-					.detail("Use the cell on the essence pile")
-					.target(pileFor(alignment)).items(cell).build();
-			}
-			if (tile != null)
-			{
-				String noChisel = !s.isChisel() && s.getGuardiansActive() == 0 && c.getDesiredGuardians() > 0 ? NO_CHISEL : "";
-				return Instruction.builder().step(Step.PRE_BUILD_BARRIER).headline("Build the centre barrier")
-					.detail("Between the fire and blood portals" + (noChisel.isEmpty() ? "" : " - " + noChisel))
-					.target(Target.CELL_TILE).location(tile).items(cell).build();
-			}
-			WorldPoint right = weakRightTile(s, c, s.getChargedCell());
-			if (right != null)
-			{
-				return Instruction.builder().step(Step.PRE_BUILD_BARRIER).headline("Build a weak barrier on the far right")
-					.detail(KEEP_WEAK).target(Target.CELL_TILE).location(right).items(cell).build();
-			}
-			return null;
-		}
 		if (!s.getEmptyTiles().isEmpty())
 		{
 			return Instruction.builder().step(Step.PRE_BUILD_BARRIER).headline("Build a barrier")
@@ -415,72 +378,7 @@ public class Planner
 				.detail("Keep barriers and guardians up").urgency(Urgency.INFO).build();
 		}
 
-		if (c.getStrategy() == Strategy.MASS)
-		{
-			return massPlan(s, c);
-		}
-
-		int essence = s.essenceTotal();
-		boolean full = s.capacity() == 0;
-		boolean nothingToCraft = s.getFragments() == 0;
-		if (essence >= MIN_TRIP_ESSENCE && !craftingUnderway(s)
-			&& ((nothingToCraft && s.capacity() < MIN_MINING_LEG) || !topUpWorthIt(s, essence)))
-		{
-			full = true;
-		}
-		if (essence > 0 && (full || (nothingToCraft && essence >= MIN_TRIP_ESSENCE)))
-		{
-			Instruction trip = altarTrip(s, c, essence);
-			if (trip.getStep() != Step.WAIT_FOR_ALTAR)
-			{
-				return trip;
-			}
-			// Continue mining/crafting while all altars are unavailable.
-			if (s.getFragments() > 0 && s.capacity() == 0)
-			{
-				return mineWhileWaitingForAltar(s, c);
-			}
-			if (s.getFragments() == 0 && s.capacity() < MIN_MINING_LEG)
-			{
-				// Preserve the specific weak-altar wait instruction.
-				if (AltarChooser.choose(s, c) != null)
-				{
-					return trip;
-				}
-				return s.getFreeSlots() > 0 ? mineWhileWaitingForAltar(s, c) : waitForAltar(s);
-			}
-		}
-
-		if (s.getFragments() > 0 && s.capacity() > 0 && (essence == 0 || topUpWorthIt(s, essence) || craftingUnderway(s)))
-		{
-			if (craftingUnderway(s))
-			{
-				return craftEssence(s);
-			}
-			Instruction mine = openingMine(s, c);
-			if (mine == null)
-			{
-				mine = midGameMine(s, c);
-			}
-			if (mine != null)
-			{
-				return mine;
-			}
-			return craftEssence(s);
-		}
-		if (s.getFragments() > 0 && s.capacity() == 0)
-		{
-			return Instruction.builder().step(Step.FREE_SPACE).headline("Make room for essence")
-				.detail("Use your cell or drop an item").build();
-		}
-
-		Instruction portalWait = portalWait(s, c);
-		if (portalWait != null)
-		{
-			return portalWait;
-		}
-		// The opening run is the configured size; with the altars open a run is a load.
-		return mineFragments(s, c, s.isAnyPortalThisGame() || altarsOpen(s) ? s.capacity() : c.getOpeningFragmentTarget());
+		return massPlan(s, c);
 	}
 
 	private Instruction massPlan(Snapshot s, PlannerSettings c)
@@ -962,36 +860,6 @@ public class Planner
 	}
 
 	/**
-	 * Solo and general: the opening run, mined to its target or cut at the craft window before
-	 * the first altars open, to be crafting as they do. Once they are open a run is sized to
-	 * the load instead (see {@link #midGameMine}).
-	 */
-	@Nullable
-	private Instruction openingMine(Snapshot s, PlannerSettings c)
-	{
-		if (s.isAnyPortalThisGame() || altarsOpen(s) || s.getEssence() > 0)
-		{
-			return null;
-		}
-		int target = c.getOpeningFragmentTarget();
-		if (s.getFragments() >= target)
-		{
-			return null;
-		}
-		int rot = s.getAltarSecondsRemaining();
-		// Craft no earlier than the load needs: with the pouches already full, a short craft can wait.
-		int craftSeconds = (int) Math.round(Math.min(s.getFragments(), s.capacity()) / s.getCraftPerTick() * 0.6)
-			+ walkSeconds(s, Target.WORKBENCH, 10);
-		boolean windowOpen = rot >= 0 && rot <= c.getCraftWindowSeconds() && rot <= craftSeconds + 8
-			&& s.getFragments() >= c.getMinFragmentsToCraft();
-		if (windowOpen)
-		{
-			return null;
-		}
-		return mineFragments(s, c, target);
-	}
-
-	/**
 	 * With mining after the opening turned off, a walk back to the remains becomes crafting the
 	 * fragments left, a trip with the essence in hand, or a wait for the next portal's essence.
 	 */
@@ -1040,38 +908,6 @@ public class Planner
 	private static boolean massOpeningRun(Snapshot s, PlannerSettings c)
 	{
 		return !pastOpening(s) && s.essenceTotal() == 0 && s.getFragments() < c.getOpeningFragmentTarget();
-	}
-
-	/**
-	 * Solo and general, with the altars open: a run is a full load, as the altars change every
-	 * 20 s and there is no pair to craft in time for. It is cut short only for a portal the
-	 * rest of it would miss, once there is a load worth crafting.
-	 */
-	@Nullable
-	private Instruction midGameMine(Snapshot s, PlannerSettings c)
-	{
-		if (!s.isAnyPortalThisGame() && !altarsOpen(s))
-		{
-			return null;
-		}
-		int room = s.capacity();
-		int fragments = s.getFragments();
-		int remaining = room - fragments;
-		if (remaining <= 0 || !miningLegWorthIt(s, remaining))
-		{
-			return null;
-		}
-		int craftSeconds = craftOnlySeconds(s, Math.min(fragments, room));
-		int trip = (int) Math.round(AltarChooser.tripSeconds(s, s.getActiveCatalytic() != null ? s.getActiveCatalytic() : Altar.AIR));
-		// A run under way is not cut short for a portal that is only a few seconds too soon.
-		int slack = s.getLastStep() == Step.MINE_FRAGMENTS ? 5 : 0;
-		boolean portalTooSoon = s.getSecondsToNextPortal() >= 0
-			&& legSeconds(s, remaining) + craftSeconds + trip > s.getSecondsToNextPortal() + slack;
-		if (portalTooSoon && fragments >= c.getMinFragmentsToCraft())
-		{
-			return null;
-		}
-		return mineFragments(s, c, room);
 	}
 
 	/**
@@ -1209,18 +1045,6 @@ public class Planner
 			.target(Target.WORKBENCH).items(FRAGMENT_ITEM).build();
 	}
 
-	@Nullable
-	private Instruction portalWait(Snapshot s, PlannerSettings c)
-	{
-		int eta = s.getSecondsToNextPortal();
-		if (eta < 0 || eta > c.getPortalWarningSeconds() || s.capacity() < c.getPortalMinCapacity())
-		{
-			return null;
-		}
-		return Instruction.builder().step(Step.WAIT_FOR_PORTAL).headline("Portal opens in ~" + eta + "s")
-			.detail("").urgency(Urgency.INFO).build();
-	}
-
 	private boolean shouldHoldStones(Snapshot s, PlannerSettings c)
 	{
 		if (!s.isAnyPortalThisGame() || s.getMaxPower() <= 0 || s.getSecondsSinceLastPortal() < 0)
@@ -1279,21 +1103,13 @@ public class Planner
 		}
 		// Without a chisel the cell goes to a barrier instead; say why, as the guardian was wanted.
 		String note = wantGuardian ? NO_CHISEL : "";
-		// Solo rebuilds its one barrier whenever it is down, whatever else stands.
-		WorldPoint tile = c.getStrategy() == Strategy.SOLO ? soloTile(s) : s.getBarriers().isEmpty() ? emptyTile(s) : null;
+		WorldPoint tile = s.getBarriers().isEmpty() ? emptyTile(s) : null;
 		if (tile != null)
 		{
 			return Instruction.builder().step(Step.CELL_BARRIER_BUILD).headline("Build a barrier")
 				.detail(note).target(Target.CELL_TILE).location(tile).items(cell).build();
 		}
 		BarrierState target = barrierToTend(s, c, tier);
-		WorldPoint right = weakRightTile(s, c, tier);
-		boolean urgent = target != null && target.getHealthPercent() >= 0 && target.getHealthPercent() < 60;
-		if (right != null && !urgent)
-		{
-			return Instruction.builder().step(Step.CELL_BARRIER_BUILD).headline("Build a weak barrier on the far right")
-				.detail(KEEP_WEAK).target(Target.CELL_TILE).location(right).items(cell).build();
-		}
 		if (target != null)
 		{
 			if (target.getTier().getRank() < tier.getRank())
@@ -1330,7 +1146,7 @@ public class Planner
 		BarrierState fresh = freshBarrierToTend(s, c, tier);
 		// Keep the previous barrier unless a new target is below 60% health, or it is now left alone.
 		BarrierState kept = barrierAt(barriers, s.getChosenTile());
-		if (kept == null || kept == fresh || kept == protectedBarrier(s, c))
+		if (kept == null || kept == fresh)
 		{
 			return fresh;
 		}
@@ -1377,7 +1193,6 @@ public class Planner
 	private BarrierState freshBarrierToTend(Snapshot s, PlannerSettings c, CellTier tier)
 	{
 		List<BarrierState> barriers = s.getBarriers();
-		BarrierState protectedBarrier = protectedBarrier(s, c);
 		WorldPoint me = s.getPlayerLocation();
 		BarrierState damaged = null;
 		BarrierState upgradable = null;
@@ -1385,10 +1200,6 @@ public class Planner
 		int nearestDistance = Integer.MAX_VALUE;
 		for (BarrierState barrier : barriers)
 		{
-			if (barrier == protectedBarrier)
-			{
-				continue;
-			}
 			int distance = me == null ? 0 : barrier.getLocation().distanceTo2D(me);
 			int hp = barrier.getHealthPercent();
 			if (hp >= 0 && hp < NEEDS_CELL_PERCENT && (damaged == null || hp < damaged.getHealthPercent()
@@ -1472,97 +1283,6 @@ public class Planner
 	private static String direction(Snapshot s)
 	{
 		return s.getPortalDirection() == null || s.getPortalDirection().isEmpty() ? "" : " (" + s.getPortalDirection() + ")";
-	}
-
-	/**
-	 * Where the solo barrier still has to be built, or null once it stands. The strategy keeps
-	 * one barrier, between the fire and blood portals, for the creatures to queue at: a second
-	 * one near the middle splits them, so a neighbouring tile is never a stand-in.
-	 */
-	@Nullable
-	private static WorldPoint soloTile(Snapshot s)
-	{
-		WorldPoint centre = soloCentre(s);
-		if (centre == null)
-		{
-			// The portals are out of view: the first barrier goes on the nearest tile, and no more.
-			return s.getBarriers().isEmpty() ? nearest(s.getEmptyTiles(), s.getPlayerLocation()) : null;
-		}
-		return s.getEmptyTiles().contains(centre) ? centre : null;
-	}
-
-	// The solo barrier's tile, empty or not: the cell tile nearest the middle of the fire and blood portals.
-	@Nullable
-	private static WorldPoint soloCentre(Snapshot s)
-	{
-		WorldPoint fire = s.getPortalGuardians().get(Altar.FIRE);
-		WorldPoint blood = s.getPortalGuardians().get(Altar.BLOOD);
-		if (fire == null || blood == null)
-		{
-			return null;
-		}
-		WorldPoint mid = new WorldPoint((fire.getX() + blood.getX()) / 2, (fire.getY() + blood.getY()) / 2, fire.getPlane());
-		return nearest(cellTiles(s), mid);
-	}
-
-	/**
-	 * Solo: the right-most tile, whose barrier is built weak and never recharged, as the 60%
-	 * explosion does at most its health less one to it. Null when it is the solo barrier's own
-	 * tile or the setting is off.
-	 */
-	@Nullable
-	private static WorldPoint protectedTile(Snapshot s, PlannerSettings c)
-	{
-		if (c.getStrategy() != Strategy.SOLO || !c.isProtectRightBarrier())
-		{
-			return null;
-		}
-		WorldPoint right = null;
-		for (WorldPoint tile : cellTiles(s))
-		{
-			if (right == null || tile.getX() > right.getX())
-			{
-				right = tile;
-			}
-		}
-		return right == null || right.equals(soloCentre(s)) ? null : right;
-	}
-
-	/**
-	 * Solo: the barrier left alone, going by its tile. Going by the barriers that happen to stand,
-	 * a stray one to the west of the solo barrier would hand the solo barrier the protection.
-	 * Creatures do not attack it, so it is not tended even while it is the only one standing.
-	 */
-	@Nullable
-	private static BarrierState protectedBarrier(Snapshot s, PlannerSettings c)
-	{
-		WorldPoint tile = protectedTile(s, c);
-		// With the solo barrier's place unknown, a lone barrier may well be it.
-		if (tile == null || (soloCentre(s) == null && s.getBarriers().size() < 2))
-		{
-			return null;
-		}
-		return barrierAt(s.getBarriers(), tile);
-	}
-
-	// Solo: the right-most tile while it is empty and a weak cell is in hand, once the solo barrier stands.
-	@Nullable
-	private static WorldPoint weakRightTile(Snapshot s, PlannerSettings c, CellTier tier)
-	{
-		WorldPoint right = tier == CellTier.WEAK ? protectedTile(s, c) : null;
-		return right != null && s.getEmptyTiles().contains(right) && soloTile(s) == null ? right : null;
-	}
-
-	// Every cell tile: empty, broken or under a barrier.
-	private static List<WorldPoint> cellTiles(Snapshot s)
-	{
-		List<WorldPoint> tiles = new ArrayList<>(s.getEmptyTiles());
-		tiles.addAll(s.getBrokenTiles());
-		for (BarrierState barrier : s.getBarriers())
-		{
-			tiles.add(barrier.getLocation());
-		}
-		return tiles;
 	}
 
 	@Nullable

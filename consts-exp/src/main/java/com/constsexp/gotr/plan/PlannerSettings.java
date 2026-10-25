@@ -25,8 +25,9 @@
 package com.constsexp.gotr.plan;
 
 /**
- * consts-EXP has no GOTR settings but its switch, so every one is fixed at upstream's default, Strategy at Mass;
- * only what the player carries changes.
+ * consts-EXP has no GOTR settings but its switch, so every one is fixed at upstream's default and the planner
+ * plays only upstream's default strategy, Mass (its General and Solo plans are cut); only what the player carries
+ * changes.
  */
 public final class PlannerSettings
 {
@@ -37,17 +38,12 @@ public final class PlannerSettings
 		this.combinationRunes = combinationRunes;
 	}
 
-	public Strategy getStrategy()
-	{
-		return Strategy.MASS;
-	}
-
 	public int getOpeningFragmentTarget()
 	{
 		return 120;
 	}
 
-	// Seconds before the first altars open at which the solo and general opening run stops to craft.
+	// Seconds before the altars change at which a run past the opening stops mining to craft.
 	public int getCraftWindowSeconds()
 	{
 		return 50;
@@ -76,11 +72,6 @@ public final class PlannerSettings
 	public int getMaxImbalance()
 	{
 		return 200;
-	}
-
-	public boolean isProtectRightBarrier()
-	{
-		return true;
 	}
 
 	public int getPortalMinCapacity()
