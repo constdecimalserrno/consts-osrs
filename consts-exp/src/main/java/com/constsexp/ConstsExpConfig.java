@@ -151,37 +151,45 @@ public interface ConstsExpConfig extends Config
     String cargoSection = "cargo";
 
     @ConfigSection(
+        name = "Thieving",
+        description = "Stealing Artefacts: whether Port Piscarilius' two guards are lured",
+        position = 13,
+        closedByDefault = true
+    )
+    String thievingSection = "thieving";
+
+    @ConfigSection(
         name = "XP per Hour",
         description = "XP per hour for the skill you're training, in the status panel",
-        position = 13
+        position = 14
     )
     String xpSection = "xp";
 
     @ConfigSection(
         name = "Tick Pendulum",
         description = "A pendulum in the status panel: each swing is one tick's click window, and the lines in its middle glow when it's time to click",
-        position = 14
+        position = 15
     )
     String tickSection = "tick";
 
     @ConfigSection(
         name = "Timing",
         description = "Click pause, quiet after dismiss, give up after and startup delay",
-        position = 15
+        position = 16
     )
     String timingSection = "general";
 
     @ConfigSection(
         name = "Sounds",
         description = "What alerts sound like, and how often",
-        position = 16
+        position = 17
     )
     String soundsSection = "sounds";
 
     @ConfigSection(
         name = "Screen Flash",
         description = "The flash over the game screen while an alert fires",
-        position = 17
+        position = 18
     )
     String flashSection = "flash";
 
@@ -1093,5 +1101,21 @@ public interface ConstsExpConfig extends Config
     default Color cargoHoldFlashColor()
     {
         return new Color(150, 110, 255);
+    }
+
+    // Thieving
+
+    // From pajlads' Stealing Artefacts (MIT, Copyright 2020 Christopher Bitler); see GuardLures.java. Not an alert: no
+    // preset touches it.
+    @ConfigItem(
+        keyName = "guardLures",
+        name = "Guard Lures",
+        description = "In Port Piscarilius, two rows in the status panel, the east and south-east guards, each a green tick once it's lured and a red cross while it isn't",
+        section = thievingSection,
+        position = 0
+    )
+    default boolean guardLures()
+    {
+        return true;
     }
 }

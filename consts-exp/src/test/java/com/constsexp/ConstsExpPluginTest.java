@@ -32,11 +32,13 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.IndexedObjectSet;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectID;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
@@ -130,6 +132,53 @@ public class ConstsExpPluginTest
     public void tearDown() throws Exception
     {
         invokePrivate("shutdownScheduler");
+    }
+
+    // Guard lures
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void guardLuresShowInPortPiscariliusWhileBothSwitchesAreOnAndClearOnAHop()
+    {
+        List<NPC> seen = new java.util.ArrayList<>(List.of(GuardLuresTest.npc(6980, new WorldPoint(1777, 3746, 0), 0)));
+        IndexedObjectSet<NPC> npcs = mock(IndexedObjectSet.class);
+        when(npcs.iterator()).thenAnswer(invocation -> List.copyOf(seen).iterator());
+        WorldView worldView = mock(WorldView.class);
+        when(worldView.npcs()).thenReturn((IndexedObjectSet) npcs);
+        // The tree timer reads the players.
+        IndexedObjectSet<Player> players = mock(IndexedObjectSet.class);
+        when(players.iterator()).thenAnswer(invocation -> List.<Player>of().iterator());
+        when(worldView.players()).thenReturn((IndexedObjectSet) players);
+        when(client.getTopLevelWorldView()).thenReturn(worldView);
+        when(player.getWorldLocation()).thenReturn(new WorldPoint(1790, 3740, 0));
+
+        plugin.onGameTick(new GameTick());
+        assertFalse("Guard Lures off", plugin.isGuardLuresShown());
+
+        when(config.guardLures()).thenReturn(true);
+        plugin.onGameTick(new GameTick());
+        assertTrue(plugin.isGuardLuresShown());
+        assertTrue(plugin.getGuardLures().isEastLured());
+
+        // Gone from sight: it stays lured.
+        seen.clear();
+        plugin.onGameTick(new GameTick());
+        assertTrue(plugin.getGuardLures().isEastLured());
+
+        // The Master Switch hides the rows on its tick.
+        when(config.masterSwitch()).thenReturn(false);
+        plugin.onGameTick(new GameTick());
+        assertFalse(plugin.isGuardLuresShown());
+        when(config.masterSwitch()).thenReturn(true);
+
+        // Logging in, before the local player is there: nothing, and no NullPointerException.
+        when(client.getLocalPlayer()).thenReturn(null);
+        plugin.onGameTick(new GameTick());
+        assertFalse(plugin.isGuardLuresShown());
+
+        // Another world's guards start not lured.
+        plugin.onGameStateChanged(gameState(GameState.HOPPING));
+        assertFalse(plugin.getGuardLures().isEastLured());
     }
 
     // XP per hour
