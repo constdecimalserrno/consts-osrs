@@ -391,7 +391,7 @@ public class ConfigSidePanelTest
         List<String> general = rows(tabs.getTab(3).getContent(), true);
         assertTrue(alerts.size() > 1);
         assertFalse(skills.isEmpty());
-        assertEquals(List.of("xpPerHour", "tickPendulum", "pendulumRhythm", "yourPing"), tick);
+        assertEquals(List.of("xpPerHour", "xpDropAfterMinutes", "tickPendulum", "pendulumRhythm", "yourPing"), tick);
         assertFalse(general.isEmpty());
 
         // Every alert's and skill's setting sits under a folded header, Preset aside; every Tick & XP and General

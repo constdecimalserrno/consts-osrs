@@ -181,8 +181,10 @@ public class ConstsExpStatusOverlayTest
         assertTrue(xp.tooltip, xp.tooltip.contains("500 XP in 1:00"));
         assertTrue(rows.get(3) instanceof ConstsExpStatusOverlay.PendulumRow);
 
-        // Reset: back to zero, the row stays.
-        xpRates.resetAll();
+        // Reset: the row hides until the next drop, which starts it from zero.
+        xpRates.clear();
+        assertFalse(overlay.rows(NOW).stream().anyMatch(ConstsExpStatusOverlay.XpRow.class::isInstance));
+        xpRates.gain(Skill.MINING, 400, NOW);
         assertEquals("0/h", ((ConstsExpStatusOverlay.XpRow) overlay.rows(NOW).get(2)).value);
 
         when(config.xpPerHour()).thenReturn(false);

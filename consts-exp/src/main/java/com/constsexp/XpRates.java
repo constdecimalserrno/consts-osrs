@@ -11,10 +11,10 @@ import java.util.Set;
 import net.runelite.api.Skill;
 
 /**
- * XP per hour for each skill trained since the login: the XP after its first drop over the time since that drop, so
- * steady drops give their true rate and a single drop no spike. A reset sets a skill back to zero, with its clock
- * stopped until its next drop. Times are in ms, from the caller's clock. Drops come on the client thread and the side
- * menu reads on Swing's, so every method locks.
+ * XP per hour for each skill you're training: the XP after its first drop over the time since that drop, so steady
+ * drops give their true rate and a single drop no spike. A skill joins at its first drop and leaves at a reset, at the
+ * login screen, or once it's gone idle (see dropIdle). Times are in ms, from the caller's clock. Drops come on the
+ * client thread and the side menu reads on Swing's, so every method locks.
  */
 final class XpRates
 {
@@ -25,59 +25,73 @@ final class XpRates
     {
         long gained;
         long firstXp;
-        // When its first drop came since the login or its reset; -1 for none yet.
-        long firstAt = -1;
+        long firstAt;
+        long lastAt;
+        // Which drop of all was its last, so the shown skill follows the drops' order, not the clock.
+        long lastDrop;
     }
 
     // By first drop, oldest first.
     private final Map<Skill, Rate> rates = new LinkedHashMap<>();
-    private Skill last;
-    private Skill lastSide;
+    private long drops;
 
     synchronized void gain(Skill skill, int xp, long now)
     {
-        Rate rate = rates.computeIfAbsent(skill, s -> new Rate());
-        if (rate.firstAt < 0)
+        Rate rate = rates.computeIfAbsent(skill, s ->
         {
-            rate.firstAt = now;
-            rate.firstXp = xp;
-        }
+            Rate first = new Rate();
+            first.firstAt = now;
+            first.firstXp = xp;
+            return first;
+        });
         rate.gained += xp;
-        if (SIDE_SKILLS.contains(skill))
-        {
-            lastSide = skill;
-        }
-        else
-        {
-            last = skill;
-        }
+        rate.lastAt = now;
+        rate.lastDrop = ++drops;
     }
 
+    /** Takes the skill off the list; its next drop brings it back, from zero. */
     synchronized void reset(Skill skill)
     {
-        rates.computeIfPresent(skill, (s, rate) -> new Rate());
+        rates.remove(skill);
     }
 
-    synchronized void resetAll()
-    {
-        rates.replaceAll((s, rate) -> new Rate());
-    }
-
-    /** Forgets every skill, as at the login screen. */
+    /** Forgets every skill: Reset all, and the login screen. */
     synchronized void clear()
     {
         rates.clear();
-        last = null;
-        lastSide = null;
     }
 
-    /** The skill you're training: the last to gain XP, Hitpoints and Slayer only if no other has. Null for none. */
+    /** Takes off every skill whose last drop is idleMs or more ago; 0 or less keeps them all. */
+    synchronized void dropIdle(long idleMs, long now)
+    {
+        if (idleMs > 0)
+        {
+            rates.values().removeIf(rate -> now - rate.lastAt >= idleMs);
+        }
+    }
+
+    /** The skill you're training: the last left to gain XP, Hitpoints and Slayer only if no other is left. */
     synchronized Skill shown()
     {
-        return last != null ? last : lastSide;
+        Skill shown = null;
+        // Starts as a side skill before any drop, so the first skill always takes it.
+        boolean shownSide = true;
+        long shownDrop = 0;
+        for (Map.Entry<Skill, Rate> entry : rates.entrySet())
+        {
+            boolean side = SIDE_SKILLS.contains(entry.getKey());
+            long drop = entry.getValue().lastDrop;
+            if ((shownSide && !side) || (side == shownSide && drop > shownDrop))
+            {
+                shown = entry.getKey();
+                shownSide = side;
+                shownDrop = drop;
+            }
+        }
+        return shown;
     }
 
-    /** Every skill trained since the login, newest first. */
+    /** Every skill on the list, newest first (by first drop). */
     synchronized List<Skill> skills()
     {
         List<Skill> skills = new ArrayList<>(rates.keySet());
@@ -94,7 +108,7 @@ final class XpRates
     synchronized long elapsed(Skill skill, long now)
     {
         Rate rate = rates.get(skill);
-        return rate != null && rate.firstAt >= 0 ? Math.max(0, now - rate.firstAt) : 0;
+        return rate != null ? Math.max(0, now - rate.firstAt) : 0;
     }
 
     synchronized long perHour(Skill skill, long now)

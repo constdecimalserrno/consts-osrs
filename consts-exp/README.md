@@ -47,7 +47,7 @@ Under the title, four tabs split the settings: **Alerts**, which the panel opens
 |---|---|
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
 | Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Thieving (Guard Lures), Runecraft (GOTR Autopilot) |
-| Tick & XP | The XP table, then XP per Hour (Enabled), Tick Pendulum (Enabled, Rhythm, Your Ping) |
+| Tick & XP | The XP table, then XP per Hour (Enabled, Drop After), Tick Pendulum (Enabled, Rhythm, Your Ping) |
 | General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
 Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
@@ -107,8 +107,9 @@ The crew message arrives as a filtered (spam) game message; consts-EXP listens o
 On by default (**Tick & XP** → **XP per Hour** → **Enabled**). Once you gain XP, a row under the alerts shows your XP per hour in the skill you're training: the last one to gain XP. Hitpoints and Slayer come with combat XP, so they only show when no other skill has gained any. Hover the row for the XP gained and the time behind the rate.
 
 - **The rate** is the XP since the skill's first drop over the time since that drop, so steady drops give their true rate from the second one on. It keeps falling while you're away, which is what the reset is for.
-- **The Tick & XP tab** opens with a table of every skill trained since you logged in, newest first: its icon, XP/h, XP gained and time, and a **Reset** for each. **Reset all** under it resets every skill.
-- **Reset** sets a skill back to zero, for after a break; its clock starts again at its next drop. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to reset every skill from the game.
+- **The Tick & XP tab** opens with a table of the skills you're training, newest first: its icon, XP/h, XP gained and time, and a **Reset** for each. A skill joins the table at its first XP drop. **Reset all** under it clears the table.
+- **Reset** takes a skill off the table, for after a break; its next drop brings it back, from zero. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to clear every skill from the game. If the skill the status panel shows goes, the panel shows the last one left to gain XP, or hides the row.
+- **Drop After** (**XP per Hour**, 60 minutes by default) takes off a skill with no XP drop for that long. Set it to 0 to keep every skill until you reset it or log out.
 - **Logging out** clears it; hopping worlds and loading screens don't.
 
 ## Tick pendulum

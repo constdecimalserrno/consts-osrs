@@ -108,7 +108,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         setMinimumSize(ComponentConstants.STANDARD_WIDTH);
 
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset Aggro Timer", TITLE, e -> plugin.resetAggroTimer());
-        addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset XP/h", TITLE, e -> plugin.getXpRates().resetAll());
+        addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset XP/h", TITLE, e -> plugin.getXpRates().clear());
         for (Preset preset : Preset.values())
         {
             addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Preset: " + preset, TITLE, e -> plugin.applyPreset(preset));

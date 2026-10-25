@@ -22,8 +22,8 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
 /**
- * The Tick & XP tab's live table: one row per skill trained since the login, newest first (its icon, XP/h, XP gained
- * and the time since its first drop, and a reset), then Reset all. It follows the clock once a second while it shows.
+ * The Tick & XP tab's live table: one row per skill on XpRates' list, newest first (its icon, XP/h, XP gained and the
+ * time since its first drop, and a reset), then Reset all. It follows the clock once a second while it shows.
  */
 final class XpTable extends JPanel
 {
@@ -47,10 +47,10 @@ final class XpTable extends JPanel
         rows.setLayout(new BoxLayout(rows, BoxLayout.Y_AXIS));
         rows.setOpaque(false);
         add(rows, BorderLayout.CENTER);
-        resetAll.setToolTipText("Set every skill's XP/h back to zero, for after a break");
+        resetAll.setToolTipText("Clear the list, for after a break; each skill comes back at its next XP drop");
         resetAll.addActionListener(e ->
         {
-            rates.resetAll();
+            rates.clear();
             refresh(System.currentTimeMillis());
         });
         add(resetAll, BorderLayout.SOUTH);
@@ -113,7 +113,7 @@ final class XpTable extends JPanel
                 JLabel[] row = {cell("", Color.WHITE), cell("", Color.WHITE), cell("", Color.WHITE)};
                 cells.add(row);
                 JButton reset = resetButton();
-                reset.setToolTipText("Set " + skill.getName() + "'s XP/h back to zero");
+                reset.setToolTipText("Take " + skill.getName() + " off the list; it comes back at its next XP drop");
                 reset.addActionListener(e ->
                 {
                     rates.reset(skill);

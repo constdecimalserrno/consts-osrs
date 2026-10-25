@@ -220,6 +220,22 @@ public class ConstsExpPluginTest
         assertNull(plugin.getXpRates().shown());
     }
 
+    @Test
+    public void eachTickDropsASkillWithNoXpDropForDropAfterEvenUnderTheMasterSwitch()
+    {
+        when(config.masterSwitch()).thenReturn(false);
+        // A drop long ago, by the clock.
+        plugin.getXpRates().gain(Skill.MINING, 35, 0);
+
+        when(config.xpDropAfterMinutes()).thenReturn(0);
+        plugin.onGameTick(new GameTick());
+        assertEquals("0: never", Skill.MINING, plugin.getXpRates().shown());
+
+        when(config.xpDropAfterMinutes()).thenReturn(60);
+        plugin.onGameTick(new GameTick());
+        assertNull(plugin.getXpRates().shown());
+    }
+
     // Tick pendulum
 
     @Test
