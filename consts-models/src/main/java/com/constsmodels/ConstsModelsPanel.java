@@ -14,7 +14,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BaseMultiResolutionImage;
 import java.awt.image.BufferedImage;
-import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -37,8 +36,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.View;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.Range;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
@@ -531,9 +528,9 @@ class ConstsModelsPanel extends PluginPanel
 
         settings.setOpaque(false);
         settings.setBorder(new EmptyBorder(6, 0, 0, 0));
-        settings.add(settingRow("format", format));
-        settings.add(settingRow("captureRadius", radius));
-        settings.add(settingRow("shiftOnly", shiftOnly));
+        settings.add(settingRow(ConstsModelsConfig.FORMAT_NAME, ConstsModelsConfig.FORMAT_DESCRIPTION, format));
+        settings.add(settingRow(ConstsModelsConfig.RADIUS_NAME, ConstsModelsConfig.RADIUS_DESCRIPTION, radius));
+        settings.add(settingRow(ConstsModelsConfig.SHIFT_NAME, ConstsModelsConfig.SHIFT_DESCRIPTION, shiftOnly));
         settings.setVisible(false);
 
         JPanel section = new JPanel(new BorderLayout());
@@ -554,12 +551,11 @@ class ConstsModelsPanel extends PluginPanel
     }
 
     /** A setting's row: its name, its description on hover, and its control. */
-    private static JPanel settingRow(String key, JComponent control)
+    private static JPanel settingRow(String title, String description, JComponent control)
     {
-        ConfigItem item = setting(key).getAnnotation(ConfigItem.class);
-        JLabel name = new JLabel(item.name());
+        JLabel name = new JLabel(title);
         name.setForeground(Color.WHITE);
-        name.setToolTipText("<html>" + item.name() + ":<br>" + item.description() + "</html>");
+        name.setToolTipText("<html>" + title + ":<br>" + description + "</html>");
         JPanel row = new JPanel(new BorderLayout());
         row.setOpaque(false);
         row.add(name, BorderLayout.CENTER);
@@ -570,21 +566,8 @@ class ConstsModelsPanel extends PluginPanel
     /** The area radius's numbers, from the setting's own range. */
     private static SpinnerNumberModel radiusModel()
     {
-        Range range = setting("captureRadius").getAnnotation(Range.class);
-        return new SpinnerNumberModel(range.min(), range.min(), range.max(), 1);
-    }
-
-    /** A setting's getter, which carries its name, description and range. */
-    static Method setting(String key)
-    {
-        try
-        {
-            return ConstsModelsConfig.class.getMethod(key);
-        }
-        catch (NoSuchMethodException e)
-        {
-            throw new IllegalArgumentException("no setting " + key, e);
-        }
+        return new SpinnerNumberModel(ConstsModelsConfig.RADIUS_MIN, ConstsModelsConfig.RADIUS_MIN,
+            ConstsModelsConfig.RADIUS_MAX, 1);
     }
 
     /** What a tab shows while it has no captures. */
