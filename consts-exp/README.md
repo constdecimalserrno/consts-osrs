@@ -108,7 +108,7 @@ On by default (**Tick & XP** → **XP per Hour** → **Enabled**). Once you gain
 
 - **The rate** is the XP since the skill's first drop over the time since that drop, so steady drops give their true rate from the second one on. It keeps falling while you're away, which is what the reset is for.
 - **The Tick & XP tab** opens with a table of the skills you're training, newest first: its icon, XP/h, XP gained and time, and a **Reset** for each. A skill joins the table at its first XP drop. **Reset all** under it clears the table.
-- **Reset** takes a skill off the table, for after a break; its next drop brings it back, from zero. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to clear every skill from the game. If the skill the status panel shows goes, the panel shows the newest one left, or hides the row.
+- **Reset** takes a skill off the table, for after a break; its next drop brings it back, from zero. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to clear every skill from the game. If the skill the status panel shows goes, the panel shows the last one left to gain XP, or hides the row.
 - **Drop After** (**XP per Hour**, 60 minutes by default) takes off a skill with no XP drop for that long. Set it to 0 to keep every skill until you reset it or log out.
 - **Logging out** clears it; hopping worlds and loading screens don't.
 

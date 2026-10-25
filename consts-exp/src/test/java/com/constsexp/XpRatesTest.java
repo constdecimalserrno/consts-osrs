@@ -91,6 +91,17 @@ public class XpRatesTest
     }
 
     @Test
+    public void theShownSkillFollowsTheDropsOrderNotTheClock()
+    {
+        // Two skills in the same ms (longrange), then the clock steps back.
+        rates.gain(Skill.RANGED, 40, T0);
+        rates.gain(Skill.DEFENCE, 40, T0);
+        assertEquals(Skill.DEFENCE, rates.shown());
+        rates.gain(Skill.RANGED, 40, T0 - MINUTE);
+        assertEquals(Skill.RANGED, rates.shown());
+    }
+
+    @Test
     public void aSkillWithNoDropForTheIdleTimeLeavesTheList()
     {
         long hour = 60 * MINUTE;

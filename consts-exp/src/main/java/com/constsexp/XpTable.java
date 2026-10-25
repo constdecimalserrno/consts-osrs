@@ -22,8 +22,8 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
 /**
- * The Tick & XP tab's live table: one row per skill on XpRates' list, newest first (its icon, XP/h, XP gained
- * and the time since its first drop, and a reset), then Reset all. It follows the clock once a second while it shows.
+ * The Tick & XP tab's live table: one row per skill on XpRates' list, newest first (its icon, XP/h, XP gained and the
+ * time since its first drop, and a reset), then Reset all. It follows the clock once a second while it shows.
  */
 final class XpTable extends JPanel
 {

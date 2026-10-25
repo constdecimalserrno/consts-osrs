@@ -27,10 +27,13 @@ final class XpRates
         long firstXp;
         long firstAt;
         long lastAt;
+        // Which drop of all was its last, so the shown skill follows the drops' order, not the clock.
+        long lastDrop;
     }
 
     // By first drop, oldest first.
     private final Map<Skill, Rate> rates = new LinkedHashMap<>();
+    private long drops;
 
     synchronized void gain(Skill skill, int xp, long now)
     {
@@ -43,6 +46,7 @@ final class XpRates
         });
         rate.gained += xp;
         rate.lastAt = now;
+        rate.lastDrop = ++drops;
     }
 
     /** Takes the skill off the list; its next drop brings it back, from zero. */
@@ -66,24 +70,22 @@ final class XpRates
         }
     }
 
-    /**
-     * The skill you're training: the last to gain XP, Hitpoints and Slayer only if no other has. Null for none. A
-     * tie (drops in the same ms) goes to the newer skill on the list.
-     */
+    /** The skill you're training: the last left to gain XP, Hitpoints and Slayer only if no other is left. */
     synchronized Skill shown()
     {
         Skill shown = null;
+        // Starts as a side skill before any drop, so the first skill always takes it.
         boolean shownSide = true;
-        long shownAt = Long.MIN_VALUE;
+        long shownDrop = 0;
         for (Map.Entry<Skill, Rate> entry : rates.entrySet())
         {
             boolean side = SIDE_SKILLS.contains(entry.getKey());
-            long at = entry.getValue().lastAt;
-            if ((shownSide && !side) || (side == shownSide && at >= shownAt))
+            long drop = entry.getValue().lastDrop;
+            if ((shownSide && !side) || (side == shownSide && drop > shownDrop))
             {
                 shown = entry.getKey();
                 shownSide = side;
-                shownAt = at;
+                shownDrop = drop;
             }
         }
         return shown;
