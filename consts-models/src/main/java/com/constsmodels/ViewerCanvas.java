@@ -440,7 +440,6 @@ final class ViewerCanvas extends JComponent
                     }
                     catch (InterruptedException e)
                     {
-                        Thread.currentThread().interrupt();
                         return;
                     }
                 }

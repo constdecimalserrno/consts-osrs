@@ -8,11 +8,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.awt.Component;
+import java.awt.Container;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.AbstractButton;
+import javax.swing.JLabel;
+import javax.swing.SpinnerNumberModel;
+import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Range;
 import net.runelite.client.util.Filepath;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,9 +71,6 @@ public class ConstsModelsPanelTest
         assertTrue(panel.settingsOpen());
         assertEquals(ExportFormat.OBJ, panel.formatBox().getSelectedItem());
         assertEquals(6, panel.radiusSpinner().getValue());
-        // Named as in the Configuration panel, from the same annotations
-        assertEquals("Area radius (tiles)",
-            ConstsModelsPanel.setting("captureRadius").getAnnotation(net.runelite.client.config.ConfigItem.class).name());
 
         panel.formatBox().setSelectedItem(ExportFormat.PLY);
         panel.radiusSpinner().setValue(9);
@@ -81,6 +84,41 @@ public class ConstsModelsPanelTest
         panel.refresh();
         assertEquals(12, panel.radiusSpinner().getValue());
         verify(config, never()).captureRadius(12);
+    }
+
+    /** Each setting is named and described as in the Configuration panel, and the radius keeps its range. */
+    @Test
+    public void theSettingsReadAsInTheConfigurationPanel() throws NoSuchMethodException
+    {
+        ConstsModelsPanel panel = new ConstsModelsPanel(plugin, config);
+        List<JLabel> labels = new ArrayList<>();
+        collect(panel, labels);
+        for (String key : List.of("format", "captureRadius", "shiftOnly"))
+        {
+            ConfigItem item = ConstsModelsConfig.class.getMethod(key).getAnnotation(ConfigItem.class);
+            JLabel label = labels.stream().filter(l -> item.name().equals(l.getText())).findFirst()
+                .orElseThrow(() -> new AssertionError("no " + item.name() + " row"));
+            assertEquals("<html>" + item.name() + ":<br>" + item.description() + "</html>", label.getToolTipText());
+        }
+        Range range = ConstsModelsConfig.class.getMethod("captureRadius").getAnnotation(Range.class);
+        SpinnerNumberModel radius = (SpinnerNumberModel) panel.radiusSpinner().getModel();
+        assertEquals(range.min(), radius.getMinimum());
+        assertEquals(range.max(), radius.getMaximum());
+    }
+
+    private static void collect(Container parent, List<JLabel> labels)
+    {
+        for (Component child : parent.getComponents())
+        {
+            if (child instanceof JLabel)
+            {
+                labels.add((JLabel) child);
+            }
+            if (child instanceof Container)
+            {
+                collect((Container) child, labels);
+            }
+        }
     }
 
     @Test

@@ -10,10 +10,20 @@ public interface ConstsModelsConfig extends Config
 {
     String GROUP = "constsmodels";
 
+    // Named here once, for the Configuration panel and the sidebar's Settings section alike
+    String FORMAT_NAME = "Save as";
+    String FORMAT_DESCRIPTION = "The file the viewer saves first: OBJ with its colors in a material file, or PLY with a color on every corner";
+    String RADIUS_NAME = "Area radius (tiles)";
+    String RADIUS_DESCRIPTION = "How far Capture area reaches from you, in tiles, each way";
+    int RADIUS_MIN = 1;
+    int RADIUS_MAX = 24;
+    String SHIFT_NAME = "Only with Shift";
+    String SHIFT_DESCRIPTION = "Show Export Model on the right-click menu only while Shift is held";
+
     @ConfigItem(
         keyName = "format",
-        name = "Save as",
-        description = "The file the viewer saves first: OBJ with its colors in a material file, or PLY with a color on every corner",
+        name = FORMAT_NAME,
+        description = FORMAT_DESCRIPTION,
         position = 1
     )
     default ExportFormat format()
@@ -23,11 +33,11 @@ public interface ConstsModelsConfig extends Config
 
     @ConfigItem(
         keyName = "captureRadius",
-        name = "Area radius (tiles)",
-        description = "How far Capture area reaches from you, in tiles, each way",
+        name = RADIUS_NAME,
+        description = RADIUS_DESCRIPTION,
         position = 2
     )
-    @Range(min = 1, max = 24)
+    @Range(min = RADIUS_MIN, max = RADIUS_MAX)
     default int captureRadius()
     {
         return 6;
@@ -35,8 +45,8 @@ public interface ConstsModelsConfig extends Config
 
     @ConfigItem(
         keyName = "shiftOnly",
-        name = "Only with Shift",
-        description = "Show Export Model on the right-click menu only while Shift is held",
+        name = SHIFT_NAME,
+        description = SHIFT_DESCRIPTION,
         position = 3
     )
     default boolean shiftOnly()
