@@ -39,7 +39,7 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 The EXP icon in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset from the status panel's Shift + right-click menu and the **Preset** dropdown here shows it. The preset decides which alerts are on; an alert's own **Enabled** only counts under **Custom**. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel and no area lines, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines and no tree timer, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does.
 
 Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open; click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 
@@ -119,7 +119,7 @@ Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabl
 
 ## Tree timer
 
-A pie on each tree empties as the tree nears falling, ported from Tree Despawn Timer by Jason O'Neill. It isn't an alert and never beeps. It shows whenever **Tree Timer** (Skills → Woodcutting, on by default) is on, whatever the preset. Run it instead of that plugin, not beside it, or each tree gets two.
+A pie on each tree empties as the tree nears falling, ported from Tree Despawn Timer by Jason O'Neill. It isn't an alert and never beeps. It shows whenever **Tree Timer** (Skills → Woodcutting, on by default) is on, whatever the preset, unless the Master Switch is off. Run it instead of that plugin, not beside it, or each tree gets two.
 
 - **How it counts.** Under Forestry a tree has hidden health. It only starts going down once someone takes a first log. Then it drops by one every game tick (0.6 s) while anyone chops the tree, and climbs back by one every tick while nobody does. Chopping alone, the timer waits for your first log; anyone else chopping is taken to have had theirs. A full tree lasts as long as the OSRS Wiki says: an oak 27 s, a yew 1:54, a magic tree 3:54, a redwood 4:24.
 - **The pie** turns from green to yellow, orange and red as the tree runs low.

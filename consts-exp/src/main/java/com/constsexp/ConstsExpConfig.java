@@ -34,7 +34,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its EXP icon stays in the sidebar.",
+        description = "Off silences consts-EXP: no alerts, no status panel, no area lines, no tree timer. The plugin itself stays on, so its EXP icon stays in the sidebar.",
         position = -1
     )
     default boolean masterSwitch()
@@ -992,7 +992,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = "showTreeTimer",
         name = "Tree Timer",
-        description = "A pie on each tree that empties as it nears falling, whatever the preset. A tree that was already being chopped when you got there shows none, since its time can't be known",
+        description = "A pie on each tree that empties as it nears falling, whatever the preset (the Master Switch hides it too). A tree that was already being chopped when you got there shows none, since its time can't be known",
         section = woodcuttingSection,
         position = 12
     )

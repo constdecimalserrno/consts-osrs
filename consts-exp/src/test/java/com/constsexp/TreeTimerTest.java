@@ -81,13 +81,30 @@ public class TreeTimerTest
         assertEquals("no log yet, so no health lost", 45, oak.getTimeTicks());
         assertTrue("shown while you chop it", oak.shouldShowTimer());
 
-        timer.onStatChanged(Skill.ATTACK);
+        timer.onStatChanged(Skill.ATTACK, 1_000);
         tick(1);
         assertEquals("only Woodcutting XP is a log", 45, oak.getTimeTicks());
 
-        timer.onStatChanged(Skill.WOODCUTTING);
+        timer.onStatChanged(Skill.WOODCUTTING, 1_000);
         tick(3);
         assertEquals("then 1 a tick", 42, oak.getTimeTicks());
+    }
+
+    @Test
+    public void aBoostWithoutXpShouldNotCountAsALog()
+    {
+        TreeTimerState oak = spawnTree(ObjectID.OAKTREE, OAK_TILE);
+        timer.onStatChanged(Skill.WOODCUTTING, 1_000);
+        startChopping(me);
+        tick(1);
+
+        timer.onStatChanged(Skill.WOODCUTTING, 1_000);
+        tick(3);
+        assertEquals("a boost or its decay: same XP, no log", 45, oak.getTimeTicks());
+
+        timer.onStatChanged(Skill.WOODCUTTING, 1_025);
+        tick(3);
+        assertEquals("XP up: a log", 42, oak.getTimeTicks());
     }
 
     @Test
@@ -96,7 +113,7 @@ public class TreeTimerTest
         TreeTimerState oak = spawnTree(ObjectID.OAKTREE, OAK_TILE);
         startChopping(me);
         tick(1);
-        timer.onStatChanged(Skill.WOODCUTTING);
+        timer.onStatChanged(Skill.WOODCUTTING, 1_000);
         tick(10);
         assertEquals(35, oak.getTimeTicks());
 
@@ -164,7 +181,7 @@ public class TreeTimerTest
         assertFalse("its time can't be known", oak.shouldShowTimer());
 
         startChopping(me);
-        timer.onStatChanged(Skill.WOODCUTTING);
+        timer.onStatChanged(Skill.WOODCUTTING, 1_000);
         tick(10);
         assertFalse("chopping it yourself doesn't make the guess any better", oak.shouldShowTimer());
     }

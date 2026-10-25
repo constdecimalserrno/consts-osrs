@@ -417,7 +417,7 @@ public class ConstsExpPlugin extends Plugin
     public void onStatChanged(StatChanged event)
     {
         updateActivityFromXp(event.getSkill(), event.getXp());
-        treeTimer.onStatChanged(event.getSkill());
+        treeTimer.onStatChanged(event.getSkill(), event.getXp());
     }
 
     @Subscribe

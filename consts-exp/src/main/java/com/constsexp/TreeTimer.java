@@ -2,7 +2,8 @@
  * Copyright (c) 2023, Jason O'Neill
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from Tree Despawn Timer,
  *   TreeDespawnTimerPlugin.java, into a tracker consts-EXP feeds its events; no debug levels or chat messages,
- *   no timer thread, since only the pie is drawn, the top-level world view instead of the deprecated client calls)
+ *   no timer thread, since only the pie is drawn, a log only when XP goes up, the top-level world view instead
+ *   of the deprecated client calls)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -86,6 +87,8 @@ class TreeTimer
     private int localPlayerRecentlyClimbedRedwood;
     private int currentPlayerPlane;
     private int nextAnimationRecheck;
+    // The last Woodcutting XP seen; -1 until the login's first stat update.
+    private int woodcuttingXp = -1;
 
     @Inject
     TreeTimer(Client client)
@@ -118,6 +121,7 @@ class TreeTimer
         playerSpawnLocation.clear();
         deferTickQueue.clear();
         playerRecentlySpeced.clear();
+        woodcuttingXp = -1;
     }
 
     /** The trees to draw, each once. */
@@ -261,12 +265,14 @@ class TreeTimer
     }
 
     /** A Woodcutting XP drop: you took a log from the tree you're chopping. */
-    void onStatChanged(Skill skill)
+    void onStatChanged(Skill skill, int xp)
     {
-        if (skill != Skill.WOODCUTTING)
+        // Only XP going up is a log: a boost, or its decay, changes the level and not the XP.
+        if (skill != Skill.WOODCUTTING || xp <= woodcuttingXp)
         {
             return;
         }
+        woodcuttingXp = xp;
 
         TreeTimerState tree = playerTreeChopping.get(client.getLocalPlayer());
         if (tree != null)
