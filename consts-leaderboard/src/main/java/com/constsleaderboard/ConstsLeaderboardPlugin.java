@@ -138,8 +138,12 @@ public class ConstsLeaderboardPlugin extends Plugin
         Player local = client.getLocalPlayer();
         updateLocalName(local == null ? null : local.getName());
 
-        FriendContainer container = client.getGameState() == GameState.LOGGED_IN ? client.getFriendContainer() : null;
-        updateFriends(container == null ? null : friends(container.getMembers()));
+        // Only while logged in, so a loading screen doesn't blank the list; the login screen clears it
+        FriendContainer container = client.getFriendContainer();
+        if (client.getGameState() == GameState.LOGGED_IN && container != null)
+        {
+            updateFriends(friends(container.getMembers()));
+        }
     }
 
     @Subscribe

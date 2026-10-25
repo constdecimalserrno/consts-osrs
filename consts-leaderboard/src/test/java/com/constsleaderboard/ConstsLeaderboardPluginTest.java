@@ -148,6 +148,8 @@ public class ConstsLeaderboardPluginTest
         plugin.onGameTick(new GameTick());
         when(container.getMembers()).thenReturn(new Friend[]{online});
         plugin.onGameTick(new GameTick());
+        when(client.getGameState()).thenReturn(GameState.LOADING);
+        plugin.onGameTick(new GameTick());
 
         GameStateChanged logout = new GameStateChanged();
         logout.setGameState(GameState.LOGIN_SCREEN);
