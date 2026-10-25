@@ -27,8 +27,6 @@ package com.constsexp.gotr.model;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import javax.annotation.Nullable;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.ObjectID;
 import net.runelite.api.Quest;
@@ -36,8 +34,6 @@ import net.runelite.api.Quest;
 /**
  * HUD indices are 1-based within each alignment; 0 means no active altar.
  */
-@AllArgsConstructor
-@Getter
 public enum Altar
 {
 	AIR("Air", Alignment.ELEMENTAL, 1, 1, CellTier.WEAK, ObjectID.GOTR_PORTAL_AIR, ObjectID.AIR_ALTAR, ObjectID.AIRTEMPLE_EXIT_PORTAL, ItemID.GOTR_PORTAL_TALISMAN_AIR, ItemID.AIRRUNE, null, 4),
@@ -94,6 +90,64 @@ public enum Altar
 	@Nullable
 	private final Quest requiredQuest;
 	private final int insideTiles;
+
+	Altar(String label, Alignment alignment, int hudIndex, int levelRequired, CellTier cellTier, int portalGuardianObjectId,
+		int altarObjectId, int exitPortalObjectId, int talismanItemId, int runeItemId, @Nullable Quest requiredQuest, int insideTiles)
+	{
+		this.label = label;
+		this.alignment = alignment;
+		this.hudIndex = hudIndex;
+		this.levelRequired = levelRequired;
+		this.cellTier = cellTier;
+		this.portalGuardianObjectId = portalGuardianObjectId;
+		this.altarObjectId = altarObjectId;
+		this.exitPortalObjectId = exitPortalObjectId;
+		this.talismanItemId = talismanItemId;
+		this.runeItemId = runeItemId;
+		this.requiredQuest = requiredQuest;
+		this.insideTiles = insideTiles;
+	}
+
+	public Alignment getAlignment()
+	{
+		return alignment;
+	}
+
+	public CellTier getCellTier()
+	{
+		return cellTier;
+	}
+
+	public int getInsideTiles()
+	{
+		return insideTiles;
+	}
+
+	public String getLabel()
+	{
+		return label;
+	}
+
+	public int getLevelRequired()
+	{
+		return levelRequired;
+	}
+
+	@Nullable
+	public Quest getRequiredQuest()
+	{
+		return requiredQuest;
+	}
+
+	public int getRuneItemId()
+	{
+		return runeItemId;
+	}
+
+	public int getTalismanItemId()
+	{
+		return talismanItemId;
+	}
 
 	@Nullable
 	public static Altar fromHud(Alignment alignment, int hudIndex)

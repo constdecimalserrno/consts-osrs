@@ -24,52 +24,96 @@
  */
 package com.constsexp.gotr.plan;
 
-import com.constsexp.gotr.model.Altar;
-import lombok.Builder;
-import lombok.Value;
-
-@Value
-@Builder(toBuilder = true)
-public class PlannerSettings
+/**
+ * consts-EXP has no GOTR settings but its switch, so every one is fixed at upstream's default, Strategy at Mass;
+ * only what the player carries changes.
+ */
+public final class PlannerSettings
 {
-	@Builder.Default
-	Strategy strategy = Strategy.GENERAL;
-	@Builder.Default
-	int openingFragmentTarget = 120;
+	private final boolean combinationRunes;
+
+	public PlannerSettings(boolean combinationRunes)
+	{
+		this.combinationRunes = combinationRunes;
+	}
+
+	public Strategy getStrategy()
+	{
+		return Strategy.MASS;
+	}
+
+	public int getOpeningFragmentTarget()
+	{
+		return 120;
+	}
+
 	// Seconds before the first altars open at which the solo and general opening run stops to craft.
-	@Builder.Default
-	int craftWindowSeconds = 50;
-	@Builder.Default
-	int minFragmentsToCraft = 30;
-	@Builder.Default
-	int desiredGuardians = 2;
-	@Builder.Default
-	boolean combinationRunes = false;
-	@Builder.Default
-	Altar baseRune = Altar.AIR;
-	@Builder.Default
-	boolean balanceWithSavedPoints = true;
-	@Builder.Default
-	int maxImbalance = 200;
-	@Builder.Default
-	boolean protectRightBarrier = true;
-	@Builder.Default
-	int portalMinCapacity = 10;
-	// On for players who bank their runes at the deposit pool for the inventory space.
-	@Builder.Default
-	boolean depositRunes = false;
-	@Builder.Default
-	boolean takeWeakCell = true;
+	public int getCraftWindowSeconds()
+	{
+		return 50;
+	}
+
+	public int getMinFragmentsToCraft()
+	{
+		return 30;
+	}
+
+	public int getDesiredGuardians()
+	{
+		return 2;
+	}
+
+	public boolean isCombinationRunes()
+	{
+		return combinationRunes;
+	}
+
+	public boolean isBalanceWithSavedPoints()
+	{
+		return true;
+	}
+
+	public int getMaxImbalance()
+	{
+		return 200;
+	}
+
+	public boolean isProtectRightBarrier()
+	{
+		return true;
+	}
+
+	public int getPortalMinCapacity()
+	{
+		return 10;
+	}
+
+	public boolean isTakeWeakCell()
+	{
+		return true;
+	}
+
 	// Off: once the opening run is done, fragments come only from what is left and the portals.
-	@Builder.Default
-	boolean mineAfterOpening = true;
-	@Builder.Default
-	int gracePortalSeconds = 95;
+	public boolean isMineAfterOpening()
+	{
+		return true;
+	}
+
+	public int getGracePortalSeconds()
+	{
+		return 95;
+	}
+
 	// How long to wait for a better altar when only a weak one is usable; 0 never waits. Every
 	// altar pays two energy per essence, so the wait only buys a better cell, and points come
 	// first: a weak altar is an altar.
-	@Builder.Default
-	int weakAltarWaitSeconds = 0;
-	@Builder.Default
-	int portalWarningSeconds = 10;
+	public int getWeakAltarWaitSeconds()
+	{
+		return 0;
+	}
+
+	public int getPortalWarningSeconds()
+	{
+		return 10;
+	}
 }

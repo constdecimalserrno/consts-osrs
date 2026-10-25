@@ -24,8 +24,7 @@
  */
 package com.constsexp.gotr.overlay;
 
-import com.constsexp.gotr.GotrAutopilotConfig;
-import com.constsexp.gotr.GotrAutopilotPlugin;
+import com.constsexp.gotr.GotrAutopilot;
 import com.constsexp.gotr.plan.Instruction;
 import com.constsexp.gotr.plan.Step;
 import com.constsexp.gotr.plan.Target;
@@ -43,7 +42,6 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import lombok.extern.slf4j.Slf4j;
 import com.constsexp.gotr.model.Altar;
 import java.awt.image.BufferedImage;
 import java.util.EnumMap;
@@ -52,7 +50,6 @@ import net.runelite.api.Client;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.GameObject;
-import net.runelite.api.GroundObject;
 import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.Player;
@@ -64,23 +61,23 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
 public class SceneOverlay extends Overlay
 {
+	private static final Logger log = LoggerFactory.getLogger(SceneOverlay.class);
 	private static final Stroke PATH_STROKE = new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
 	private static final Stroke CLIMB_STROKE = new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f,
 		new float[]{8f, 8f}, 0f);
 	private static final int PATH_ALPHA = 160;
 	private static final int PATH_RESYNC_TILES = 2;
-	private static final int TILE_LABEL_HEIGHT = 40;
 	private static final int OBJECT_LABEL_HEIGHT = 120;
 	// Height above a portal guardian for its rune sprite, clear of the model.
 	private static final int RUNE_ICON_HEIGHT = 260;
 
 	private final Client client;
-	private final GotrAutopilotPlugin plugin;
-	private final GotrAutopilotConfig config;
+	private final GotrAutopilot plugin;
 	private final ModelOutlineRenderer modelOutlineRenderer;
 	private final ItemManager itemManager;
 	// Rune sprites by altar, fetched once and drawn over the active portal guardians.
@@ -88,13 +85,11 @@ public class SceneOverlay extends Overlay
 	private final Map<Altar, BufferedImage> talismanImages = new EnumMap<>(Altar.class);
 
 	@Inject
-	SceneOverlay(Client client, GotrAutopilotPlugin plugin, GotrAutopilotConfig config, ModelOutlineRenderer modelOutlineRenderer,
-		ItemManager itemManager)
+	SceneOverlay(Client client, GotrAutopilot plugin, ModelOutlineRenderer modelOutlineRenderer, ItemManager itemManager)
 	{
 		this.itemManager = itemManager;
 		this.client = client;
 		this.plugin = plugin;
-		this.config = config;
 		this.modelOutlineRenderer = modelOutlineRenderer;
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
@@ -108,37 +103,25 @@ public class SceneOverlay extends Overlay
 		{
 			return null;
 		}
-		TileObject countdownAt = drawStartCountdown(graphics, instruction);
+		drawStartCountdown(graphics);
 		drawSafeToLeave(graphics);
 		drawActiveAltarRunes(graphics);
 		if (instruction.getTarget() == Target.NONE)
 		{
 			return null;
 		}
-		Color color = instruction.getUrgency() == Urgency.HIGH ? config.urgentColor() : config.highlightColor();
+		Color color = instruction.getUrgency() == Urgency.HIGH ? GotrAutopilot.URGENT : GotrAutopilot.HIGHLIGHT;
 		drawPath(graphics, plugin.getPath(), color);
 		NPC npc = plugin.getTargetNpc();
 		if (npc != null)
 		{
 			modelOutlineRenderer.drawOutline(npc, 3, color, 3);
-			if (config.showTargetLabel())
-			{
-				label(graphics, npc.getLocalLocation(), instruction.getHeadline(), color, npc.getLogicalHeight() + 40);
-			}
 			return null;
 		}
 		TileObject object = plugin.getTargetObject();
 		if (object != null)
 		{
 			outline(object, color);
-			if (object != countdownAt)
-			{
-				int height = object instanceof GroundObject ? TILE_LABEL_HEIGHT : OBJECT_LABEL_HEIGHT;
-				if (config.showTargetLabel())
-				{
-					label(graphics, object.getLocalLocation(), instruction.getHeadline(), color, height);
-				}
-			}
 			return null;
 		}
 		if (instruction.getLocation() != null)
@@ -150,10 +133,6 @@ public class SceneOverlay extends Overlay
 				if (poly != null)
 				{
 					OverlayUtil.renderPolygon(graphics, poly, color);
-				}
-				if (config.showTargetLabel())
-				{
-					label(graphics, lp, instruction.getHeadline(), color, TILE_LABEL_HEIGHT);
 				}
 			}
 		}
@@ -215,7 +194,7 @@ public class SceneOverlay extends Overlay
 		GameObject barrier = plugin.getTracker().getEntranceBarrier();
 		if (barrier != null)
 		{
-			label(graphics, barrier.getLocalLocation(), "Safe to exit", config.highlightColor(), OBJECT_LABEL_HEIGHT);
+			label(graphics, barrier.getLocalLocation(), "Safe to exit", GotrAutopilot.HIGHLIGHT, OBJECT_LABEL_HEIGHT);
 		}
 	}
 
@@ -236,23 +215,16 @@ public class SceneOverlay extends Overlay
 		}
 	}
 
-	@Nullable
-	private TileObject drawStartCountdown(Graphics2D graphics, Instruction instruction)
+	private void drawStartCountdown(Graphics2D graphics)
 	{
 		Snapshot s = plugin.getSnapshot();
 		TileObject object = plugin.getCountdownObject();
 		if (object == null || s.getPhase() != GamePhase.COUNTDOWN || s.getSecondsToStart() < 0)
 		{
-			return null;
+			return;
 		}
-		String text = "Starts in " + s.getSecondsToStart() + "s";
-		if (object == plugin.getTargetObject())
-		{
-			text = config.showTargetLabel() ? instruction.getHeadline() + " - " + text : text;
-		}
-		Color color = s.getSecondsToStart() <= 5 ? config.urgentColor() : config.highlightColor();
-		label(graphics, object.getLocalLocation(), text, color, OBJECT_LABEL_HEIGHT);
-		return object;
+		Color color = s.getSecondsToStart() <= 5 ? GotrAutopilot.URGENT : GotrAutopilot.HIGHLIGHT;
+		label(graphics, object.getLocalLocation(), "Starts in " + s.getSecondsToStart() + "s", color, OBJECT_LABEL_HEIGHT);
 	}
 
 	private void drawPath(Graphics2D graphics, Pathfinder.Path path, Color color)

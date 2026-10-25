@@ -28,26 +28,156 @@ import com.constsexp.gotr.model.Altar;
 import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import javax.annotation.Nullable;
-import lombok.Builder;
-import lombok.Value;
 import net.runelite.api.coords.WorldPoint;
 
-@Value
-@Builder(toBuilder = true)
-public class Instruction
+public final class Instruction
 {
-	Step step;
-	String headline;
-	@Builder.Default
-	String detail = "";
-	@Builder.Default
-	Target target = Target.NONE;
+	private final Step step;
+	private final String headline;
+	private final String detail;
+	private final Target target;
 	@Nullable
-	Altar altar;
+	private final Altar altar;
 	@Nullable
-	WorldPoint location;
-	@Builder.Default
-	Set<Integer> items = ImmutableSet.of();
-	@Builder.Default
-	Urgency urgency = Urgency.NORMAL;
+	private final WorldPoint location;
+	private final Set<Integer> items;
+	private final Urgency urgency;
+
+	private Instruction(Builder b)
+	{
+		this.step = b.step;
+		this.headline = b.headline;
+		this.detail = b.detail;
+		this.target = b.target;
+		this.altar = b.altar;
+		this.location = b.location;
+		this.items = b.items;
+		this.urgency = b.urgency;
+	}
+
+	public static Builder builder()
+	{
+		return new Builder();
+	}
+
+	public Builder toBuilder()
+	{
+		Builder b = new Builder();
+		b.step = step;
+		b.headline = headline;
+		b.detail = detail;
+		b.target = target;
+		b.altar = altar;
+		b.location = location;
+		b.items = items;
+		b.urgency = urgency;
+		return b;
+	}
+
+	public Step getStep()
+	{
+		return step;
+	}
+
+	public String getHeadline()
+	{
+		return headline;
+	}
+
+	public String getDetail()
+	{
+		return detail;
+	}
+
+	public Target getTarget()
+	{
+		return target;
+	}
+
+	@Nullable
+	public Altar getAltar()
+	{
+		return altar;
+	}
+
+	@Nullable
+	public WorldPoint getLocation()
+	{
+		return location;
+	}
+
+	public Set<Integer> getItems()
+	{
+		return items;
+	}
+
+	public Urgency getUrgency()
+	{
+		return urgency;
+	}
+
+	public static final class Builder
+	{
+		private Step step;
+		private String headline;
+		private String detail = "";
+		private Target target = Target.NONE;
+		private Altar altar;
+		private WorldPoint location;
+		private Set<Integer> items = ImmutableSet.of();
+		private Urgency urgency = Urgency.NORMAL;
+
+		public Builder step(Step step)
+		{
+			this.step = step;
+			return this;
+		}
+
+		public Builder headline(String headline)
+		{
+			this.headline = headline;
+			return this;
+		}
+
+		public Builder detail(String detail)
+		{
+			this.detail = detail;
+			return this;
+		}
+
+		public Builder target(Target target)
+		{
+			this.target = target;
+			return this;
+		}
+
+		public Builder altar(@Nullable Altar altar)
+		{
+			this.altar = altar;
+			return this;
+		}
+
+		public Builder location(@Nullable WorldPoint location)
+		{
+			this.location = location;
+			return this;
+		}
+
+		public Builder items(Set<Integer> items)
+		{
+			this.items = items;
+			return this;
+		}
+
+		public Builder urgency(Urgency urgency)
+		{
+			this.urgency = urgency;
+			return this;
+		}
+
+		public Instruction build()
+		{
+			return new Instruction(this);
+		}
+	}
 }

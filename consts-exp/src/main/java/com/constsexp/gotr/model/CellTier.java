@@ -27,14 +27,10 @@ package com.constsexp.gotr.model;
 import com.google.common.collect.ImmutableMap;
 import java.util.Map;
 import javax.annotation.Nullable;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.NpcID;
 import net.runelite.api.gameval.ObjectID;
 
-@AllArgsConstructor
-@Getter
 public enum CellTier
 {
 	WEAK(1, "Weak", ItemID.GOTR_CELL_TIER1, ObjectID.GOTR_CELL_TILE_TIER1, NpcID.GOTR_BARRIER_NPC_TIER1, NpcID.GOTR_BARRIER_NPC_TIER1_LARGE, 0, 2, 6),
@@ -72,6 +68,65 @@ public enum CellTier
 	private final int strengthenEnergy;
 	private final int rechargeEnergy;
 	private final int guardianEnergy;
+
+	CellTier(int rank, String label, int cellItemId, int tileObjectId, int barrierNpcId, int barrierNpcLargeId,
+		int strengthenEnergy, int rechargeEnergy, int guardianEnergy)
+	{
+		this.rank = rank;
+		this.label = label;
+		this.cellItemId = cellItemId;
+		this.tileObjectId = tileObjectId;
+		this.barrierNpcId = barrierNpcId;
+		this.barrierNpcLargeId = barrierNpcLargeId;
+		this.strengthenEnergy = strengthenEnergy;
+		this.rechargeEnergy = rechargeEnergy;
+		this.guardianEnergy = guardianEnergy;
+	}
+
+	public int getRank()
+	{
+		return rank;
+	}
+
+	public String getLabel()
+	{
+		return label;
+	}
+
+	public int getCellItemId()
+	{
+		return cellItemId;
+	}
+
+	public int getTileObjectId()
+	{
+		return tileObjectId;
+	}
+
+	public int getBarrierNpcId()
+	{
+		return barrierNpcId;
+	}
+
+	public int getBarrierNpcLargeId()
+	{
+		return barrierNpcLargeId;
+	}
+
+	public int getStrengthenEnergy()
+	{
+		return strengthenEnergy;
+	}
+
+	public int getRechargeEnergy()
+	{
+		return rechargeEnergy;
+	}
+
+	public int getGuardianEnergy()
+	{
+		return guardianEnergy;
+	}
 
 	public boolean isAtLeast(CellTier other)
 	{

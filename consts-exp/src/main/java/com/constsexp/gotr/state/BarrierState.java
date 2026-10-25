@@ -25,16 +25,36 @@
 package com.constsexp.gotr.state;
 
 import com.constsexp.gotr.model.CellTier;
-import lombok.Value;
 import net.runelite.api.coords.WorldPoint;
 
 /**
  * healthPercent is -1 until a health bar has been observed.
  */
-@Value
-public class BarrierState
+public final class BarrierState
 {
-	WorldPoint location;
-	CellTier tier;
-	int healthPercent;
+	private final WorldPoint location;
+	private final CellTier tier;
+	private final int healthPercent;
+
+	public BarrierState(WorldPoint location, CellTier tier, int healthPercent)
+	{
+		this.location = location;
+		this.tier = tier;
+		this.healthPercent = healthPercent;
+	}
+
+	public WorldPoint getLocation()
+	{
+		return location;
+	}
+
+	public CellTier getTier()
+	{
+		return tier;
+	}
+
+	public int getHealthPercent()
+	{
+		return healthPercent;
+	}
 }

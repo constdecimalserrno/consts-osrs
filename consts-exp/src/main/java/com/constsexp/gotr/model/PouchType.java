@@ -25,9 +25,6 @@
 package com.constsexp.gotr.model;
 
 import javax.annotation.Nullable;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
@@ -37,8 +34,6 @@ import net.runelite.api.gameval.VarbitID;
  * essence filled raises a hidden counter, and the step is set by the counter crossing the
  * thresholds below (from the wiki's degradation table).
  */
-@AllArgsConstructor
-@Getter
 public enum PouchType
 {
 	SMALL("Small pouch", VarbitID.SMALL_ESSENCE_POUCH, ItemID.RCU_POUCH_SMALL, -1, 1, -1, -1,
@@ -65,10 +60,47 @@ public enum PouchType
 	// The degradation counter: a varp for the original pouches, a varbit for the colossal.
 	private final int degradationVarp;
 	private final int degradationVarbit;
-	@Getter(AccessLevel.NONE)
 	private final int[] stageCapacities;
-	@Getter(AccessLevel.NONE)
 	private final int[] stageThresholds;
+
+	PouchType(String label, int varbitId, int itemId, int degradedItemId, int levelRequired, int degradationVarp,
+		int degradationVarbit, int[] stageCapacities, int[] stageThresholds)
+	{
+		this.label = label;
+		this.varbitId = varbitId;
+		this.itemId = itemId;
+		this.degradedItemId = degradedItemId;
+		this.levelRequired = levelRequired;
+		this.degradationVarp = degradationVarp;
+		this.degradationVarbit = degradationVarbit;
+		this.stageCapacities = stageCapacities;
+		this.stageThresholds = stageThresholds;
+	}
+
+	public int getDegradationVarbit()
+	{
+		return degradationVarbit;
+	}
+
+	public int getDegradationVarp()
+	{
+		return degradationVarp;
+	}
+
+	public int getDegradedItemId()
+	{
+		return degradedItemId;
+	}
+
+	public int getItemId()
+	{
+		return itemId;
+	}
+
+	public int getVarbitId()
+	{
+		return varbitId;
+	}
 
 	/** The degradation step for a counter value, 0 being intact. */
 	public int stage(int counter)

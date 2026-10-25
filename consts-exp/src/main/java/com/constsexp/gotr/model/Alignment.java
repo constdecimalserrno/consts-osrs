@@ -24,17 +24,22 @@
  */
 package com.constsexp.gotr.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
-@AllArgsConstructor
-@Getter
 public enum Alignment
 {
 	ELEMENTAL("Elemental"),
 	CATALYTIC("Catalytic");
 
 	private final String label;
+
+	Alignment(String label)
+	{
+		this.label = label;
+	}
+
+	public String getLabel()
+	{
+		return label;
+	}
 
 	public Alignment other()
 	{

@@ -24,20 +24,9 @@
  */
 package com.constsexp.gotr.plan;
 
-import lombok.AllArgsConstructor;
-
-@AllArgsConstructor
 public enum Strategy
 {
-	GENERAL("General / team"),
-	SOLO("Solo"),
-	MASS("Mass");
-
-	private final String name;
-
-	@Override
-	public String toString()
-	{
-		return name;
-	}
+	GENERAL,
+	SOLO,
+	MASS
 }

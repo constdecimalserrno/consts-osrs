@@ -24,8 +24,7 @@
  */
 package com.constsexp.gotr.overlay;
 
-import com.constsexp.gotr.GotrAutopilotConfig;
-import com.constsexp.gotr.GotrAutopilotPlugin;
+import com.constsexp.gotr.GotrAutopilot;
 import com.constsexp.gotr.plan.Instruction;
 import com.constsexp.gotr.plan.Step;
 import com.constsexp.gotr.plan.Urgency;
@@ -51,19 +50,17 @@ public class ItemHighlightOverlay extends WidgetItemOverlay
 	private static final String DROP_LABEL = "DROP";
 
 	private final Client client;
-	private final GotrAutopilotPlugin plugin;
-	private final GotrAutopilotConfig config;
+	private final GotrAutopilot plugin;
 
 	// The slot of the essence to drop, looked up once per game tick rather than per item drawn.
 	private int dropSlotTick = -1;
 	private int dropSlot = -1;
 
 	@Inject
-	ItemHighlightOverlay(Client client, GotrAutopilotPlugin plugin, GotrAutopilotConfig config)
+	ItemHighlightOverlay(Client client, GotrAutopilot plugin)
 	{
 		this.client = client;
 		this.plugin = plugin;
-		this.config = config;
 		showOnInventory();
 	}
 
@@ -94,7 +91,7 @@ public class ItemHighlightOverlay extends WidgetItemOverlay
 			OverlayUtil.renderTextLocation(graphics, new Point(x, y), DROP_LABEL, Color.RED);
 			return;
 		}
-		Color color = instruction.getUrgency() == Urgency.HIGH ? config.urgentColor() : config.highlightColor();
+		Color color = instruction.getUrgency() == Urgency.HIGH ? GotrAutopilot.URGENT : GotrAutopilot.HIGHLIGHT;
 		outline(graphics, bounds, color);
 	}
 

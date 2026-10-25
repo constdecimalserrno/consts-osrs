@@ -34,13 +34,12 @@ import com.constsexp.gotr.plan.Planner;
 import com.constsexp.gotr.plan.PlannerSettings;
 import com.constsexp.gotr.plan.Step;
 import com.constsexp.gotr.plan.Target;
-import com.constsexp.gotr.plan.Urgency;
 import com.constsexp.gotr.state.GamePhase;
 import com.constsexp.gotr.state.Location;
 import com.constsexp.gotr.state.Snapshot;
 import com.constsexp.gotr.state.StateTracker;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Provides;
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -50,9 +49,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import lombok.extern.slf4j.Slf4j;
-import lombok.Getter;
-import net.runelite.api.ChatMessageType;
+import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.CollisionData;
 import net.runelite.api.CollisionDataFlag;
@@ -74,22 +71,25 @@ import net.runelite.api.WorldView;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.RenderCallback;
 import net.runelite.client.callback.RenderCallbackManager;
-import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.Notifier;
-import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Slf4j
-@PluginDescriptor(
-	name = "GOTR Autopilot",
-	description = "Tells you exactly what to do next in Guardians of the Rift",
-	tags = {"gotr", "guardians of the rift", "runecraft", "minigame"}
-)
-public class GotrAutopilotPlugin extends Plugin
+/**
+ * GOTR Autopilot, from the Plugin Hub, as a part of consts-EXP: the next step in Guardians of the Rift, the path to it
+ * and the timers. ConstsExpPlugin turns it on and off with its switch; it has no other settings, so the planner runs
+ * on upstream's defaults with the Mass strategy (see PlannerSettings), and its notifications, hint arrow, chat steps,
+ * target label and rune deposits are cut.
+ */
+@Singleton
+public class GotrAutopilot
 {
+	private static final Logger log = LoggerFactory.getLogger(GotrAutopilot.class);
+	// Upstream's default outline colors, for the current target and items, and for an urgent step.
+	public static final Color HIGHLIGHT = new Color(0, 255, 180, 220);
+	public static final Color URGENT = new Color(255, 80, 80, 230);
 	private static final Instruction NOT_IN_GAME = Instruction.builder().step(Step.NOT_IN_GAME).headline("").build();
 	private static final int SHORTCUT_AGILITY_LEVEL = 56;
 	private static final int CENTRE_WAIT_SEARCH_TILES = 8;
@@ -129,13 +129,7 @@ public class GotrAutopilotPlugin extends Plugin
 	private EventBus eventBus;
 
 	@Inject
-	private GotrAutopilotConfig config;
-
-	@Inject
 	private OverlayManager overlayManager;
-
-	@Inject
-	private Notifier notifier;
 
 	@Inject
 	private RenderCallbackManager renderCallbackManager;
@@ -153,7 +147,6 @@ public class GotrAutopilotPlugin extends Plugin
 	private boolean hideGuardian;
 
 	@Inject
-	@Getter
 	private StateTracker tracker;
 
 	@Inject
@@ -167,49 +160,63 @@ public class GotrAutopilotPlugin extends Plugin
 
 	private final Planner planner = new Planner();
 
-	@Getter
 	private Snapshot snapshot = Snapshot.OUTSIDE;
-	@Getter
 	private Instruction instruction = NOT_IN_GAME;
-	@Getter
 	@Nullable
 	private NPC targetNpc;
-	@Getter
 	@Nullable
 	private TileObject targetObject;
-	@Getter
 	@Nullable
 	private TileObject countdownObject;
-	@Getter
 	private Pathfinder.Path path = Pathfinder.Path.EMPTY;
+	private boolean running;
 
 	private Pathfinder pathfinder;
 	private List<Pathfinder.Transport> transports = Collections.emptyList();
 	private Step lastStep = Step.NOT_IN_GAME;
 	private Altar lastAltar;
 	private WorldPoint lastTile;
-	private int stepStartTick;
 	private Step pathLoggedStep;
 	private int talismanHoldUntil = -1;
-	private boolean hintArrowSet;
 	private int sceneVersion = -1;
 	private boolean canUseShortcuts;
 
-	@Override
-	protected void startUp()
+	/**
+	 * Starts or stops it, as upstream's plugin did in startUp and shutDown. Call it on the client thread, so it never
+	 * stops in the middle of a game tick.
+	 */
+	public void setRunning(boolean on)
+	{
+		if (on == running)
+		{
+			return;
+		}
+		running = on;
+		if (on)
+		{
+			startUp();
+		}
+		else
+		{
+			shutDown();
+		}
+	}
+
+	private void startUp()
 	{
 		pathfinder = new Pathfinder(client);
 		overlayManager.add(instructionOverlay);
 		overlayManager.add(sceneOverlay);
 		overlayManager.add(itemHighlightOverlay);
+		eventBus.register(this);
 		eventBus.register(tracker);
 		renderCallbackManager.register(drawListener);
 		clientThread.invokeLater(tracker::primeFromClient);
 	}
 
-	@Override
-	protected void shutDown()
+	private void shutDown()
 	{
+		eventBus.unregister(this);
 		eventBus.unregister(tracker);
 		renderCallbackManager.unregister(drawListener);
 		hideGuardian = false;
@@ -227,9 +234,46 @@ public class GotrAutopilotPlugin extends Plugin
 		return !hideGuardian || renderable != tracker.getGreatGuardian();
 	}
 
+	public StateTracker getTracker()
+	{
+		return tracker;
+	}
+
+	public Snapshot getSnapshot()
+	{
+		return snapshot;
+	}
+
+	public Instruction getInstruction()
+	{
+		return instruction;
+	}
+
+	@Nullable
+	public NPC getTargetNpc()
+	{
+		return targetNpc;
+	}
+
+	@Nullable
+	public TileObject getTargetObject()
+	{
+		return targetObject;
+	}
+
+	@Nullable
+	public TileObject getCountdownObject()
+	{
+		return countdownObject;
+	}
+
+	public Pathfinder.Path getPath()
+	{
+		return path;
+	}
+
 	private void clearInstruction()
 	{
-		clearHintArrow();
 		snapshot = Snapshot.OUTSIDE;
 		instruction = NOT_IN_GAME;
 		targetNpc = null;
@@ -242,12 +286,6 @@ public class GotrAutopilotPlugin extends Plugin
 		lastAltar = null;
 		lastTile = null;
 		sceneVersion = -1;
-	}
-
-	@Provides
-	GotrAutopilotConfig provideConfig(ConfigManager configManager)
-	{
-		return configManager.getConfig(GotrAutopilotConfig.class);
 	}
 
 	// Entering or leaving an altar swaps the scene and unloads what the targets point at, which
@@ -306,27 +344,15 @@ public class GotrAutopilotPlugin extends Plugin
 		snapshot = s;
 		instruction = next;
 
-		boolean altarSwitched = next.getStep() == Step.GO_TO_ALTAR && lastStep == Step.GO_TO_ALTAR
-			&& next.getAltar() != null && next.getAltar() != lastAltar;
-		if (next.getStep() != lastStep || altarSwitched)
-		{
-			int tick = client.getTickCount();
-			// A mid-run altar change is always announced: the player is running the wrong way.
-			boolean afterLongStint = altarSwitched || (tick - stepStartTick) * 0.6 >= config.notifyAfterSeconds();
-			lastStep = next.getStep();
-			stepStartTick = tick;
-			announce(next, afterLongStint);
-		}
+		lastStep = next.getStep();
 		lastAltar = next.getAltar();
 
 		targetNpc = resolveNpc(next);
 		targetObject = targetNpc == null ? resolveObject(next) : null;
 		countdownObject = resolveCountdownObject(s, next);
-		updateHintArrow(next);
-		path = config.showPath() ? computePath(next) : Pathfinder.Path.EMPTY;
-		hideGuardian = config.hideGuardianForCells()
-			&& (next.getTarget() == Target.CELL_TILE || next.getTarget() == Target.BARRIER);
-		boolean noPath = config.showPath() && path.isEmpty() && next.getTarget() != Target.NONE;
+		path = computePath(next);
+		hideGuardian = next.getTarget() == Target.CELL_TILE || next.getTarget() == Target.BARRIER;
+		boolean noPath = path.isEmpty() && next.getTarget() != Target.NONE;
 		// Once per step, then every 30 s while it persists.
 		if (noPath && (next.getStep() != pathLoggedStep || client.getTickCount() % 50 == 0))
 		{
@@ -599,7 +625,6 @@ public class GotrAutopilotPlugin extends Plugin
 	{
 		Map<Target, Integer> out = new EnumMap<>(Target.class);
 		putDistance(out, Target.WORKBENCH, tracker.getLandmarks().get(ObjectID.GOTR_WORKBENCH));
-		putDistance(out, Target.DEPOSIT_POOL, tracker.getLandmarks().get(ObjectID.GOTR_DEPOSITCHEST));
 		putDistance(out, Target.UNCHARGED_CELL_TABLE, tracker.getLandmarks().get(ObjectID.GOTR_UNCHARGED_CELLS));
 		putDistance(out, Target.WEAK_CELL_TABLE, tracker.getLandmarks().get(ObjectID.GOTR_WEAK_CELLS));
 		putDistance(out, Target.LARGE_REMAINS, nearest(tracker.getLargeRemains()));
@@ -640,7 +665,6 @@ public class GotrAutopilotPlugin extends Plugin
 		{
 			return out;
 		}
-		putReturn(out, Target.DEPOSIT_POOL, tracker.getLandmarks().get(ObjectID.GOTR_DEPOSITCHEST), portal);
 		putReturn(out, Target.UNCHARGED_CELL_TABLE, tracker.getLandmarks().get(ObjectID.GOTR_UNCHARGED_CELLS), portal);
 		int[] box = guardianFootprint();
 		if (box != null)
@@ -849,79 +873,7 @@ public class GotrAutopilotPlugin extends Plugin
 	{
 		boolean combo = s.isBindingNecklaceWorn() && s.getMagicLevel() >= 82 && s.getBaseRuneCount() > 0
 			&& (s.isLunarSpellbook() || (s.getBaseRune() != null && s.getTalismans().contains(s.getBaseRune())));
-		return PlannerSettings.builder()
-			.strategy(config.strategy())
-			.openingFragmentTarget(config.openingFragments())
-			.craftWindowSeconds(config.craftWindow())
-			.minFragmentsToCraft(config.minFragmentsToCraft())
-			.desiredGuardians(config.desiredGuardians())
-			.combinationRunes(combo)
-			.baseRune(s.getBaseRune())
-			.balanceWithSavedPoints(config.balanceWithSaved())
-			.maxImbalance(config.maxImbalance())
-			.protectRightBarrier(config.protectRightBarrier())
-			.portalMinCapacity(config.portalMinCapacity())
-			.depositRunes(config.depositRunes())
-			.takeWeakCell(config.takeWeakCell())
-			.mineAfterOpening(config.mineAfterOpening())
-			.build();
-	}
-
-	// Suppress notifications for short-lived steps.
-	private void announce(Instruction next, boolean afterLongStint)
-	{
-		if (next.getStep() == Step.NOT_IN_GAME || next.getHeadline().isEmpty())
-		{
-			return;
-		}
-		// A quiet step still earns a ping when it sends the player somewhere, such as the
-		// walk to the centre for the altars; only a stay-put wait is silent.
-		boolean actionable = next.getUrgency() != Urgency.INFO || next.getTarget() != Target.NONE;
-		if (actionable && afterLongStint)
-		{
-			notifier.notify(config.notification(), next.getHeadline());
-		}
-		if (config.chatSteps())
-		{
-			String line = next.getDetail().isEmpty() ? next.getHeadline() : next.getHeadline() + ": " + next.getDetail();
-			client.addChatMessage(ChatMessageType.GAMEMESSAGE, "", "<col=00b3a1>[GOTR]</col> " + line, null);
-		}
-	}
-
-	private void updateHintArrow(Instruction next)
-	{
-		if (!config.hintArrow() || next.getTarget() == Target.NONE)
-		{
-			clearHintArrow();
-			return;
-		}
-		if (targetNpc != null)
-		{
-			client.setHintArrow(targetNpc);
-			hintArrowSet = true;
-			return;
-		}
-		WorldPoint point = next.getLocation();
-		if (point == null && targetObject != null)
-		{
-			point = targetObject.getWorldLocation();
-		}
-		if (point == null)
-		{
-			clearHintArrow();
-			return;
-		}
-		client.setHintArrow(point);
-		hintArrowSet = true;
-	}
-
-	private void clearHintArrow()
-	{
-		if (hintArrowSet)
-		{
-			client.clearHintArrow();
-			hintArrowSet = false;
-		}
+		return new PlannerSettings(combo);
 	}
 
 	@Nullable
@@ -993,8 +945,6 @@ public class GotrAutopilotPlugin extends Plugin
 				return nearest(tracker.getHugeRemains());
 			case WORKBENCH:
 				return tracker.getLandmarks().get(ObjectID.GOTR_WORKBENCH);
-			case DEPOSIT_POOL:
-				return tracker.getLandmarks().get(ObjectID.GOTR_DEPOSITCHEST);
 			case UNCHARGED_CELL_TABLE:
 				return tracker.getLandmarks().get(ObjectID.GOTR_UNCHARGED_CELLS);
 			case WEAK_CELL_TABLE:

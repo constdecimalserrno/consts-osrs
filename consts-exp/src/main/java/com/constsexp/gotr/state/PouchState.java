@@ -25,15 +25,41 @@
 package com.constsexp.gotr.state;
 
 import com.constsexp.gotr.model.PouchType;
-import lombok.Value;
 
-@Value
-public class PouchState
+public final class PouchState
 {
-	PouchType type;
-	int stored;
-	int capacity;
-	boolean degraded;
+	private final PouchType type;
+	private final int stored;
+	private final int capacity;
+	private final boolean degraded;
+
+	public PouchState(PouchType type, int stored, int capacity, boolean degraded)
+	{
+		this.type = type;
+		this.stored = stored;
+		this.capacity = capacity;
+		this.degraded = degraded;
+	}
+
+	public PouchType getType()
+	{
+		return type;
+	}
+
+	public int getStored()
+	{
+		return stored;
+	}
+
+	public int getCapacity()
+	{
+		return capacity;
+	}
+
+	public boolean isDegraded()
+	{
+		return degraded;
+	}
 
 	public int space()
 	{

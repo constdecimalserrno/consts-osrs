@@ -24,11 +24,10 @@
  */
 package com.constsexp.gotr.state;
 
-import com.constsexp.gotr.GotrAutopilotConfig;
+import com.constsexp.ConstsExpConfig;
 import com.constsexp.gotr.model.Alignment;
 import com.constsexp.gotr.model.Altar;
 import com.constsexp.gotr.model.CellTier;
-import com.constsexp.gotr.model.CombinationRune;
 import com.constsexp.gotr.model.PouchType;
 import com.google.common.collect.ImmutableSet;
 import java.util.ArrayList;
@@ -47,8 +46,6 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import lombok.extern.slf4j.Slf4j;
-import lombok.Getter;
 import net.runelite.api.Animation;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
@@ -100,14 +97,17 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * The plugin calls tick() before snapshot() so polling follows the tick's client events.
  */
-@Slf4j
 @Singleton
 public class StateTracker
 {
+	private static final Logger log = LoggerFactory.getLogger(StateTracker.class);
+
 	static final int TEMPLE_REGION = 14484;
 	private static final int HUD_SCRIPT = 5980;
 	private static final int HUGE_REMAINS_WEST = 3587;
@@ -152,7 +152,6 @@ public class StateTracker
 	);
 	private static final Set<Integer> LANDMARK_OBJECTS = ImmutableSet.of(
 		ObjectID.GOTR_WORKBENCH,
-		ObjectID.GOTR_DEPOSITCHEST,
 		ObjectID.GOTR_UNCHARGED_CELLS,
 		ObjectID.GOTR_WEAK_CELLS,
 		ObjectID.GOTR_GUARDIAN_SPAWN_EAST,
@@ -171,9 +170,10 @@ public class StateTracker
 	private static final int LOBBY_RADIUS = 40;
 	// Fallback until a complete intermission has been observed.
 	private static final int DEFAULT_BREAK_SECONDS = 120;
-	private static final String BREAK_KEY = "learnedBreakSeconds";
-	private static final String ELEMENTAL_POINTS_KEY = "savedElementalPoints";
-	private static final String CATALYTIC_POINTS_KEY = "savedCatalyticPoints";
+	// Kept per RuneScape profile in consts-EXP's group, which ConstsExpPlugin's settings handler leaves alone.
+	private static final String BREAK_KEY = "gotrLearnedBreakSeconds";
+	private static final String ELEMENTAL_POINTS_KEY = "gotrSavedElementalPoints";
+	private static final String CATALYTIC_POINTS_KEY = "gotrSavedCatalyticPoints";
 	private static final Set<Integer> CORDELIA_NPCS = ImmutableSet.of(NpcID.GOTR_CORDELIA, NpcID.GOTR_CORDELIA_1OP, NpcID.GOTR_CORDELIA_2OPS);
 	private static final Set<Integer> BROKEN_TILES = ImmutableSet.of(ObjectID.GOTR_CELL_TILE_BROKEN_REPAIRABLE, ObjectID.GOTR_CELL_TILE_BROKEN);
 	private static final Set<Integer> EMPTY_TILES = ImmutableSet.of(ObjectID.GOTR_CELL_TILE_INACTIVE, ObjectID.GOTR_CELL_TILE_INACTIVE_NOOP);
@@ -182,7 +182,6 @@ public class StateTracker
 	private final ClientThread clientThread;
 	private final ItemManager itemManager;
 	private final ConfigManager configManager;
-	private final GotrAutopilotConfig config;
 
 	// HUD script arguments and the tick they were last seen on.
 	private int hudElemental;
@@ -217,49 +216,35 @@ public class StateTracker
 	private String portalDirection;
 	private boolean scanPending;
 	private boolean scannedOnce;
-	@Getter
 	private int sceneVersion;
 	private Set<Altar> questLockedAltars = ImmutableSet.of();
 	private int questCheckedTick = -1;
 
 	// Scene.
-	@Getter
 	private final Map<Altar, GameObject> portalGuardians = new EnumMap<>(Altar.class);
-	@Getter
 	private final Map<Integer, GameObject> landmarks = new HashMap<>();
-	@Getter
 	private final List<GameObject> partsRemains = new ArrayList<>();
-	@Getter
 	private final List<GameObject> largeRemains = new ArrayList<>();
-	@Getter
 	private final List<GameObject> hugeRemains = new ArrayList<>();
-	@Getter
 	private final List<TileObject> shortcuts = new ArrayList<>();
 	// Both portal objects can be loaded at once.
 	private GameObject portal;
 	private GameObject hugeExitPortal;
-	@Getter
 	private GameObject altarObject;
 	// Some altar rooms contain multiple exits; retain the arrival position for selection.
 	private final List<GameObject> altarExits = new ArrayList<>();
 	private WorldPoint altarArrival;
 	private Location lastLocation = Location.OUTSIDE;
 	private Altar altarRoom;
-	@Getter
 	private NPC greatGuardian;
 	// The client only keeps NPCs within about 15 tiles, and the guardian never moves, so its
 	// position is remembered from the last spawn for use from the far side of the temple.
-	@Getter
 	private WorldPoint greatGuardianCentre;
-	@Getter
 	private int greatGuardianSize;
 	// The Rewards Guardian in the waiting area outside the barrier.
 	private NPC rewardTrader;
-	@Getter
 	private NPC cordelia;
-	@Getter
 	private final Map<WorldPoint, GroundObject> cellTiles = new LinkedHashMap<>();
-	@Getter
 	private final Map<Integer, NPC> barrierNpcs = new HashMap<>();
 	private final Map<WorldPoint, Integer> barrierHealth = new HashMap<>();
 
@@ -279,10 +264,6 @@ public class StateTracker
 	private int freeSlots = INVENTORY_SIZE;
 	private final Set<Altar> talismans = new HashSet<>();
 	private final Map<Integer, Integer> runeStacks = new HashMap<>();
-	// Lower-case rune names without the " rune", matched against the runes to keep.
-	private final Map<Integer, String> runeNames = new HashMap<>();
-	private String keepRunesSetting;
-	private Set<String> runesToKeep = ImmutableSet.of();
 	private final Map<PouchType, Boolean> pouchesPresent = new EnumMap<>(PouchType.class);
 	// What each pouch held at the last tick, and what each degraded pouch held when last seen
 	// full: a degraded pouch keeps losing capacity, and seeing it full is the surest measure.
@@ -307,14 +288,82 @@ public class StateTracker
 	private int lastStones;
 
 	@Inject
-	StateTracker(Client client, ClientThread clientThread, ItemManager itemManager, ConfigManager configManager,
-		GotrAutopilotConfig config)
+	StateTracker(Client client, ClientThread clientThread, ItemManager itemManager, ConfigManager configManager)
 	{
 		this.client = client;
 		this.clientThread = clientThread;
 		this.itemManager = itemManager;
 		this.configManager = configManager;
-		this.config = config;
+	}
+
+	public int getSceneVersion()
+	{
+		return sceneVersion;
+	}
+
+	public Map<Altar, GameObject> getPortalGuardians()
+	{
+		return portalGuardians;
+	}
+
+	public Map<Integer, GameObject> getLandmarks()
+	{
+		return landmarks;
+	}
+
+	public List<GameObject> getPartsRemains()
+	{
+		return partsRemains;
+	}
+
+	public List<GameObject> getLargeRemains()
+	{
+		return largeRemains;
+	}
+
+	public List<GameObject> getHugeRemains()
+	{
+		return hugeRemains;
+	}
+
+	public List<TileObject> getShortcuts()
+	{
+		return shortcuts;
+	}
+
+	public GameObject getAltarObject()
+	{
+		return altarObject;
+	}
+
+	public NPC getGreatGuardian()
+	{
+		return greatGuardian;
+	}
+
+	public WorldPoint getGreatGuardianCentre()
+	{
+		return greatGuardianCentre;
+	}
+
+	public int getGreatGuardianSize()
+	{
+		return greatGuardianSize;
+	}
+
+	public NPC getCordelia()
+	{
+		return cordelia;
+	}
+
+	public Map<WorldPoint, GroundObject> getCellTiles()
+	{
+		return cellTiles;
+	}
+
+	public Map<Integer, NPC> getBarrierNpcs()
+	{
+		return barrierNpcs;
 	}
 
 	public void reset()
@@ -954,7 +1003,6 @@ public class StateTracker
 		runePouch = false;
 		talismans.clear();
 		runeStacks.clear();
-		runeNames.clear();
 		pouchesPresent.clear();
 		int used = 0;
 		if (items == null)
@@ -1023,21 +1071,12 @@ public class StateTracker
 				runePouch = true;
 				continue;
 			}
-			Altar rune = Altar.fromRune(id);
-			CombinationRune combination = rune == null ? CombinationRune.fromRune(id) : null;
-			if (rune != null || combination != null)
+			// Only the air and water runes count, for combination runes.
+			if (Altar.fromRune(id) != null)
 			{
 				runeStacks.merge(id, qty, Integer::sum);
-				runeNames.put(id, (rune != null ? rune.getLabel() : combination.getLabel()).toLowerCase(Locale.ROOT));
-				continue;
 			}
-			String name = itemName(id);
-			if (name.endsWith(" rune"))
-			{
-				runeStacks.merge(id, qty, Integer::sum);
-				runeNames.put(id, name.substring(0, name.length() - " rune".length()));
-			}
-			else if (name.contains("pickaxe"))
+			else if (itemName(id).contains("pickaxe"))
 			{
 				pickaxeInInventory = true;
 			}
@@ -1397,27 +1436,8 @@ public class StateTracker
 			guardianPoints.put(entry.getKey(), entry.getValue().getWorldLocation());
 		}
 
-		int depositable = 0;
-		int baseCount = 0;
 		Altar baseRune = baseRuneCarried();
-		Set<String> keep = runesToKeep();
-		List<String> kept = new ArrayList<>();
-		for (Map.Entry<Integer, Integer> stack : runeStacks.entrySet())
-		{
-			String name = runeNames.get(stack.getKey());
-			if (baseRune != null && stack.getKey() == baseRune.getRuneItemId())
-			{
-				baseCount = stack.getValue();
-			}
-			else if (keep.contains(name))
-			{
-				kept.add(name);
-			}
-			else
-			{
-				depositable++;
-			}
-		}
+		int baseCount = runeStacks.getOrDefault(baseRune.getRuneItemId(), 0);
 
 		int sinceStart = phase == GamePhase.ACTIVE && gameStartTick >= 0 ? ticksToSeconds(tick - gameStartTick) : -1;
 		int toStart = phase == GamePhase.COUNTDOWN && startAtTick >= 0 ? Math.max(0, ticksToSeconds(startAtTick - tick)) : -1;
@@ -1478,8 +1498,6 @@ public class StateTracker
 			.pickaxe(pickaxeInInventory || pickaxeWorn)
 			.freeSlots(freeSlots)
 			.talismans(ImmutableSet.copyOf(talismans))
-			.depositableRunes(depositable)
-			.keptRunes(kept)
 			.baseRune(baseRune)
 			.baseRuneCount(baseCount)
 			.pouches(pouches)
@@ -1519,28 +1537,6 @@ public class StateTracker
 		return portal;
 	}
 
-	// The configured runes to keep as lower-case names without " rune", parsed when the setting changes.
-	private Set<String> runesToKeep()
-	{
-		String setting = config.keepRunes();
-		if (setting == null || setting.equals(keepRunesSetting))
-		{
-			return setting == null ? ImmutableSet.of() : runesToKeep;
-		}
-		keepRunesSetting = setting;
-		Set<String> names = new HashSet<>();
-		for (String part : setting.toLowerCase(Locale.ROOT).split("[,;\\n]"))
-		{
-			String name = part.trim().replaceFirst("\\s+runes?$", "");
-			if (!name.isEmpty())
-			{
-				names.add(name);
-			}
-		}
-		runesToKeep = ImmutableSet.copyOf(names);
-		return runesToKeep;
-	}
-
 	private Altar baseRuneCarried()
 	{
 		int air = runeStacks.getOrDefault(Altar.AIR.getRuneItemId(), 0);
@@ -1559,12 +1555,12 @@ public class StateTracker
 
 	private void loadBreak()
 	{
-		Integer saved = configManager.getConfiguration(GotrAutopilotConfig.GROUP, BREAK_KEY, Integer.class);
+		Integer saved = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, BREAK_KEY, Integer.class);
 		learnedBreakSeconds = saved == null ? -1 : saved;
 		// Banked points are only announced at the end of a game or by the Rewards Guardian, so
 		// the last known totals carry over between sessions.
-		Integer elemental = configManager.getConfiguration(GotrAutopilotConfig.GROUP, ELEMENTAL_POINTS_KEY, Integer.class);
-		Integer catalytic = configManager.getConfiguration(GotrAutopilotConfig.GROUP, CATALYTIC_POINTS_KEY, Integer.class);
+		Integer elemental = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, ELEMENTAL_POINTS_KEY, Integer.class);
+		Integer catalytic = configManager.getRSProfileConfiguration(ConstsExpConfig.GROUP, CATALYTIC_POINTS_KEY, Integer.class);
 		if (elemental != null && catalytic != null)
 		{
 			savedElementalPoints = elemental;
@@ -1574,8 +1570,8 @@ public class StateTracker
 
 	private void savePoints()
 	{
-		configManager.setConfiguration(GotrAutopilotConfig.GROUP, ELEMENTAL_POINTS_KEY, savedElementalPoints);
-		configManager.setConfiguration(GotrAutopilotConfig.GROUP, CATALYTIC_POINTS_KEY, savedCatalyticPoints);
+		configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, ELEMENTAL_POINTS_KEY, savedElementalPoints);
+		configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, CATALYTIC_POINTS_KEY, savedCatalyticPoints);
 	}
 
 	private int breakSeconds()
@@ -1595,7 +1591,7 @@ public class StateTracker
 		if (seconds != learnedBreakSeconds)
 		{
 			learnedBreakSeconds = seconds;
-			configManager.setConfiguration(GotrAutopilotConfig.GROUP, BREAK_KEY, seconds);
+			configManager.setRSProfileConfiguration(ConstsExpConfig.GROUP, BREAK_KEY, seconds);
 			log.debug("Learned break between games: {}s", seconds);
 		}
 		closingTick = -1;

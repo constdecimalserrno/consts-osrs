@@ -81,11 +81,6 @@ public class Planner
 
 	public Instruction plan(Snapshot s, PlannerSettings c)
 	{
-		if (!c.isDepositRunes() && s.getDepositableRunes() > 0)
-		{
-			// The runes stay where they are and simply take their inventory slots.
-			s = s.toBuilder().depositableRunes(0).build();
-		}
 		if (s.getLocation() == Location.OUTSIDE)
 		{
 			return Instruction.builder().step(Step.NOT_IN_GAME).headline("").urgency(Urgency.INFO).build();
@@ -150,10 +145,6 @@ public class Planner
 			}
 			return Instruction.builder().step(Step.ENTER_PORTAL).headline("Enter the portal and wait inside" + direction(s))
 				.detail("Wait inside for the next game").target(Target.PORTAL).urgency(Urgency.HIGH).build();
-		}
-		if (s.getDepositableRunes() > 0)
-		{
-			return depositRunes(s);
 		}
 		if (s.anyPouchDegraded())
 		{
@@ -349,8 +340,7 @@ public class Planner
 		// The close estimate drifts by seconds each tick: once judged, the judgement holds
 		// until the estimate has moved a few seconds the other way.
 		Step last = s.getLastStep();
-		boolean wasGrace = last == Step.POWER_UP || last == Step.DEPOSIT_RUNES || last == Step.PRE_TAKE_CELLS
-			|| last == Step.PRE_REPAIR_POUCHES;
+		boolean wasGrace = last == Step.POWER_UP || last == Step.PRE_TAKE_CELLS || last == Step.PRE_REPAIR_POUCHES;
 		int slack = wasGrace ? 5 : last == Step.ENTER_PORTAL ? -5 : 0;
 		return s.energyCapped() || (close >= 0 && close <= (left >= 0 ? left : 30) + GRACE_MARGIN_SECONDS + slack);
 	}
@@ -370,7 +360,7 @@ public class Planner
 	private Instruction graceResupply(Snapshot s, int left)
 	{
 		Step last = s.getLastStep();
-		if (last == Step.POWER_UP || last == Step.DEPOSIT_RUNES || last == Step.PRE_TAKE_CELLS || last == Step.PRE_REPAIR_POUCHES)
+		if (last == Step.POWER_UP || last == Step.PRE_TAKE_CELLS || last == Step.PRE_REPAIR_POUCHES)
 		{
 			left += 4;
 		}
@@ -378,11 +368,6 @@ public class Planner
 		{
 			return Instruction.builder().step(Step.POWER_UP).headline("Hand in your stones, then enter the portal")
 				.detail("").target(Target.GREAT_GUARDIAN).items(STONE_ITEMS).urgency(Urgency.HIGH).build();
-		}
-		if (s.getDepositableRunes() > 0 && errandFits(s, Target.DEPOSIT_POOL, 10, 2, left))
-		{
-			return Instruction.builder().step(Step.DEPOSIT_RUNES).headline("Deposit your runes, then enter the portal")
-				.detail("").target(Target.DEPOSIT_POOL).urgency(Urgency.HIGH).build();
 		}
 		// Once the portal is open it comes first, and cells are fetched only when none are left,
 		// as during a round. Until it opens, the wait is spent topping them up.
@@ -485,10 +470,8 @@ public class Planner
 		}
 		if (s.getFragments() > 0 && s.capacity() == 0)
 		{
-			boolean deposit = s.getDepositableRunes() > 0;
 			return Instruction.builder().step(Step.FREE_SPACE).headline("Make room for essence")
-				.detail(deposit ? "Deposit runes or use your cell" : "Use your cell or drop an item")
-				.target(deposit ? Target.DEPOSIT_POOL : Target.NONE).build();
+				.detail("Use your cell or drop an item").build();
 		}
 
 		Instruction portalWait = portalWait(s, c);
@@ -620,10 +603,6 @@ public class Planner
 			}
 			// Exclude the changing walk distance to avoid alternating instructions while moving.
 			int craftSeconds = fragments > 0 ? (int) Math.round(Math.min(fragments, room) / s.getCraftPerTick() * 0.6) : Integer.MAX_VALUE;
-			if (fragments > 0 && s.getDepositableRunes() > 0 && s.getFreeSlots() < Math.min(fragments, room))
-			{
-				craftSeconds += walkSeconds(s, Target.DEPOSIT_POOL, 10) + 3;
-			}
 			if (fragments > 0 && room > 0 && craftSeconds <= portalEta)
 			{
 				return craftEssence(s);
@@ -728,8 +707,7 @@ public class Planner
 	private static boolean preppingForClose(Snapshot s)
 	{
 		Step last = s.getLastStep();
-		return last == Step.DEPOSIT_RUNES || last == Step.PRE_TAKE_CELLS || last == Step.PRE_REPAIR_POUCHES
-			|| last == Step.PRE_POSITION;
+		return last == Step.PRE_TAKE_CELLS || last == Step.PRE_REPAIR_POUCHES || last == Step.PRE_POSITION;
 	}
 
 	/**
@@ -799,30 +777,6 @@ public class Planner
 	{
 		Instruction prep = preGame(s, c);
 		return prep.toBuilder().detail("Rift closes in ~" + close + "s").build();
-	}
-
-	private static Instruction depositRunes(Snapshot s)
-	{
-		return Instruction.builder().step(Step.DEPOSIT_RUNES).headline("Deposit your runes")
-			.detail(runesToKeep(s))
-			.target(Target.DEPOSIT_POOL).build();
-	}
-
-	// The combination base rune and any runes the settings keep, as "Keep your air and law runes".
-	private static String runesToKeep(Snapshot s)
-	{
-		List<String> names = new ArrayList<>();
-		if (s.getBaseRuneCount() > 0)
-		{
-			names.add(s.getBaseRune().getLabel().toLowerCase());
-		}
-		names.addAll(s.getKeptRunes());
-		if (names.isEmpty())
-		{
-			return "";
-		}
-		String last = names.remove(names.size() - 1);
-		return "Keep your " + (names.isEmpty() ? "" : String.join(", ", names) + " and ") + last + " runes";
 	}
 
 	private static Set<Integer> degradedPouches(Snapshot s)
@@ -1249,11 +1203,6 @@ public class Planner
 		{
 			return Instruction.builder().step(Step.FILL_POUCHES).headline("Fill your pouches")
 				.detail("").target(Target.WORKBENCH).items(pouchesWithSpace(s)).build();
-		}
-		int craftable = Math.min(s.getFragments(), s.capacity());
-		if (s.getDepositableRunes() > 0 && s.getFreeSlots() < craftable)
-		{
-			return depositRunes(s);
 		}
 		return Instruction.builder().step(Step.CRAFT_ESSENCE).headline("Craft essence at the workbench")
 			.detail("")

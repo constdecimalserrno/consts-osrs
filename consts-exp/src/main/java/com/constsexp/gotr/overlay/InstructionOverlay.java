@@ -24,8 +24,7 @@
  */
 package com.constsexp.gotr.overlay;
 
-import com.constsexp.gotr.GotrAutopilotConfig;
-import com.constsexp.gotr.GotrAutopilotPlugin;
+import com.constsexp.gotr.GotrAutopilot;
 import com.constsexp.gotr.plan.Instruction;
 import com.constsexp.gotr.plan.Step;
 import com.constsexp.gotr.plan.Urgency;
@@ -42,7 +41,6 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.components.LineComponent;
-import net.runelite.client.ui.overlay.components.TitleComponent;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
@@ -52,16 +50,14 @@ public class InstructionOverlay extends OverlayPanel
 	private static final Color NORMAL = new Color(120, 255, 200);
 	private static final Color HIGH = new Color(255, 120, 120);
 
-	private final GotrAutopilotPlugin plugin;
-	private final GotrAutopilotConfig config;
+	private final GotrAutopilot plugin;
 	private String detail = "";
 	private String[] detailLines = new String[0];
 
 	@Inject
-	InstructionOverlay(GotrAutopilotPlugin plugin, GotrAutopilotConfig config)
+	InstructionOverlay(GotrAutopilot plugin)
 	{
 		this.plugin = plugin;
-		this.config = config;
 		setPosition(OverlayPosition.TOP_LEFT);
 		setPriority(PRIORITY_HIGH);
 	}
@@ -74,21 +70,14 @@ public class InstructionOverlay extends OverlayPanel
 		{
 			return null;
 		}
-		boolean compact = config.compactOverlay();
+		// Upstream's compact panel, its default: narrow, in the small font, the timers folded onto two lines.
 		Font small = FontManager.getRunescapeSmallFont();
-		panelComponent.setPreferredSize(new Dimension(compact ? 180 : 260, 0));
-		panelComponent.setBorder(compact ? new Rectangle(4, 3, 4, 3) : new Rectangle(5, 5, 5, 5));
-		panelComponent.setGap(new Point(0, compact ? 1 : 0));
+		panelComponent.setPreferredSize(new Dimension(180, 0));
+		panelComponent.setBorder(new Rectangle(4, 3, 4, 3));
+		panelComponent.setGap(new Point(0, 1));
 		Color color = instruction.getUrgency() == Urgency.HIGH ? HIGH : instruction.getUrgency() == Urgency.INFO ? INFO : NORMAL;
-		if (compact)
-		{
-			// A line rather than a title so a long headline wraps instead of running off the panel.
-			panelComponent.getChildren().add(LineComponent.builder().left(instruction.getHeadline()).leftColor(color).leftFont(small).build());
-		}
-		else
-		{
-			panelComponent.getChildren().add(TitleComponent.builder().text(instruction.getHeadline()).color(color).build());
-		}
+		// A line rather than a title so a long headline wraps instead of running off the panel.
+		panelComponent.getChildren().add(LineComponent.builder().left(instruction.getHeadline()).leftColor(color).leftFont(small).build());
 		if (!detail.equals(instruction.getDetail()))
 		{
 			detail = instruction.getDetail();
@@ -101,20 +90,7 @@ public class InstructionOverlay extends OverlayPanel
 				panelComponent.getChildren().add(LineComponent.builder().left(part).leftFont(small).build());
 			}
 		}
-		if (config.showTimers())
-		{
-			Snapshot s = plugin.getSnapshot();
-			if (compact)
-			{
-				compactTimers(s);
-			}
-			else
-			{
-				// A gap between the step's text and the figures below it.
-				panelComponent.getChildren().add(LineComponent.builder().left(" ").build());
-				timers(s);
-			}
-		}
+		compactTimers(plugin.getSnapshot());
 		return super.render(graphics);
 	}
 
@@ -188,69 +164,6 @@ public class InstructionOverlay extends OverlayPanel
 		{
 			builder.right(right);
 		}
-		if (rightColor != null)
-		{
-			builder.rightColor(rightColor);
-		}
-		panelComponent.getChildren().add(builder.build());
-	}
-
-	private void timers(Snapshot s)
-	{
-		if (s.getPhase() != GamePhase.ACTIVE && s.isPortalOpen())
-		{
-			// The last portal of a round can still be open as the round closes.
-			line("Portal", s.getPortalSecondsRemaining() >= 0 ? "open - " + s.getPortalSecondsRemaining() + "s" : "open", HIGH);
-		}
-		if (s.getPhase() == GamePhase.ACTIVE)
-		{
-			if (s.getSecondsSinceStart() >= 0)
-			{
-				line("Game", clock(s.getSecondsSinceStart()));
-			}
-			if (s.isPortalOpen())
-			{
-				line("Portal", s.getPortalSecondsRemaining() >= 0 ? "open - " + s.getPortalSecondsRemaining() + "s" : "open", HIGH);
-			}
-			else if (s.getSecondsToNextPortal() >= 0)
-			{
-				line("Next portal", "~" + s.getSecondsToNextPortal() + "s");
-			}
-			if (s.getSecondsToClose() >= 0)
-			{
-				line("Rift closes", "~" + clock(s.getSecondsToClose()), s.getSecondsToClose() < 60 ? HIGH : null);
-			}
-		}
-		else if (s.getPhase() == GamePhase.COUNTDOWN && s.getSecondsToStart() >= 0)
-		{
-			line("Starts in", s.getSecondsToStart() + "s");
-		}
-		if (s.getLocation() == Location.LOBBY && s.getPhase() != GamePhase.COUNTDOWN && s.getSecondsToNextGame() >= 0)
-		{
-			line("Next game", "~" + clock(s.getSecondsToNextGame()));
-		}
-		if (s.getSavedElementalPoints() >= 0 || s.getSavedCatalyticPoints() >= 0)
-		{
-			line("Points", "E " + Math.max(0, s.getSavedElementalPoints()) + " / C " + Math.max(0, s.getSavedCatalyticPoints()));
-		}
-		if (s.getChargedCell() != null)
-		{
-			line("Cell", s.getChargedCell().getLabel());
-		}
-		if (s.isBindingNecklaceWorn())
-		{
-			line("Necklace", s.getNecklaceCharges() + " charges", s.getNecklaceCharges() <= 2 ? HIGH : null);
-		}
-	}
-
-	private void line(String left, String right)
-	{
-		line(left, right, null);
-	}
-
-	private void line(String left, String right, @Nullable Color rightColor)
-	{
-		LineComponent.LineComponentBuilder builder = LineComponent.builder().left(left).right(right);
 		if (rightColor != null)
 		{
 			builder.rightColor(rightColor);

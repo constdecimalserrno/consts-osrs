@@ -27,15 +27,49 @@ package com.constsexp.gotr.plan;
 import com.constsexp.gotr.model.Altar;
 import com.constsexp.gotr.model.CombinationRune;
 import javax.annotation.Nullable;
-import lombok.Value;
 
-@Value
-public class AltarChoice
+public final class AltarChoice
 {
-	Altar altar;
+	private final Altar altar;
 	@Nullable
-	CombinationRune combination;
-	boolean viaTalisman;
-	int energyPerEssence;
-	String reason;
+	private final CombinationRune combination;
+	private final boolean viaTalisman;
+	private final int energyPerEssence;
+	private final String reason;
+
+	public AltarChoice(Altar altar, @Nullable CombinationRune combination, boolean viaTalisman, int energyPerEssence,
+		String reason)
+	{
+		this.altar = altar;
+		this.combination = combination;
+		this.viaTalisman = viaTalisman;
+		this.energyPerEssence = energyPerEssence;
+		this.reason = reason;
+	}
+
+	public Altar getAltar()
+	{
+		return altar;
+	}
+
+	@Nullable
+	public CombinationRune getCombination()
+	{
+		return combination;
+	}
+
+	public boolean isViaTalisman()
+	{
+		return viaTalisman;
+	}
+
+	public int getEnergyPerEssence()
+	{
+		return energyPerEssence;
+	}
+
+	public String getReason()
+	{
+		return reason;
+	}
 }

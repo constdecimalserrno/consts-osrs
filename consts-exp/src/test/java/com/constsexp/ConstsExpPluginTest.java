@@ -13,9 +13,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.constsexp.gotr.GotrAutopilot;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -90,6 +92,7 @@ public class ConstsExpPluginTest
         setField("configManager", configManager);
         setField("clientThread", clientThread);
         setField("sessionActive", true);
+        setField("gotrAutopilot", mock(GotrAutopilot.class));
 
         when(config.masterSwitch()).thenReturn(true);
         when(config.preset()).thenReturn(Preset.CUSTOM);
@@ -1133,6 +1136,48 @@ public class ConstsExpPluginTest
         assertTrue((long) getField("lastActivityMillis") > 1L);
     }
 
+    // GOTR Autopilot
+
+    @Test
+    public void gotrAutopilotRunsOnlyWhileItsSwitchAndTheMasterSwitchAreOn() throws Exception
+    {
+        GotrAutopilot autopilot = (GotrAutopilot) getField("gotrAutopilot");
+
+        when(config.gotrAutopilot()).thenReturn(true);
+        plugin.onConfigChanged(gotrAutopilotChange("false", "true"));
+        verify(autopilot).setRunning(true);
+
+        when(config.masterSwitch()).thenReturn(false);
+        plugin.onConfigChanged(masterSwitchChange("true", "false"));
+        verify(autopilot).setRunning(false);
+
+        when(config.masterSwitch()).thenReturn(true);
+        when(config.gotrAutopilot()).thenReturn(false);
+        plugin.onConfigChanged(gotrAutopilotChange("true", "false"));
+        verify(autopilot, times(2)).setRunning(false);
+    }
+
+    @Test
+    public void gotrAutopilotStartsWithThePluginAndStopsWithIt() throws Exception
+    {
+        GotrAutopilot autopilot = (GotrAutopilot) getField("gotrAutopilot");
+        when(config.gotrAutopilot()).thenReturn(true);
+        setField("overlayManager", mock(OverlayManager.class));
+        setField("mouseManager", mock(MouseManager.class));
+        setField("clientToolbar", mock(ClientToolbar.class));
+        setField("eventBus", mock(EventBus.class));
+        setField("colorPickerManager", mock(ColorPickerManager.class));
+        when(configManager.getConfigDescriptor(any())).thenReturn(
+            new ConfigDescriptor(ConstsExpConfig.class.getAnnotation(ConfigGroup.class), List.of(), List.of()));
+        when(client.getGameState()).thenReturn(GameState.LOGIN_SCREEN);
+
+        plugin.startUp();
+        verify(autopilot).setRunning(true);
+
+        plugin.shutDown();
+        verify(autopilot).setRunning(false);
+    }
+
     // Lifecycle
 
     @Test
@@ -1263,6 +1308,16 @@ public class ConstsExpPluginTest
         ConfigChanged changed = new ConfigChanged();
         changed.setGroup(ConstsExpConfig.GROUP);
         changed.setKey(ConstsExpConfig.MASTER_KEY);
+        changed.setOldValue(from);
+        changed.setNewValue(to);
+        return changed;
+    }
+
+    private static ConfigChanged gotrAutopilotChange(String from, String to)
+    {
+        ConfigChanged changed = new ConfigChanged();
+        changed.setGroup(ConstsExpConfig.GROUP);
+        changed.setKey("gotrAutopilot");
         changed.setOldValue(from);
         changed.setNewValue(to);
         return changed;

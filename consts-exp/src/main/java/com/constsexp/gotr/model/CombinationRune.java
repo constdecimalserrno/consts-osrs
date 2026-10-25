@@ -25,12 +25,8 @@
 package com.constsexp.gotr.model;
 
 import javax.annotation.Nullable;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import net.runelite.api.gameval.ItemID;
 
-@AllArgsConstructor
-@Getter
 public enum CombinationRune
 {
 	MIST("Mist", 6, Altar.AIR, Altar.WATER, ItemID.MISTRUNE),
@@ -45,6 +41,40 @@ public enum CombinationRune
 	private final Altar first;
 	private final Altar second;
 	private final int runeItemId;
+
+	CombinationRune(String label, int levelRequired, Altar first, Altar second, int runeItemId)
+	{
+		this.label = label;
+		this.levelRequired = levelRequired;
+		this.first = first;
+		this.second = second;
+		this.runeItemId = runeItemId;
+	}
+
+	public String getLabel()
+	{
+		return label;
+	}
+
+	public int getLevelRequired()
+	{
+		return levelRequired;
+	}
+
+	public Altar getFirst()
+	{
+		return first;
+	}
+
+	public Altar getSecond()
+	{
+		return second;
+	}
+
+	public int getRuneItemId()
+	{
+		return runeItemId;
+	}
 
 	@Nullable
 	public static CombinationRune of(Altar altar, Altar carriedRune)

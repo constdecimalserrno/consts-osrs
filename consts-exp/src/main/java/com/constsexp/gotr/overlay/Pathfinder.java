@@ -31,7 +31,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nullable;
-import lombok.Value;
 import net.runelite.api.Client;
 import net.runelite.api.CollisionData;
 import net.runelite.api.coords.LocalPoint;
@@ -48,13 +47,28 @@ public class Pathfinder
 	/**
 	 * Climb index k connects waypoints k and k + 1; -1 connects the player to the first waypoint.
 	 */
-	@Value
-	public static class Path
+	public static final class Path
 	{
 		public static final Path EMPTY = new Path(Collections.emptyList(), Collections.emptySet());
 
-		List<WorldPoint> points;
-		Set<Integer> climbs;
+		private final List<WorldPoint> points;
+		private final Set<Integer> climbs;
+
+		Path(List<WorldPoint> points, Set<Integer> climbs)
+		{
+			this.points = points;
+			this.climbs = climbs;
+		}
+
+		public List<WorldPoint> getPoints()
+		{
+			return points;
+		}
+
+		public Set<Integer> getClimbs()
+		{
+			return climbs;
+		}
 
 		public boolean isEmpty()
 		{
@@ -93,16 +107,46 @@ public class Pathfinder
 		}
 	}
 
-	@Value
-	public static class Transport
+	public static final class Transport
 	{
-		Set<Integer> bottom;
-		Set<Integer> top;
+		private final Set<Integer> bottom;
+		private final Set<Integer> top;
 		// Optional anchors pin the drawn route to the shortcut objects.
 		@Nullable
-		WorldPoint bottomAnchor;
+		private final WorldPoint bottomAnchor;
 		@Nullable
-		WorldPoint topAnchor;
+		private final WorldPoint topAnchor;
+
+		public Transport(Set<Integer> bottom, Set<Integer> top, @Nullable WorldPoint bottomAnchor,
+			@Nullable WorldPoint topAnchor)
+		{
+			this.bottom = bottom;
+			this.top = top;
+			this.bottomAnchor = bottomAnchor;
+			this.topAnchor = topAnchor;
+		}
+
+		Set<Integer> getBottom()
+		{
+			return bottom;
+		}
+
+		Set<Integer> getTop()
+		{
+			return top;
+		}
+
+		@Nullable
+		WorldPoint getBottomAnchor()
+		{
+			return bottomAnchor;
+		}
+
+		@Nullable
+		WorldPoint getTopAnchor()
+		{
+			return topAnchor;
+		}
 	}
 
 	private static final int W = 0x1240108;
