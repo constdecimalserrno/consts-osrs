@@ -277,6 +277,7 @@ class ConstsLeaderboardPanel extends PluginPanel
         add(friendsList, c);
         c.gridy++;
 
+        // Last: it fills the Friends list, so the list must exist
         setMyName(null);
         showFriendsOpen(!"false".equals(configManager.getConfiguration(CONFIG_GROUP, FRIENDS_OPEN)));
     }
@@ -285,8 +286,14 @@ class ConstsLeaderboardPanel extends PluginPanel
     void setFriends(Map<String, Boolean> friends)
     {
         this.friends = friends;
+        showFriends();
+    }
+
+    /* You first once your friends have loaded, then your friends */
+    private void showFriends()
+    {
         friendsList.removeAll();
-        if (myName != null)
+        if (myName != null && friends != null)
         {
             friendsList.add(youRow());
         }
@@ -464,7 +471,7 @@ class ConstsLeaderboardPanel extends PluginPanel
         myName = name == null ? null : sanitize(name);
         meButton.setEnabled(myName != null);
         meButton.setToolTipText(meTooltip(myName, shownName.getText()));
-        setFriends(friends);
+        showFriends();
     }
 
     private void showName(String text, Color color)

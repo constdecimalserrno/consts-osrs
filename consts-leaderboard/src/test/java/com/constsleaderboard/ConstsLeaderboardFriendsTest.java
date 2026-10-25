@@ -143,7 +143,11 @@ public class ConstsLeaderboardFriendsTest
         onEdt(() ->
         {
             ConstsLeaderboardPanel panel = panel();
+            // Logging in: your name comes a tick before your friends, and the list waits for them
             panel.setMyName("Iron Wren");
+            assertEquals("Log in to see your friends", ((JLabel) panel.friendsList.getComponent(0)).getText());
+            panel.setFriends(Map.of());
+            assertEquals("Iron Wren", ((JLabel) panel.friendsList.getComponent(0)).getText());
             panel.setMyName(null);
             panel.setFriends(null);
             assertEquals(1, panel.friendsList.getComponentCount());
