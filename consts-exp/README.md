@@ -2,9 +2,9 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, a tick pendulum for tick-perfect clicking, a timer on each tree, and Stealing Artefacts' two guards. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, XP per hour for the skill you're training, a tick pendulum for tick-perfect clicking, a timer on each tree, and Stealing Artefacts' two guards. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
-![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
+![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event; under them, Woodcutting at 42.1k XP an hour](screenshots/status-panel.gif)
 
 ![The inventory fills while woodcutting: the screen flashes magenta and the Inv Full row lights up](screenshots/inventory-full.jpg)
 
@@ -39,15 +39,15 @@ Presets only choose which alerts are on. Thresholds, colors and Dismiss on Click
 
 The EXP icon in RuneLite's sidebar opens these settings in a panel of their own, the same as the plugin's page in the Configuration panel, so they're one click away while you play. It keeps up with the config: pick a preset from the status panel's Shift + right-click menu and the **Preset** dropdown here shows it. The preset decides which alerts are on; an alert's own **Enabled** only counts under **Custom**. Right-click a setting's name to reset it.
 
-The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines and no tree timer, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does.
+The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel, no area lines and no tree timer, without turning the plugin off, so the EXP icon stays in the sidebar. Turning it back on starts fresh, as logging in does, except XP per hour, which lasts until you log out.
 
-Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open; click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
+Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open (Tick & XP opens with the XP table first); click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 
 | Tab | Sections |
 |---|---|
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
 | Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Thieving (Guard Lures) |
-| Tick & XP | Tick Pendulum (Enabled, Rhythm, Your Ping) |
+| Tick & XP | The XP table, then XP per Hour (Enabled), Tick Pendulum (Enabled, Rhythm, Your Ping) |
 | General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
 Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
@@ -100,11 +100,22 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 
 The crew message arrives as a filtered (spam) game message; consts-EXP listens on that channel.
 
+## XP per hour
+
+![The status panel on the Mining preset: Idle at 0:04, and under it a Mining row with the pickaxe icon at 24.1k XP an hour](screenshots/xp-per-hour.png)
+
+On by default (**Tick & XP** → **XP per Hour** → **Enabled**). Once you gain XP, a row under the alerts shows your XP per hour in the skill you're training: the last one to gain XP. Hitpoints and Slayer come with combat XP, so they only show when no other skill has gained any. Hover the row for the XP gained and the time behind the rate.
+
+- **The rate** is the XP since the skill's first drop over the time since that drop, so steady drops give their true rate from the second one on. It keeps falling while you're away, which is what the reset is for.
+- **The Tick & XP tab** opens with a table of every skill trained since you logged in, newest first: its icon, XP/h, XP gained and time, and a **Reset** for each. **Reset all** under it resets every skill.
+- **Reset** sets a skill back to zero, for after a break; its clock starts again at its next drop. There's no undo. Shift + right-click the status panel and pick **Reset XP/h** to reset every skill from the game.
+- **Logging out** clears it; hopping worlds and loading screens don't.
+
 ## Tick pendulum
 
 ![The tick pendulum under the Idle row: 12 ticks in a row on the left, the ball between the two orange lines with the zone glowing, and ~60 ms of ping on the right](screenshots/tick-pendulum.png)
 
-Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabled**. It sits in the status panel under the alerts, as wide as their bars.
+Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabled**. It sits in the status panel under the alerts and XP per hour, as wide as their bars.
 
 - **The ball** crosses the track once a tick, left to right, then back. Each swing is one tick's click window: every click made during it is read by the server on the same tick.
 - **Click while the ball is between the two orange lines.** The space between them glows while it's time. The middle of the swing is the safest click, as far as it gets from both cutoffs.
@@ -191,7 +202,7 @@ Where each preset shines, what its alerts are telling you, and what to tune.
 - **Startup Delay** (`8 s`): nothing fires right after the plugin starts.
 - **Loading screens** (teleports, region changes) don't reset timers or running alerts. Logging out stops running alerts and starts the timers over, except Aggro in OSRS mode: its area and time left are saved per account and carry on if you log back in where you logged out.
 - **Sound**: the system beep by default. **Sound** (General → Sounds) swaps it for one of the game's own sounds (town crier bell, Grand Exchange offer, coins, prayer drained, teleport, tree falling, boop, anvil), or **Custom sound ID** plays any game sound effect by its id. Picking one plays it once. **Volume** (`96` of `127`) plays it even with the game's sound effects off. `Repeat Interval` (`1.2 s`) sets the gap between sounds.
-- **Status panel**: the title, with the active preset as a tag beside it, or on a line of its own when it doesn't fit, as both Salvaging presets do. Then one row per enabled alert: its icon, name and value (hover for details). A quiet row stays dark, with a thin line under it: Idle's fills toward its threshold, Logout's toward its warning and Aggro's toward running out, and Health's and Prayer's show your level. A firing row lights up in its color, and pulses with the screen flash while it flashes. A color too dark to show well on the panel, like Potion's default black or a deep blue, is lightened toward white there; the screen flash keeps it as it is. An hourglass on Idle's row means it's waiting for your animation to stop. The pause countdown shows under the alerts. Shift + right-click the panel for its menu. It's drawn in RuneScape's small font, whatever RuneLite's interface font is set to.
+- **Status panel**: the title, with the active preset as a tag beside it, or on a line of its own when it doesn't fit, as both Salvaging presets do. Then one row per enabled alert: its icon, name and value (hover for details). A quiet row stays dark, with a thin line under it: Idle's fills toward its threshold, Logout's toward its warning and Aggro's toward running out, and Health's and Prayer's show your level. A firing row lights up in its color, and pulses with the screen flash while it flashes. A color too dark to show well on the panel, like Potion's default black or a deep blue, is lightened toward white there; the screen flash keeps it as it is. An hourglass on Idle's row means it's waiting for your animation to stop. Under the alerts come XP per hour, the tick pendulum when it's on, and the pause countdown. Shift + right-click the panel for its menu. It's drawn in RuneScape's small font, whatever RuneLite's interface font is set to.
 
 ## Running it
 

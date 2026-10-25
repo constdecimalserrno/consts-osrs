@@ -21,6 +21,7 @@ import javax.inject.Singleton;
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.Skill;
+import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPanel;
@@ -34,10 +35,11 @@ import net.runelite.client.util.ImageUtil;
 
 /**
  * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
- * value), Stealing Artefacts' two guards in Port Piscarilius, the tick pendulum when it's on, and the pause
- * countdown. A quiet row stays dark, with a thin line under it that fills as a timer gets close, or shows Health's
- * and Prayer's level; a firing row lights up in its color, and pulses with the screen flash. Text is RuneScape's
- * small font whatever RuneLite's interface font is: the 129 px rows are laid out for it.
+ * value), Stealing Artefacts' two guards in Port Piscarilius, XP per hour for the skill you're training, the tick
+ * pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a
+ * timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color, and pulses with the
+ * screen flash. Text is RuneScape's small font whatever RuneLite's interface font is: the 129 px rows are laid out
+ * for it.
  */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
@@ -83,14 +85,19 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private final ConstsExpPlugin plugin;
     private final ConstsExpConfig config;
     private final TooltipManager tooltipManager;
+    private final SkillIconManager skillIconManager;
+    // Each skill's icon, cut down to the row.
+    private final Map<Skill, BufferedImage> skillIcons = new EnumMap<>(Skill.class);
 
     @Inject
-    ConstsExpStatusOverlay(Client client, ConstsExpPlugin plugin, ConstsExpConfig config, TooltipManager tooltipManager)
+    ConstsExpStatusOverlay(Client client, ConstsExpPlugin plugin, ConstsExpConfig config, TooltipManager tooltipManager,
+        SkillIconManager skillIconManager)
     {
         this.client = client;
         this.plugin = plugin;
         this.config = config;
         this.tooltipManager = tooltipManager;
+        this.skillIconManager = skillIconManager;
 
         setPosition(OverlayPosition.TOP_RIGHT);
         setPriority(PRIORITY_HIGH);
@@ -101,6 +108,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
         setMinimumSize(ComponentConstants.STANDARD_WIDTH);
 
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset Aggro Timer", TITLE, e -> plugin.resetAggroTimer());
+        addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Reset XP/h", TITLE, e -> plugin.getXpRates().resetAll());
         for (Preset preset : Preset.values())
         {
             addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Preset: " + preset, TITLE, e -> plugin.applyPreset(preset));
@@ -136,8 +144,8 @@ class ConstsExpStatusOverlay extends OverlayPanel
     }
 
     /**
-     * The panel's rows at {@code now}: the title, each enabled alert, the guards, the tick pendulum, then the pause
-     * countdown.
+     * The panel's rows at {@code now}: the title, each enabled alert, the guards, XP per hour, the tick pendulum, then
+     * the pause countdown.
      */
     List<Row> rows(long now)
     {
@@ -160,6 +168,12 @@ class ConstsExpStatusOverlay extends OverlayPanel
         {
             rows.add(guardRow("East guard", lures[0]));
             rows.add(guardRow("SE guard", lures[1]));
+        }
+
+        Skill training = plugin.getXpRates().shown();
+        if (config.xpPerHour() && training != null)
+        {
+            rows.add(xpRow(training, now));
         }
 
         // Above the pause countdown, so the pause row a click brings never moves it.
@@ -249,6 +263,18 @@ class ConstsExpStatusOverlay extends OverlayPanel
     {
         return new AlertRow(lured ? LURED : NOT_LURED, label, "", lured ? Color.GREEN : Color.RED, null, 0, false,
             GUARD_TOOLTIP);
+    }
+
+    /** XP per hour for the skill you're training, with its own icon. */
+    private XpRow xpRow(Skill skill, long now)
+    {
+        XpRates rates = plugin.getXpRates();
+        BufferedImage icon = skillIcons.computeIfAbsent(skill,
+            s -> ImageUtil.resizeImage(skillIconManager.getSkillImage(s, true), XpRow.ICON, XpRow.ICON));
+        return new XpRow(icon, skill.getName(), XpRates.format(rates.perHour(skill, now)) + "/h",
+            "XP/h for " + skill.getName() + ", the last skill to gain XP: "
+                + String.format(Locale.ROOT, "%,d", rates.gained(skill)) + " XP in "
+                + XpRates.formatTime(rates.elapsed(skill, now)) + ".</br>Shift + right-click and Reset XP/h after a break.");
     }
 
     private String tooltip(AlertType type)
@@ -460,7 +486,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
     }
 
     /** An alert: its icon, name and value, and under a quiet row a thin line. */
-    static final class AlertRow extends Row
+    static class AlertRow extends Row
     {
         private static final int HEIGHT = 15;
 
@@ -506,7 +532,10 @@ class ConstsExpStatusOverlay extends OverlayPanel
             }
 
             Color iconColor = foreground != null ? foreground : ColorUtil.colorLerp(Color.BLACK, ink, 0.9);
-            icon(graphics, icon, x + 2, y + 3, iconColor);
+            if (icon != null)
+            {
+                icon(graphics, icon, x + 2, y + 3, iconColor);
+            }
             text(graphics, label, x + 14 - textBounds(label).x, y + 14, foreground != null ? foreground : LABEL_COLOR);
             Rectangle valueInk = textBounds(value);
             int valueX = x + width - 2 - valueInk.x - valueInk.width;
@@ -517,6 +546,29 @@ class ConstsExpStatusOverlay extends OverlayPanel
                 icon(graphics, HOURGLASS, valueX + valueInk.x - 3 - HOURGLASS.getWidth(), y + 3, iconColor);
             }
             return size(HEIGHT);
+        }
+    }
+
+    /** XP per hour: a quiet alert row with no line, and the skill's own icon in full color in place of a mask. */
+    static final class XpRow extends AlertRow
+    {
+        static final int ICON = 11;
+
+        private final BufferedImage skillIcon;
+
+        XpRow(BufferedImage skillIcon, String label, String value, String tooltip)
+        {
+            // Never lit and no line, so the ink only has to be some color.
+            super(null, label, value, INFO_COLOR, null, 0, false, tooltip);
+            this.skillIcon = skillIcon;
+        }
+
+        @Override
+        public Dimension render(Graphics2D graphics)
+        {
+            Dimension size = super.render(graphics);
+            graphics.drawImage(skillIcon, location.x + 1, location.y + 2, null);
+            return size;
         }
     }
 
