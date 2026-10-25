@@ -32,14 +32,15 @@ package com.constsdestination.tilepacks;
 import com.constsdestination.tilepacks.data.TilePack;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -213,10 +214,7 @@ public class TilePackMigrations
             return packs;
         }
 
-        Map<Integer, LegacyTilePack> customPacks = parseMap(customPacksJson,
-            new TypeToken<Map<Integer, LegacyTilePack>>()
-            {
-            }.getType());
+        Map<Integer, LegacyTilePack> customPacks = parseMap(customPacksJson, LegacyTilePack.class);
         for (Map.Entry<Integer, LegacyTilePack> customPack : customPacks.entrySet())
         {
             LegacyTilePack legacy = customPack.getValue();
@@ -346,11 +344,8 @@ public class TilePackMigrations
             {
                 throw new IllegalStateException("tilePacks.jsonc is missing");
             }
-            Map<Integer, TilePack> packs = gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8),
-                new TypeToken<Map<Integer, TilePack>>()
-                {
-                }.getType());
-            return packs == null ? new HashMap<>() : packs;
+            return toMap(gson.fromJson(new InputStreamReader(in, StandardCharsets.UTF_8), JsonObject.class),
+                TilePack.class);
         }
         catch (IOException e)
         {
@@ -382,20 +377,31 @@ public class TilePackMigrations
         {
             return new ArrayList<>();
         }
-        List<Integer> parsed = gson.fromJson(json, new TypeToken<List<Integer>>()
-        {
-        }.getType());
-        return parsed == null ? new ArrayList<>() : parsed;
+        Integer[] parsed = gson.fromJson(json, Integer[].class);
+        return parsed == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(parsed));
     }
 
-    private <T> Map<Integer, T> parseMap(String json, Type type)
+    private <T> Map<Integer, T> parseMap(String json, Class<T> type)
     {
         if (Strings.isNullOrEmpty(json))
         {
             return new HashMap<>();
         }
-        Map<Integer, T> parsed = gson.fromJson(json, type);
-        return parsed == null ? new HashMap<>() : parsed;
+        return toMap(gson.fromJson(json, JsonObject.class), type);
+    }
+
+    /** A JSON object keyed by pack number, as a map, each value read as type. */
+    private <T> Map<Integer, T> toMap(JsonObject json, Class<T> type)
+    {
+        Map<Integer, T> map = new HashMap<>();
+        if (json != null)
+        {
+            for (Map.Entry<String, JsonElement> entry : json.entrySet())
+            {
+                map.put(Integer.valueOf(entry.getKey()), gson.fromJson(entry.getValue(), type));
+            }
+        }
+        return map;
     }
 
     private static class LegacyTilePack

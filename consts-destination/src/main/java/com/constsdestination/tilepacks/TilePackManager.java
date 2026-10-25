@@ -31,9 +31,9 @@ package com.constsdestination.tilepacks;
 import com.constsdestination.ConstsDestinationConfig;
 import com.constsdestination.tilepacks.data.TilePack;
 import com.google.common.base.Strings;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -165,9 +165,8 @@ public class TilePackManager
         {
             return;
         }
-        enabledPacks = gson.fromJson(json, new TypeToken<List<Integer>>()
-        {
-        }.getType());
+        Integer[] ids = gson.fromJson(json, Integer[].class);
+        enabledPacks = ids == null ? new ArrayList<>() : new ArrayList<>(Arrays.asList(ids));
     }
 
     //gets the custom id the user is currently on
@@ -181,9 +180,7 @@ public class TilePackManager
             //default to 9999 because we add 1, and I want it to start at an even 10k.
             return FIRST_ID - 1;
         }
-        return gson.fromJson(json, new TypeToken<Integer>()
-        {
-        }.getType());
+        return gson.fromJson(json, Integer.class);
     }
 
     //saves a new pack to the users config, turned on

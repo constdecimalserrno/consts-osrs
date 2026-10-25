@@ -72,7 +72,18 @@ public class ConfigSidePanelTest
         config = (ConstsExpConfig) Proxy.newProxyInstance(ConstsExpConfig.class.getClassLoader(),
             new Class<?>[]{ConstsExpConfig.class}, (proxy, method, args) -> null);
         descriptor = configManager.getConfigDescriptor(config);
-        panel = new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin());
+        panel = new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
+            ConstsExpPlugin.NAME, ConstsExpPlugin.DESCRIPTION);
+    }
+
+    @Test
+    public void theTitleIsThePluginsNameWithItsDescriptionOnHover()
+    {
+        JLabel title = find(panel, JLabel.class, l -> "consts-EXP".equals(l.getText()));
+        assertNotNull(title);
+        assertEquals("<html>consts-EXP:<br>The all-in-one XP helper: AFK alerts you can't sleep through, with presets"
+            + " per activity, Forestry events, a timer on each tree and Stealing Artefacts' guards.</html>",
+            title.getToolTipText());
     }
 
     @Test
@@ -182,7 +193,7 @@ public class ConfigSidePanelTest
     private ConfigSidePanel withMasterSwitch()
     {
         return new ConfigSidePanel(configManager, mock(ColorPickerManager.class), config, new ConstsExpPlugin(),
-            ConstsExpConfig.MASTER_KEY);
+            ConstsExpPlugin.NAME, ConstsExpPlugin.DESCRIPTION, ConstsExpConfig.MASTER_KEY);
     }
 
     @Test

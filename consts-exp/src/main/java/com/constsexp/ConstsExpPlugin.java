@@ -69,12 +69,15 @@ import net.runelite.http.api.worlds.World;
 import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
-    name = "consts-EXP",
-    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events, a timer on each tree and Stealing Artefacts' guards.",
+    name = ConstsExpPlugin.NAME,
+    description = ConstsExpPlugin.DESCRIPTION,
     tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "tree", "timer", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum", "thieving", "stealing", "artefacts"}
 )
 public class ConstsExpPlugin extends Plugin
 {
+    static final String NAME = "consts-EXP";
+    static final String DESCRIPTION = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events, a timer on each tree and Stealing Artefacts' guards.";
+
     static final long LOGOUT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(25L);
 
     private static final long MIN_REPEAT_INTERVAL_MS = 100L;
@@ -274,8 +277,8 @@ public class ConstsExpPlugin extends Plugin
     static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
         ConstsExpConfig config, ConstsExpPlugin plugin, SkillIconManager skillIconManager)
     {
-        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin,
-            ConstsExpConfig.MASTER_KEY);
+        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin, NAME,
+            DESCRIPTION, ConstsExpConfig.MASTER_KEY);
         panel.addSettingsTab("Alerts", ConstsExpConfig.healthSection, ConstsExpConfig.prayerSection,
             ConstsExpConfig.aggroSection, ConstsExpConfig.potionSection, ConstsExpConfig.cannonSection,
             ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
