@@ -192,6 +192,22 @@ public class ConstsExpStatusOverlayTest
     }
 
     @Test
+    public void everySkillOnTheListShouldGetItsOwnXpRowInTheOrderItStarted()
+    {
+        xpRates.gain(Skill.MINING, 100, NOW - 60_000);
+        xpRates.gain(Skill.SMITHING, 100, NOW - 30_000);
+        xpRates.gain(Skill.MINING, 400, NOW);
+        List<String> skills = overlay.rows(NOW).stream()
+            .filter(ConstsExpStatusOverlay.XpRow.class::isInstance)
+            .map(r -> ((ConstsExpStatusOverlay.XpRow) r).label)
+            .collect(java.util.stream.Collectors.toList());
+        assertEquals(java.util.Arrays.asList("Mining", "Smithing"), skills);
+
+        xpRates.reset(Skill.MINING);
+        assertEquals(1, overlay.rows(NOW).stream().filter(ConstsExpStatusOverlay.XpRow.class::isInstance).count());
+    }
+
+    @Test
     public void shiftRightClickShouldOfferResetXpPerHour()
     {
         assertTrue(overlay.getMenuEntries().stream().anyMatch(e -> "Reset XP/h".equals(e.getOption())));

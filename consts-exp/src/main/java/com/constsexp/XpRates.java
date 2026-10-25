@@ -2,12 +2,10 @@ package com.constsexp;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import net.runelite.api.Skill;
 
 /**
@@ -18,22 +16,16 @@ import net.runelite.api.Skill;
  */
 final class XpRates
 {
-    // They come with combat XP, so they show only while no other skill has gained any.
-    private static final Set<Skill> SIDE_SKILLS = EnumSet.of(Skill.HITPOINTS, Skill.SLAYER);
-
     private static final class Rate
     {
         long gained;
         long firstXp;
         long firstAt;
         long lastAt;
-        // Which drop of all was its last, so the shown skill follows the drops' order, not the clock.
-        long lastDrop;
     }
 
     // By first drop, oldest first.
     private final Map<Skill, Rate> rates = new LinkedHashMap<>();
-    private long drops;
 
     synchronized void gain(Skill skill, int xp, long now)
     {
@@ -46,7 +38,6 @@ final class XpRates
         });
         rate.gained += xp;
         rate.lastAt = now;
-        rate.lastDrop = ++drops;
     }
 
     /** Takes the skill off the list; its next drop brings it back, from zero. */
@@ -70,26 +61,6 @@ final class XpRates
         }
     }
 
-    /** The skill you're training: the last left to gain XP, Hitpoints and Slayer only if no other is left. */
-    synchronized Skill shown()
-    {
-        Skill shown = null;
-        // Starts as a side skill before any drop, so the first skill always takes it.
-        boolean shownSide = true;
-        long shownDrop = 0;
-        for (Map.Entry<Skill, Rate> entry : rates.entrySet())
-        {
-            boolean side = SIDE_SKILLS.contains(entry.getKey());
-            long drop = entry.getValue().lastDrop;
-            if ((shownSide && !side) || (side == shownSide && drop > shownDrop))
-            {
-                shown = entry.getKey();
-                shownSide = side;
-                shownDrop = drop;
-            }
-        }
-        return shown;
-    }
 
     /** Every skill on the list, newest first (by first drop). */
     synchronized List<Skill> skills()
