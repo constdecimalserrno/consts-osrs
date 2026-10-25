@@ -2,7 +2,7 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, a tick pendulum for tick-perfect clicking, and a timer on each tree. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, a tick pendulum for tick-perfect clicking, a timer on each tree, and Stealing Artefacts' two guards. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
 
@@ -46,7 +46,7 @@ Under the title, four tabs split the settings: **Alerts**, which the panel opens
 | Tab | Sections |
 |---|---|
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
-| Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold |
+| Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Thieving (Guard Lures) |
 | Tick & XP | Tick Pendulum (Enabled, Rhythm, Your Ping) |
 | General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
@@ -127,6 +127,10 @@ A pie on each tree empties as the tree nears falling, ported from Tree Despawn T
 - **Trees**: oak, willow, teak, maple, hollow, mahogany, arctic pine, yew, camphor, magic, ironwood, redwood and rosewood.
 - It's an estimate. A tree can fall with a little pie left, or stand a moment past empty until someone takes another log; either way it shouldn't be off by more than a few seconds. Hopping worlds or logging in starts every tree over.
 
+## Stealing Artefacts
+
+In Port Piscarilius, two rows in the status panel, under the alerts, show whether the guards are lured: **East guard** and **SE guard**, each with a green tick once it's lured and a red cross while it isn't. A guard counts as lured while it stands on its post facing south (the east one) or west (the south-east one). That's the one part of pajlads' Stealing Artefacts that comes over: no target house, patrol highlights or Captain Khaled. It isn't an alert and never beeps. **Guard Lures** (Skills → Thieving, on by default) turns it off; the Master Switch hides it too. Run it instead of the Hub's Stealing Artefacts, not beside it.
+
 ## Training guide
 
 Where each preset shines, what its alerts are telling you, and what to tune.
@@ -195,4 +199,4 @@ From the repo root: `./run.sh all`. Setup, including the one-time Jagex account 
 
 ## Credits
 
-Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The tree timer is [Tree Despawn Timer](https://github.com/CreativeTechGuy/tree-despawn-timer) by Jason O'Neill (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill), from commit `9f9eb2b`, cut down to its pie: `TreeTimer.java`, `TreeTimerState.java`, `TreeTimerTree.java` and `ConstsExpTreeTimerOverlay.java` keep its license header and license, in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).
+Aggro's OSRS mode, its area tracking and its area lines are ported from RuneLite's [NPC Aggression Timer](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/npcunaggroarea) by Woox (BSD 2-Clause, Copyright (c) 2018, Woox). The ported files, `AggroArea.java` and `ConstsExpAggroAreaOverlay.java`, keep its license header and its BSD 2-Clause license, reproduced in [NOTICE](NOTICE). The sidebar panel is RuneLite's [Configuration panel](https://github.com/runelite/runelite/tree/master/runelite-client/src/main/java/net/runelite/client/plugins/config) by Adam (BSD 2-Clause), cut down to consts-EXP's own settings: `ConfigSidePanel.java` keeps its license header and license, in the same NOTICE. The tree timer is [Tree Despawn Timer](https://github.com/CreativeTechGuy/tree-despawn-timer) by Jason O'Neill (BSD 2-Clause, Copyright (c) 2023, Jason O'Neill), from commit `9f9eb2b`, cut down to its pie: `TreeTimer.java`, `TreeTimerState.java`, `TreeTimerTree.java` and `ConstsExpTreeTimerOverlay.java` keep its license header and license, in the same NOTICE. The guard check is [Stealing Artefacts](https://github.com/pajlads/StealingArtefacts) by Christopher Bitler (MIT, Copyright 2020 Christopher Bitler), from commit `631227f`, cut down to its two guards: `GuardLures.java` keeps its license, in the same NOTICE. The rest of consts-EXP is [MIT](LICENSE).

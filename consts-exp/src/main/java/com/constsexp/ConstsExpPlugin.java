@@ -27,6 +27,7 @@ import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectVolume;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.ChatMessage;
@@ -67,8 +68,8 @@ import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
     name = "consts-EXP",
-    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events and a timer on each tree.",
-    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "tree", "timer", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum"}
+    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events, a timer on each tree and Stealing Artefacts' guards.",
+    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "tree", "timer", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum", "thieving", "stealing", "artefacts"}
 )
 public class ConstsExpPlugin extends Plugin
 {
@@ -192,6 +193,8 @@ public class ConstsExpPlugin extends Plugin
     private final AggroArea aggroArea = new AggroArea();
 
     private final TickPendulum pendulum = new TickPendulum();
+    // Stealing Artefacts' two guards, from GuardLures; null outside Port Piscarilius or with Guard Lures off.
+    private volatile boolean[] guardLures;
     // The world the pendulum has its player count and region from; -1 until the world list has it.
     private int pendulumWorld = -1;
     private volatile long nextAggroAlertMillis;
@@ -264,7 +267,7 @@ public class ConstsExpPlugin extends Plugin
             ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
             ConstsExpConfig.randomSection);
         panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
-            ConstsExpConfig.cargoSection);
+            ConstsExpConfig.cargoSection, ConstsExpConfig.thievingSection);
         panel.addSettingsTab("Tick & XP", ConstsExpConfig.tickSection);
         panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
             ConstsExpConfig.flashSection);
@@ -355,6 +358,7 @@ public class ConstsExpPlugin extends Plugin
         updateActivityFromHybridSignals();
         updateAggroArea();
         evaluateAlerts();
+        guardLures = config.guardLures() ? guardLures() : null;
         if (config.tickPendulum())
         {
             tickPendulum(System.currentTimeMillis());
@@ -1208,6 +1212,20 @@ public class ConstsExpPlugin extends Plugin
     long getIdleDurationMillis()
     {
         return System.currentTimeMillis() - lastActivityMillis;
+    }
+
+    /** Stealing Artefacts' guards as of the last tick: east lured, south-east lured; null to show none. */
+    boolean[] getGuardLures()
+    {
+        return guardLures;
+    }
+
+    private boolean[] guardLures()
+    {
+        Player localPlayer = client.getLocalPlayer();
+        WorldView worldView = client.getTopLevelWorldView();
+        return localPlayer == null || worldView == null ? null
+            : GuardLures.check(localPlayer.getWorldLocation(), worldView.npcs());
     }
 
     /** Idle fires once you've been idle this long. */

@@ -131,6 +131,27 @@ public class ConstsExpStatusOverlayTest
     }
 
     @Test
+    public void inPortPiscariliusTheTwoGuardsShouldSitUnderTheAlertsWithATickOrACross()
+    {
+        enable(AlertType.IDLE);
+        when(plugin.getPendulum()).thenReturn(new TickPendulum());
+        when(config.tickPendulum()).thenReturn(true);
+        assertEquals(3, overlay.rows(NOW).size());
+
+        when(plugin.getGuardLures()).thenReturn(new boolean[]{true, false});
+        List<ConstsExpStatusOverlay.Row> rows = overlay.rows(NOW);
+        assertEquals(5, rows.size());
+        ConstsExpStatusOverlay.AlertRow east = (ConstsExpStatusOverlay.AlertRow) rows.get(2);
+        ConstsExpStatusOverlay.AlertRow southEast = (ConstsExpStatusOverlay.AlertRow) rows.get(3);
+        assertEquals("East guard", east.label);
+        assertEquals("SE guard", southEast.label);
+        assertTrue(east.icon == ConstsExpStatusOverlay.LURED && east.ink.equals(Color.GREEN));
+        assertTrue(southEast.icon == ConstsExpStatusOverlay.NOT_LURED && southEast.ink.equals(Color.RED));
+        assertNull("quiet, not an alert", east.fill);
+        assertTrue(rows.get(4) instanceof ConstsExpStatusOverlay.PendulumRow);
+    }
+
+    @Test
     public void theTickPendulumShouldSpanTheRowWithTheCountLeftAndThePingRight()
     {
         TickPendulum pendulum = new TickPendulum();

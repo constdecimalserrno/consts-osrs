@@ -339,7 +339,7 @@ public class ConfigSidePanelTest
         assertEquals("Preset", labels(tabs.getTab(0).getContent()).get(0));
         assertEquals(List.of("Health", "Prayer", "Aggro", "Potion", "Cannon", "Idle", "Logout", "Inventory Full",
             "Random Event"), sections(tabs.getTab(0).getContent()));
-        assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold"),
+        assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold", "Thieving"),
             sections(tabs.getTab(1).getContent()));
         assertEquals(List.of("Tick Pendulum"), sections(tabs.getTab(2).getContent()));
         assertEquals(List.of("Timing", "Sounds", "Screen Flash"), sections(tabs.getTab(3).getContent()));

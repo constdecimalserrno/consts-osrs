@@ -32,10 +32,12 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import net.runelite.api.IndexedObjectSet;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
 import net.runelite.api.SoundEffectID;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
@@ -128,6 +130,40 @@ public class ConstsExpPluginTest
     public void tearDown() throws Exception
     {
         invokePrivate("shutdownScheduler");
+    }
+
+    // Guard lures
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void guardLuresAreReadEachTickInPortPiscariliusWhileTheSwitchIsOn()
+    {
+        NPC guard = mock(NPC.class);
+        when(guard.getId()).thenReturn(6980);
+        when(guard.getWorldLocation()).thenReturn(new WorldPoint(1777, 3746, 0));
+        when(guard.getCurrentOrientation()).thenReturn(0);
+        IndexedObjectSet<NPC> npcs = mock(IndexedObjectSet.class);
+        when(npcs.iterator()).thenAnswer(invocation -> List.of(guard).iterator());
+        WorldView worldView = mock(WorldView.class);
+        when(worldView.npcs()).thenReturn((IndexedObjectSet) npcs);
+        // The tree timer reads the players.
+        IndexedObjectSet<Player> players = mock(IndexedObjectSet.class);
+        when(players.iterator()).thenAnswer(invocation -> List.<Player>of().iterator());
+        when(worldView.players()).thenReturn((IndexedObjectSet) players);
+        when(client.getTopLevelWorldView()).thenReturn(worldView);
+        when(player.getWorldLocation()).thenReturn(new WorldPoint(1790, 3740, 0));
+
+        plugin.onGameTick(new GameTick());
+        assertNull("off", plugin.getGuardLures());
+
+        when(config.guardLures()).thenReturn(true);
+        plugin.onGameTick(new GameTick());
+        assertArrayEquals(new boolean[]{true, false}, plugin.getGuardLures());
+
+        // Logging in, before the local player is there: nothing, and no NullPointerException.
+        when(client.getLocalPlayer()).thenReturn(null);
+        plugin.onGameTick(new GameTick());
+        assertNull(plugin.getGuardLures());
     }
 
     // Tick pendulum

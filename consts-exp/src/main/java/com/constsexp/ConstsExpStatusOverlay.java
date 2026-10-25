@@ -34,10 +34,10 @@ import net.runelite.client.util.ImageUtil;
 
 /**
  * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
- * value), the tick pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it
- * that fills as a timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color, and
- * pulses with the screen flash. Text is RuneScape's small font whatever RuneLite's interface font is: the 129 px rows
- * are laid out for it.
+ * value), Stealing Artefacts' two guards in Port Piscarilius, the tick pendulum when it's on, and the pause
+ * countdown. A quiet row stays dark, with a thin line under it that fills as a timer gets close, or shows Health's
+ * and Prayer's level; a firing row lights up in its color, and pulses with the screen flash. Text is RuneScape's
+ * small font whatever RuneLite's interface font is: the 129 px rows are laid out for it.
  */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
@@ -57,6 +57,10 @@ class ConstsExpStatusOverlay extends OverlayPanel
     private static final double INK_FLOOR = (luminance(QUIET_ON_WHITE) + 0.05) * MIN_CONTRAST - 0.05;
     private static final Map<AlertType, BufferedImage> ICONS = new EnumMap<>(AlertType.class);
     static final BufferedImage HOURGLASS = ImageUtil.loadImageResource(ConstsExpPlugin.class, "animating.png");
+    static final BufferedImage LURED = ImageUtil.loadImageResource(ConstsExpPlugin.class, "guard_lured.png");
+    static final BufferedImage NOT_LURED = ImageUtil.loadImageResource(ConstsExpPlugin.class, "guard_not_lured.png");
+    private static final String GUARD_TOOLTIP = "Stealing Artefacts: a green tick once the guard is lured, a red"
+        + " cross while it isn't.";
     // The icons, tinted, by mask and color. ponytail: never emptied, as it only grows when a color setting changes.
     private static final Map<Map.Entry<BufferedImage, Color>, BufferedImage> TINTED = new HashMap<>();
     private static final String HELD_TOOLTIP = "The hourglass: you're animating, so Idle waits until you stop.";
@@ -131,7 +135,10 @@ class ConstsExpStatusOverlay extends OverlayPanel
         return dimension;
     }
 
-    /** The panel's rows at {@code now}: the title, each enabled alert, the tick pendulum, then the pause countdown. */
+    /**
+     * The panel's rows at {@code now}: the title, each enabled alert, the guards, the tick pendulum, then the pause
+     * countdown.
+     */
     List<Row> rows(long now)
     {
         List<Row> rows = new ArrayList<>();
@@ -145,6 +152,14 @@ class ConstsExpStatusOverlay extends OverlayPanel
             {
                 rows.add(alertRow(type, now));
             }
+        }
+
+        // Port Piscarilius only: Stealing Artefacts' two guards.
+        boolean[] lures = plugin.getGuardLures();
+        if (lures != null)
+        {
+            rows.add(guardRow("East guard", lures[0]));
+            rows.add(guardRow("SE guard", lures[1]));
         }
 
         // Above the pause countdown, so the pause row a click brings never moves it.
@@ -227,6 +242,13 @@ class ConstsExpStatusOverlay extends OverlayPanel
         }
         return new AlertRow(ICONS.get(type), type.getLabel(), value, ink, fill, line > 0 ? Math.min(1, line) : 0, held,
             held ? tooltip(type) + "</br>" + HELD_TOOLTIP : tooltip(type));
+    }
+
+    /** A quiet row, as an alert's: the guard's name and a green tick or a red cross. */
+    private static AlertRow guardRow(String label, boolean lured)
+    {
+        return new AlertRow(lured ? LURED : NOT_LURED, label, "", lured ? Color.GREEN : Color.RED, null, 0, false,
+            GUARD_TOOLTIP);
     }
 
     private String tooltip(AlertType type)
