@@ -35,7 +35,7 @@ public interface ConstsExpConfig extends Config
     @ConfigItem(
         keyName = MASTER_KEY,
         name = "Master Switch",
-        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its bell stays in the sidebar.",
+        description = "Off silences consts-EXP: no alerts, no status panel, no area lines. The plugin itself stays on, so its EXP icon stays in the sidebar.",
         position = -1
     )
     default boolean masterSwitch()

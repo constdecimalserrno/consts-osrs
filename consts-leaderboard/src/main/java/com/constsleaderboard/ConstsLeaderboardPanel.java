@@ -4,7 +4,8 @@
  * Copyright (c) 2019, Bram91 <https://github.com/bram91>
  * Copyright (c) 2026, constdecimalserrno (consts-osrs changes: ported from RuneLite's HiScore plugin into
  *   consts-Leaderboard; skills and the total level only, levels stop at 99, a 99 shows in yellow and the lowest
- *   skill in red, a bar naming whose skills are showing and a button for your own, in place of the hiscore tabs)
+ *   skill in red, a bar naming whose skills are showing and a button for your own, in place of the hiscore tabs;
+ *   a Friends dropdown that looks a friend up)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,23 +34,32 @@ import static net.runelite.client.hiscore.HiscoreSkill.*;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingConstants;
 import javax.swing.border.EmptyBorder;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.SpriteManager;
 import net.runelite.client.hiscore.HiscoreClient;
 import net.runelite.client.hiscore.HiscoreEndpoint;
@@ -68,7 +78,8 @@ import org.slf4j.LoggerFactory;
 /**
  * The sidebar: a name to look up, a bar naming whose skills are showing with a button beside it for yours, then the skills and the total level the way the HiScore
  * plugin shows them, except that levels stop at 99, a 99 is yellow and the lowest skill is red. Hovering one gives
- * its rank, its experience and what's left to the next level.
+ * its rank, its experience and what's left to the next level. Under them, your friends, in a dropdown that opens and
+ * closes: click one to look them up.
  */
 class ConstsLeaderboardPanel extends PluginPanel
 {
@@ -85,6 +96,14 @@ class ConstsLeaderboardPanel extends PluginPanel
 
     /* What the name bar says before the first lookup */
     private static final String NOBODY = "Nobody yet";
+
+    /* Where the panel keeps whether Friends is open: a hidden key, not a setting */
+    static final String CONFIG_GROUP = "constsleaderboard";
+    static final String FRIENDS_OPEN = "friendsOpen";
+
+    /* A friend's dot: green online, grey offline */
+    private static final ImageIcon ONLINE_DOT = dot(ColorScheme.PROGRESS_COMPLETE_COLOR);
+    private static final ImageIcon OFFLINE_DOT = dot(ColorScheme.MEDIUM_GRAY_COLOR);
 
     /** The skills, in the order the game's skills tab shows them. */
     static final List<HiscoreSkill> SKILLS = List.of(
@@ -104,6 +123,7 @@ class ConstsLeaderboardPanel extends PluginPanel
     private final ConstsLeaderboardPlugin plugin;
     private final HiscoreClient hiscoreClient;
     private final SpriteManager spriteManager;
+    private final ConfigManager configManager;
 
     private final IconTextField searchBar;
 
@@ -128,12 +148,20 @@ class ConstsLeaderboardPanel extends PluginPanel
     /* Used to ignore the button for your own skills while a lookup is loading */
     private boolean loading = false;
 
+    /* The bar that opens and closes Friends, its title with the arrow, how many are online, and the list itself */
+    final JPanel friendsHeader;
+    private final JLabel friendsTitle;
+    final JLabel friendsCount;
+    final JPanel friendsList;
+
     @Inject
-    ConstsLeaderboardPanel(ConstsLeaderboardPlugin plugin, HiscoreClient hiscoreClient, SpriteManager spriteManager)
+    ConstsLeaderboardPanel(ConstsLeaderboardPlugin plugin, HiscoreClient hiscoreClient, SpriteManager spriteManager,
+        ConfigManager configManager)
     {
         this.plugin = plugin;
         this.hiscoreClient = hiscoreClient;
         this.spriteManager = spriteManager;
+        this.configManager = configManager;
 
         setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -214,6 +242,150 @@ class ConstsLeaderboardPanel extends PluginPanel
 
         add(totalPanel, c);
         c.gridy++;
+
+        // Friends: a bar like the name bar that opens and closes the list under it
+        friendsList = new JPanel(new GridLayout(0, 1));
+        friendsList.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        friendsList.setBorder(new EmptyBorder(0, 0, 4, 0));
+
+        friendsTitle = new JLabel("Friends");
+        friendsTitle.setFont(FontManager.getRunescapeBoldFont());
+        friendsTitle.setForeground(Color.WHITE);
+        friendsTitle.setIconTextGap(6);
+
+        friendsCount = new JLabel("", SwingConstants.RIGHT);
+        friendsCount.setFont(FontManager.getRunescapeSmallFont());
+        friendsCount.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+
+        friendsHeader = new JPanel(new BorderLayout());
+        friendsHeader.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        friendsHeader.setBorder(new EmptyBorder(0, 8, 0, 8));
+        friendsHeader.setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH - 20, 30));
+        friendsHeader.add(friendsTitle, BorderLayout.WEST);
+        friendsHeader.add(friendsCount, BorderLayout.EAST);
+        friendsHeader.addMouseListener(clickable(friendsHeader, () -> setFriendsOpen(!friendsList.isVisible())));
+
+        c.insets = new Insets(0, 0, 0, 0);
+        add(friendsHeader, c);
+        c.gridy++;
+        c.insets = new Insets(0, 0, 10, 0);
+        add(friendsList, c);
+        c.gridy++;
+
+        setFriends(null);
+        showFriendsOpen(!"false".equals(configManager.getConfiguration(CONFIG_GROUP, FRIENDS_OPEN)));
+    }
+
+    /** Your friends, name to online, in the order to list them; null when logged out. */
+    void setFriends(Map<String, Boolean> friends)
+    {
+        friendsList.removeAll();
+        if (friends == null || friends.isEmpty())
+        {
+            JLabel none = new JLabel(friends == null ? "Log in to see your friends" : "No friends yet");
+            none.setFont(FontManager.getRunescapeSmallFont());
+            none.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+            none.setBorder(new EmptyBorder(4, 8, 4, 8));
+            friendsList.add(none);
+            friendsCount.setText("");
+        }
+        else
+        {
+            for (Map.Entry<String, Boolean> friend : friends.entrySet())
+            {
+                friendsList.add(friendRow(friend.getKey(), friend.getValue()));
+            }
+            friendsCount.setText(friends.values().stream().filter(online -> online).count() + " online");
+        }
+        friendsList.revalidate();
+        friendsList.repaint();
+    }
+
+    /* A friend's dot and name; clicking it looks them up, the way the search box does */
+    private JLabel friendRow(String name, boolean online)
+    {
+        JLabel row = new JLabel(name, online ? ONLINE_DOT : OFFLINE_DOT, SwingConstants.LEFT);
+        row.setFont(FontManager.getRunescapeFont());
+        row.setForeground(online ? Color.WHITE : ColorScheme.LIGHT_GRAY_COLOR);
+        row.setIconTextGap(6);
+        row.setOpaque(true);
+        row.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        row.setBorder(new EmptyBorder(2, 8, 2, 8));
+        row.setToolTipText("Look up " + name);
+        row.addMouseListener(clickable(row, () ->
+        {
+            if (!loading)
+            {
+                lookup(name, plugin.getWorldEndpoint());
+            }
+        }));
+        return row;
+    }
+
+    /* Left clicks run the action; hovering shows a hand and lightens the background like RuneLite's own lists */
+    private static MouseAdapter clickable(JComponent c, Runnable onPress)
+    {
+        c.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent e)
+            {
+                if (SwingUtilities.isLeftMouseButton(e))
+                {
+                    onPress.run();
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e)
+            {
+                c.setBackground(ColorScheme.DARK_GRAY_HOVER_COLOR);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e)
+            {
+                c.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+            }
+        };
+    }
+
+    private void setFriendsOpen(boolean open)
+    {
+        showFriendsOpen(open);
+        configManager.setConfiguration(CONFIG_GROUP, FRIENDS_OPEN, open);
+    }
+
+    private void showFriendsOpen(boolean open)
+    {
+        friendsList.setVisible(open);
+        friendsTitle.setIcon(arrow(open));
+        revalidate();
+    }
+
+    /* The arrow on the Friends bar: down when open, right when closed */
+    private static ImageIcon arrow(boolean open)
+    {
+        return icon(ColorScheme.LIGHT_GRAY_COLOR, g -> g.fillPolygon(open ? new int[]{0, 8, 4} : new int[]{2, 2, 7},
+            open ? new int[]{2, 2, 7} : new int[]{0, 8, 4}, 3));
+    }
+
+    private static ImageIcon dot(Color color)
+    {
+        return icon(color, g -> g.fillOval(1, 1, 6, 6));
+    }
+
+    /* An 8x8 icon drawn in one color */
+    private static ImageIcon icon(Color color, Consumer<Graphics2D> draw)
+    {
+        BufferedImage img = new BufferedImage(8, 8, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = img.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(color);
+        draw.accept(g);
+        g.dispose();
+        return new ImageIcon(img);
     }
 
     @Override

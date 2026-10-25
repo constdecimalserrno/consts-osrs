@@ -440,7 +440,7 @@ final class ViewerCanvas extends JComponent
                     }
                     catch (InterruptedException e)
                     {
-                        Thread.currentThread().interrupt();
+                        // The thread ends here, so its interrupt flag needn't be set again (and the Hub refuses interrupt)
                         return;
                     }
                 }

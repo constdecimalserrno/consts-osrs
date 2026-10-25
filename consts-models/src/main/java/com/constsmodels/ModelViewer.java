@@ -2,7 +2,6 @@ package com.constsmodels;
 
 import java.awt.Frame;
 import java.awt.GraphicsConfiguration;
-import java.awt.KeyboardFocusManager;
 import java.awt.Rectangle;
 import java.awt.Window;
 import java.awt.event.WindowAdapter;
@@ -83,10 +82,12 @@ final class ModelViewer
     /** The game's window, to open over and to take the icon of: the active window, or else the first one showing. */
     private static Window gameWindow()
     {
-        Window active = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
-        if (active != null && !(active instanceof ViewerWindow))
+        for (Window window : Window.getWindows())
         {
-            return active;
+            if (window.isActive() && !(window instanceof ViewerWindow))
+            {
+                return window;
+            }
         }
         for (Frame frame : Frame.getFrames())
         {
