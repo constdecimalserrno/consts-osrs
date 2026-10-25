@@ -140,7 +140,7 @@ A pie on each tree empties as the tree nears falling, ported from Tree Despawn T
 
 ## Stealing Artefacts
 
-In Port Piscarilius, two rows in the status panel, under the alerts, show whether the guards are lured: **East guard** and **SE guard**, each with a green tick once it's lured and a red cross while it isn't. A guard counts as lured while it stands on its post facing south (the east one) or west (the south-east one). That's the one part of pajlads' Stealing Artefacts that comes over: no target house, patrol highlights or Captain Khaled. It isn't an alert and never beeps. **Guard Lures** (Skills → Thieving, on by default) turns it off; the Master Switch hides it too. Run it instead of the Hub's Stealing Artefacts, not beside it.
+In Port Piscarilius, two rows in the status panel, under the alerts, show whether the guards are lured: **East guard** and **SE guard**, each with a green tick once it's lured and a red cross while it isn't. A guard counts as lured while it stands on its post facing south (the east one) or west (the south-east one). Each row keeps what it last saw on the post, so it holds while you're in a target house and the guard is out of sight; a hop or a logout sets both back to a cross. That's the one part of pajlads' Stealing Artefacts that comes over: no target house, patrol highlights or Captain Khaled. It isn't an alert and never beeps. **Guard Lures** (Skills → Thieving, on by default) turns it off; the Master Switch hides it too. Run it instead of the Hub's Stealing Artefacts, not beside it.
 
 ## Training guide
 

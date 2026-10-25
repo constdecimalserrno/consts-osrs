@@ -138,14 +138,11 @@ public class ConstsExpPluginTest
 
     @Test
     @SuppressWarnings("unchecked")
-    public void guardLuresAreReadEachTickInPortPiscariliusWhileTheSwitchIsOn()
+    public void guardLuresShowInPortPiscariliusWhileBothSwitchesAreOnAndClearOnAHop()
     {
-        NPC guard = mock(NPC.class);
-        when(guard.getId()).thenReturn(6980);
-        when(guard.getWorldLocation()).thenReturn(new WorldPoint(1777, 3746, 0));
-        when(guard.getCurrentOrientation()).thenReturn(0);
+        List<NPC> seen = new java.util.ArrayList<>(List.of(GuardLuresTest.npc(6980, new WorldPoint(1777, 3746, 0), 0)));
         IndexedObjectSet<NPC> npcs = mock(IndexedObjectSet.class);
-        when(npcs.iterator()).thenAnswer(invocation -> List.of(guard).iterator());
+        when(npcs.iterator()).thenAnswer(invocation -> List.copyOf(seen).iterator());
         WorldView worldView = mock(WorldView.class);
         when(worldView.npcs()).thenReturn((IndexedObjectSet) npcs);
         // The tree timer reads the players.
@@ -156,16 +153,32 @@ public class ConstsExpPluginTest
         when(player.getWorldLocation()).thenReturn(new WorldPoint(1790, 3740, 0));
 
         plugin.onGameTick(new GameTick());
-        assertNull("off", plugin.getGuardLures());
+        assertFalse("Guard Lures off", plugin.isGuardLuresShown());
 
         when(config.guardLures()).thenReturn(true);
         plugin.onGameTick(new GameTick());
-        assertArrayEquals(new boolean[]{true, false}, plugin.getGuardLures());
+        assertTrue(plugin.isGuardLuresShown());
+        assertTrue(plugin.getGuardLures().isEastLured());
+
+        // Gone from sight: it stays lured.
+        seen.clear();
+        plugin.onGameTick(new GameTick());
+        assertTrue(plugin.getGuardLures().isEastLured());
+
+        // The Master Switch hides the rows on its tick.
+        when(config.masterSwitch()).thenReturn(false);
+        plugin.onGameTick(new GameTick());
+        assertFalse(plugin.isGuardLuresShown());
+        when(config.masterSwitch()).thenReturn(true);
 
         // Logging in, before the local player is there: nothing, and no NullPointerException.
         when(client.getLocalPlayer()).thenReturn(null);
         plugin.onGameTick(new GameTick());
-        assertNull(plugin.getGuardLures());
+        assertFalse(plugin.isGuardLuresShown());
+
+        // Another world's guards start not lured.
+        plugin.onGameStateChanged(gameState(GameState.HOPPING));
+        assertFalse(plugin.getGuardLures().isEastLured());
     }
 
     // XP per hour

@@ -197,8 +197,9 @@ public class ConstsExpPlugin extends Plugin
     private final AggroArea aggroArea = new AggroArea();
 
     private final TickPendulum pendulum = new TickPendulum();
-    // Stealing Artefacts' two guards, from GuardLures; null outside Port Piscarilius or with Guard Lures off.
-    private volatile boolean[] guardLures;
+    // Stealing Artefacts' two guards; their rows show while guardLuresShown.
+    private final GuardLures guardLures = new GuardLures();
+    private volatile boolean guardLuresShown;
     private final XpRates xpRates = new XpRates();
     // False from a login or hop until its first tick: until then the client's XP may still read 0, so the login's
     // StatChanged burst would look like drops.
@@ -301,6 +302,8 @@ public class ConstsExpPlugin extends Plugin
         treeTimer.clear();
         // Off and on again may be another account.
         xpRates.clear();
+        guardLures.clear();
+        guardLuresShown = false;
         xpArmed = false;
     }
 
@@ -314,6 +317,12 @@ public class ConstsExpPlugin extends Plugin
         {
             // Logged out: XP/h starts again at the next login, on whichever account. Hops and loading keep it.
             xpRates.clear();
+        }
+        if (state == GameState.LOGIN_SCREEN || state == GameState.HOPPING)
+        {
+            // Another world's guards, or another account's.
+            guardLures.clear();
+            guardLuresShown = false;
         }
         if (state != GameState.LOADING)
         {
@@ -378,6 +387,8 @@ public class ConstsExpPlugin extends Plugin
             seedSkillXp();
             xpArmed = true;
         }
+        // Before the Master Switch's return, so the rows never outlive it.
+        guardLuresShown = config.masterSwitch() && config.guardLures() && readGuardLures();
         if (!config.masterSwitch())
         {
             return;
@@ -385,7 +396,6 @@ public class ConstsExpPlugin extends Plugin
         updateActivityFromHybridSignals();
         updateAggroArea();
         evaluateAlerts();
-        guardLures = config.guardLures() ? guardLures() : null;
         if (config.tickPendulum())
         {
             tickPendulum(System.currentTimeMillis());
@@ -1254,18 +1264,24 @@ public class ConstsExpPlugin extends Plugin
         return System.currentTimeMillis() - lastActivityMillis;
     }
 
-    /** Stealing Artefacts' guards as of the last tick: east lured, south-east lured; null to show none. */
-    boolean[] getGuardLures()
+    GuardLures getGuardLures()
     {
         return guardLures;
     }
 
-    private boolean[] guardLures()
+    /** In Port Piscarilius with Guard Lures on, as of the last tick: the guards' rows show. */
+    boolean isGuardLuresShown()
+    {
+        return guardLuresShown;
+    }
+
+    /** Reads the guards; false outside Port Piscarilius, or with no local player yet (logging in). */
+    private boolean readGuardLures()
     {
         Player localPlayer = client.getLocalPlayer();
         WorldView worldView = client.getTopLevelWorldView();
-        return localPlayer == null || worldView == null ? null
-            : GuardLures.check(localPlayer.getWorldLocation(), worldView.npcs());
+        return localPlayer != null && worldView != null
+            && guardLures.update(localPlayer.getWorldLocation(), worldView.npcs());
     }
 
     /** Idle fires once you've been idle this long. */

@@ -143,7 +143,11 @@ public class ConstsExpStatusOverlayTest
         when(config.tickPendulum()).thenReturn(true);
         assertEquals(3, overlay.rows(NOW).size());
 
-        when(plugin.getGuardLures()).thenReturn(new boolean[]{true, false});
+        GuardLures guards = new GuardLures();
+        guards.update(new net.runelite.api.coords.WorldPoint(1790, 3740, 0),
+            List.of(GuardLuresTest.npc(6980, new net.runelite.api.coords.WorldPoint(1777, 3746, 0), 0)));
+        when(plugin.getGuardLures()).thenReturn(guards);
+        when(plugin.isGuardLuresShown()).thenReturn(true);
         List<ConstsExpStatusOverlay.Row> rows = overlay.rows(NOW);
         assertEquals(5, rows.size());
         ConstsExpStatusOverlay.AlertRow east = (ConstsExpStatusOverlay.AlertRow) rows.get(2);

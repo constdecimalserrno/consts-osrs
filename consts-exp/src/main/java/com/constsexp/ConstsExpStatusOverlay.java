@@ -163,11 +163,11 @@ class ConstsExpStatusOverlay extends OverlayPanel
         }
 
         // Port Piscarilius only: Stealing Artefacts' two guards.
-        boolean[] lures = plugin.getGuardLures();
-        if (lures != null)
+        if (plugin.isGuardLuresShown())
         {
-            rows.add(guardRow("East guard", lures[0]));
-            rows.add(guardRow("SE guard", lures[1]));
+            GuardLures guards = plugin.getGuardLures();
+            rows.add(guardRow("East guard", guards.isEastLured()));
+            rows.add(guardRow("SE guard", guards.isSouthEastLured()));
         }
 
         Skill training = plugin.getXpRates().shown();

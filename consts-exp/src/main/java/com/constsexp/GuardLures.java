@@ -23,7 +23,9 @@ import net.runelite.api.coords.WorldPoint;
 
 /**
  * Stealing Artefacts' two guards in Port Piscarilius, from pajlads' Stealing Artefacts: each is lured while it stands
- * on its post facing its lured way, the east one south and the south-east one west.
+ * on its post facing its lured way, the east one south and the south-east one west. As upstream, a post keeps the
+ * last answer seen while a guard stood on it, so a guard out of sight (from a target house) or walking its patrol
+ * keeps it. Not lured until seen.
  */
 final class GuardLures
 {
@@ -34,21 +36,19 @@ final class GuardLures
     private static final int EAST_LURED = 0;
     private static final int SOUTH_EAST_LURED = 512;
 
-    private GuardLures()
-    {
-    }
+    private volatile boolean eastLured;
+    private volatile boolean southEastLured;
 
     /**
-     * Null when {@code player} is outside Port Piscarilius; else whether the east guard and
-     * the south-east guard are lured, in that order. A guard off its post isn't.
+     * Reads the guards standing on their posts. False, reading nothing, when {@code player} is outside Port
+     * Piscarilius (any plane: the target houses' upstairs count).
      */
-    static boolean[] check(WorldPoint player, Iterable<? extends NPC> npcs)
+    boolean update(WorldPoint player, Iterable<? extends NPC> npcs)
     {
         if (player.getX() < 1739 || player.getX() > 1860 || player.getY() < 3675 || player.getY() > 3803)
         {
-            return null;
+            return false;
         }
-        boolean[] lured = new boolean[2];
         for (NPC npc : npcs)
         {
             if (npc.getId() != GUARD_ID)
@@ -56,10 +56,32 @@ final class GuardLures
                 continue;
             }
             WorldPoint at = npc.getWorldLocation();
-            int orientation = npc.getCurrentOrientation();
-            lured[0] |= EAST_POST.equals(at) && orientation == EAST_LURED;
-            lured[1] |= SOUTH_EAST_POST.equals(at) && orientation == SOUTH_EAST_LURED;
+            if (EAST_POST.equals(at))
+            {
+                eastLured = npc.getCurrentOrientation() == EAST_LURED;
+            }
+            else if (SOUTH_EAST_POST.equals(at))
+            {
+                southEastLured = npc.getCurrentOrientation() == SOUTH_EAST_LURED;
+            }
         }
-        return lured;
+        return true;
+    }
+
+    boolean isEastLured()
+    {
+        return eastLured;
+    }
+
+    boolean isSouthEastLured()
+    {
+        return southEastLured;
+    }
+
+    /** Back to not lured: another world, account or session. */
+    void clear()
+    {
+        eastLured = false;
+        southEastLured = false;
     }
 }
