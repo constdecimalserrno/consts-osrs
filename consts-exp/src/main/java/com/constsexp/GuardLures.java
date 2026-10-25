@@ -39,13 +39,12 @@ final class GuardLures
     }
 
     /**
-     * Null when {@code player} (null while logging in) is outside Port Piscarilius; else whether the east guard and
+     * Null when {@code player} is outside Port Piscarilius; else whether the east guard and
      * the south-east guard are lured, in that order. A guard off its post isn't.
      */
     static boolean[] check(WorldPoint player, Iterable<? extends NPC> npcs)
     {
-        if (player == null || player.getX() < 1739 || player.getX() > 1860 || player.getY() < 3675
-            || player.getY() > 3803)
+        if (player.getX() < 1739 || player.getX() > 1860 || player.getY() < 3675 || player.getY() > 3803)
         {
             return null;
         }

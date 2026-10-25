@@ -26,12 +26,11 @@ public class GuardLuresTest
     }
 
     @Test
-    public void outsidePortPiscariliusOrWithNoPlayerThereIsNothingToShow()
+    public void outsidePortPiscariliusThereIsNothingToShow()
     {
         List<NPC> lured = List.of(npc(6980, EAST, 0), npc(6980, SOUTH_EAST, 512));
         assertNull(GuardLures.check(new WorldPoint(3222, 3218, 0), lured));
         assertNull(GuardLures.check(new WorldPoint(1738, 3740, 0), lured));
-        assertNull(GuardLures.check(null, lured));
     }
 
     @Test
