@@ -287,7 +287,6 @@ class ConfigSidePanel extends PluginPanel
         rebuild();
     }
 
-    /** Puts the tabs under the title, the settings tabs then the plugin's own, and shows the first. */
     /** A tab with 6 px of padding a side instead of RuneLite's 10, so four tabs fit on one row. */
     private MaterialTab tab(String title, JComponent view)
     {
@@ -310,6 +309,7 @@ class ConfigSidePanel extends PluginPanel
         };
     }
 
+    /** Puts the tabs under the title, the settings tabs then the plugin's own, and shows the first. */
     private void showTabs()
     {
         if (tabGroup == null)

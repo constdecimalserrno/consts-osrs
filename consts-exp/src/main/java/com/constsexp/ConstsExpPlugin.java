@@ -356,7 +356,7 @@ public class ConstsExpPlugin extends Plugin
     @Subscribe
     public void onHitsplatApplied(HitsplatApplied event)
     {
-        if (event.getActor() == client.getLocalPlayer())
+        if (config.tickPendulum() && event.getActor() == client.getLocalPlayer())
         {
             pendulum.hitsplat();
         }

@@ -14,8 +14,7 @@ import net.runelite.client.config.Units;
 /**
  * Sections in the order of the sidebar's tabs, where ConstsExpPlugin puts them: one per alert (Alerts), the skills'
  * (Skills), Tick Pendulum (Tick & XP), then Timing, Sounds and Screen Flash (General); only Tick & XP's and General's
- * start open. RuneLite's Configuration panel
- * lists them in the same order with no tabs, so each name reads on its own.
+ * start open. RuneLite's Configuration panel lists them in the same order with no tabs, so each name reads on its own.
  * Every alert's section has the same items in the same order: Enabled (which only the Custom preset reads), Dismiss
  * on Click, Color, then whatever is its own. Some key names are older than this layout: Aggro's start with timer,
  * Salvage's with sailing, and two sections keep their old keys, Timing's general and Woodcutting's forestry.

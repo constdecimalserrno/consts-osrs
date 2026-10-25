@@ -4,9 +4,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import net.runelite.http.api.worlds.WorldRegion;
 
 /**
- * The tick pendulum's model (ticket 04, the design from ticket 09's round 7). Each swing of the ball is one tick's
+ * The tick pendulum's model. Each swing of the ball is one tick's
  * click window: clicks between one cutoff and the next are read by the server on the same tick, so the ball turns at
  * a cutoff and crosses the middle, the safest click, halfway to the next. Seen from the client, GameTick n shows
  * {@link #margin} ms into swing n: the margin is the ping, the server's time on the tick and the client ticks.
@@ -46,7 +47,7 @@ final class TickPendulum
         BAD
     }
 
-    /** Swing {@code n}, {@code el} ms in. */
+    /** Swing {@code n}, {@code el} ms elapsed in it. */
     static final class Swing
     {
         final int n;
@@ -61,7 +62,8 @@ final class TickPendulum
 
     static final int TICK = 600;
     static final int GUESS_PING = 60;
-    // Up to 60 ms of client ticks before a click is sent, and 0.09 ms of server time a player (research A).
+    // Up to 60 ms of client ticks before a click is sent, and the server's time on the tick, 0.09 ms a player (the
+    // fit the Histogram plugin measured).
     static final int CLIENT_MS = 60;
     static final double SERVER_MS_PER_PLAYER = 0.09;
     // A new margin is reached at 0.3 ms per ms: the ball runs at most 30% fast or slow, and never jumps.
@@ -80,9 +82,9 @@ final class TickPendulum
     private Rhythm rhythm = Rhythm.SINGLE;
     private int yourPing;
     private int serverMs;
-    private Object region;
+    private WorldRegion region;
     private int learnedPing = GUESS_PING;
-    private final Map<Object, Integer> learnedByRegion = new HashMap<>();
+    private final Map<WorldRegion, Integer> learnedByRegion = new HashMap<>();
 
     private int tickN;
     private long tickAt;
@@ -129,14 +131,19 @@ final class TickPendulum
     }
 
     /** A world with this many players, in this region: the learned ping carries within a region. */
-    void world(int players, Object region, long now)
+    void world(int players, WorldRegion region, long now)
     {
         if (this.region != null)
         {
             learnedByRegion.put(this.region, learnedPing);
         }
+        Integer kept = learnedByRegion.get(region);
+        if (kept != null || this.region != null)
+        {
+            // Before the first world, what's learned belongs to it.
+            learnedPing = kept != null ? kept : GUESS_PING;
+        }
         this.region = region;
-        learnedPing = learnedByRegion.getOrDefault(region, GUESS_PING);
         serverMs = (int) Math.round(SERVER_MS_PER_PLAYER * Math.max(0, players));
         retarget(now);
     }
@@ -176,6 +183,8 @@ final class TickPendulum
             }
         }
         retarget(now);
+        // Judged here too, so the count stays right while the status panel isn't drawn.
+        advance(now);
     }
 
     /**
@@ -261,8 +270,11 @@ final class TickPendulum
         }
         learnedPing = (int) Math.max(0, TICK - pendingOffset - serverMs - CLIENT_MS);
         fixAt = now;
-        // That click landed on another tick than the bar showed.
-        drop(now);
+        if (learned())
+        {
+            // That click landed on another tick than the bar showed.
+            drop(now);
+        }
         retarget(now);
     }
 

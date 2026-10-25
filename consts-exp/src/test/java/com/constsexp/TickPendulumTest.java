@@ -6,6 +6,7 @@ import static org.junit.Assert.assertTrue;
 
 import com.constsexp.TickPendulum.Rhythm;
 import com.constsexp.TickPendulum.Verdict;
+import net.runelite.http.api.worlds.WorldRegion;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -16,6 +17,9 @@ public class TickPendulumTest
     private static final int SAME = 0;
     private static final int CHANGED = 1;
 
+    private static final WorldRegion US = WorldRegion.UNITED_STATES_OF_AMERICA;
+    private static final WorldRegion UK = WorldRegion.UNITED_KINGDOM;
+
     private TickPendulum pendulum;
 
     @Before
@@ -23,7 +27,7 @@ public class TickPendulumTest
     {
         pendulum = new TickPendulum();
         // No players: no server time, so the margin is the 60 ms guess plus 60 ms of client ticks and the cutoff 480.
-        pendulum.world(0, "US", T0);
+        pendulum.world(0, US, T0);
         pendulum.tick(T0, SAME);
     }
 
@@ -31,7 +35,7 @@ public class TickPendulumTest
     public void eachSwingIsOneClickWindowAheadOfTheGameTickByTheMargin()
     {
         pendulum = new TickPendulum();
-        pendulum.world(800, "US", T0);
+        pendulum.world(800, US, T0);
         pendulum.tick(T0, SAME);
         assertEquals("60 ping + 72 server + 60 client", 192, pendulum.margin(T0));
 
@@ -225,11 +229,25 @@ public class TickPendulumTest
         pendulum.tick(T0 + 1200, CHANGED);
         assertEquals(140, pendulum.ping());
 
-        pendulum.world(1000, "UK", T0 + 1300);
+        pendulum.world(1000, UK, T0 + 1300);
         assertEquals(60, pendulum.ping());
-        pendulum.world(2000, "US", T0 + 1400);
+        pendulum.world(2000, US, T0 + 1400);
         assertEquals(140, pendulum.ping());
         assertEquals("140 ping + 180 server + 60 client", 380, pendulum.target());
+    }
+
+    @Test
+    public void whatsLearnedBeforeTheWorldListArrivesStaysWithTheFirstWorld()
+    {
+        TickPendulum early = new TickPendulum();
+        early.tick(T0, SAME);
+        early.click(T0 + 400, true, SAME);
+        early.tick(T0 + 600, SAME);
+        early.tick(T0 + 1200, CHANGED);
+        assertEquals(140, early.ping());
+
+        early.world(0, US, T0 + 1300);
+        assertEquals(140, early.ping());
     }
 
     @Test
@@ -241,8 +259,10 @@ public class TickPendulumTest
 
         pendulum.click(T0 + 400, true, SAME);
         pendulum.tick(T0 + 600, SAME);
+        pendulum.click(T0 + 900, false, SAME);
         pendulum.tick(T0 + 1200, CHANGED);
         assertEquals(100, pendulum.ping());
+        assertEquals("the bar follows your ping, so that click was on the tick it showed", 2, pendulum.run());
 
         pendulum.settings(Rhythm.SINGLE, 0, T0 + 1200);
         assertEquals(140, pendulum.ping());

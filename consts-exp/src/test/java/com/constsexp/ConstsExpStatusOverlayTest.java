@@ -134,7 +134,7 @@ public class ConstsExpStatusOverlayTest
     public void theTickPendulumShouldSpanTheRowWithTheCountLeftAndThePingRight()
     {
         TickPendulum pendulum = new TickPendulum();
-        pendulum.world(0, "US", NOW);
+        pendulum.world(0, net.runelite.http.api.worlds.WorldRegion.UNITED_STATES_OF_AMERICA, NOW);
         // 180 ms after GameTick, the ball is in the middle of its swing, and the zone glows.
         pendulum.tick(NOW - 180, 0);
         when(plugin.getPendulum()).thenReturn(pendulum);

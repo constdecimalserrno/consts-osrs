@@ -34,9 +34,10 @@ import net.runelite.client.util.ImageUtil;
 
 /**
  * Top-right panel of refined bars: the title with the preset as a tag, one row per enabled alert (its icon, name and
- * value), the tick pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it that fills as a timer gets close,
- * or shows Health's and Prayer's level; a firing row lights up in its color, and pulses with the screen flash. Text is
- * RuneScape's small font whatever RuneLite's interface font is: the 129 px rows are laid out for it.
+ * value), the tick pendulum when it's on, and the pause countdown. A quiet row stays dark, with a thin line under it
+ * that fills as a timer gets close, or shows Health's and Prayer's level; a firing row lights up in its color, and
+ * pulses with the screen flash. Text is RuneScape's small font whatever RuneLite's interface font is: the 129 px rows
+ * are laid out for it.
  */
 @Singleton
 class ConstsExpStatusOverlay extends OverlayPanel
@@ -498,7 +499,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
     }
 
     /**
-     * The tick pendulum (ticket 09's round 7): the count of ticks in a row on a chip at the left, the track, and the
+     * The tick pendulum: the count of ticks in a row on a chip at the left, the track, and the
      * ping on a chip at the right, across the row's full width. The ball crosses the track once a swing, one swing a
      * tick; the space between the two orange lines glows while it's time to click, and each click washes the track
      * green (on pace) or red (not).
@@ -525,6 +526,11 @@ class ConstsExpStatusOverlay extends OverlayPanel
         private static final int GAP = 2;
         private static final int TRACK_HEIGHT = 8;
         private static final int DOT = 6;
+        // How long each cue lasts, in ms: a click's wash, the count's hop and its red drop, the ping dot's swell.
+        private static final int WASH_MS = 200;
+        private static final int HOP_MS = 120;
+        private static final int DROP_MS = 300;
+        private static final int SWELL_MS = 250;
         private static final Rectangle DIGIT = textBounds("0");
         private static final String TOOLTIP = "Tick pendulum: click while the ball is between the two lines; a click"
             + " there is perfect.</br>Left: your ticks in a row. Right: your ping, with ~ while it's learned from your"
@@ -555,11 +561,14 @@ class ConstsExpStatusOverlay extends OverlayPanel
 
             fill(graphics, BAR, x0, top, length, TRACK_HEIGHT);
             long washAge = now - pendulum.washAt();
-            if (washAge >= 0 && washAge < 200)
+            if (washAge >= 0 && washAge < WASH_MS)
             {
+                // Faint for a flick's first click, bright when perfect.
                 TickPendulum.Verdict wash = pendulum.wash();
-                double alpha = wash == TickPendulum.Verdict.HALF ? 0.35 : wash == TickPendulum.Verdict.PERFECT ? 0.85 : 0.6;
-                fill(graphics, alpha(WASH.get(wash), alpha * (1 - washAge / 200.0)), x0, top, length, TRACK_HEIGHT);
+                double alpha = wash == TickPendulum.Verdict.HALF ? 0.35
+                    : wash == TickPendulum.Verdict.PERFECT ? 0.85 : 0.6;
+                fill(graphics, alpha(WASH.get(wash), alpha * (1 - washAge / (double) WASH_MS)), x0, top, length,
+                    TRACK_HEIGHT);
             }
             fill(graphics, CAP, x0, top, 1, TRACK_HEIGHT);
             fill(graphics, CAP, x0 + length - 1, top, 1, TRACK_HEIGHT);
@@ -600,12 +609,12 @@ class ConstsExpStatusOverlay extends OverlayPanel
             int run = pendulum.run();
             Color color = run > 0 ? Color.WHITE : DIM;
             int lift = 0;
-            if (run > 0 && now - pendulum.upAt() < 120)
+            if (run > 0 && now - pendulum.upAt() < HOP_MS)
             {
                 color = YELLOW;
                 lift = 1;
             }
-            else if (run == 0 && now - pendulum.dropAt() < 300)
+            else if (run == 0 && now - pendulum.dropAt() < DROP_MS)
             {
                 color = RED;
             }
@@ -630,7 +639,7 @@ class ConstsExpStatusOverlay extends OverlayPanel
             fill(graphics, BAR, x, top - 1, right - x, TRACK_HEIGHT + 2);
             text(graphics, (pendulum.learned() ? "~" : "") + ping, x + 2, baseline, Color.WHITE);
             Color dot = ping < 80 ? GOOD : ping <= 150 ? YELLOW : ORANGE;
-            if (pendulum.learned() && now - pendulum.fixAt() < 250)
+            if (pendulum.learned() && now - pendulum.fixAt() < SWELL_MS)
             {
                 fill(graphics, dot, x - 2, top - 3, 3, 3);
             }
