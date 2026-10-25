@@ -157,13 +157,16 @@ final class MeshFile
             throw new IOException("it's damaged");
         }
         List<Clip> clips = new ArrayList<>();
+        // Corner positions read so far, all clips together, so no file can ask for more than a capture holds
+        long read = 0;
         for (int i = 0; i < count; i++)
         {
             String label = data.readUTF();
             int animation = data.readInt();
             int loopFrom = data.readInt();
             int frames = data.readInt();
-            if (frames < 1 || (long) frames * vertices > MOST || loopFrom < 0 || loopFrom >= frames)
+            read += (long) frames * Math.max(1, vertices);
+            if (frames < 1 || read > MOST || loopFrom < 0 || loopFrom >= frames)
             {
                 throw new IOException("it's damaged");
             }

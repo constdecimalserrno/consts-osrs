@@ -16,8 +16,10 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntPredicate;
+import net.runelite.api.ActorSpotAnim;
 import net.runelite.api.Animation;
 import net.runelite.api.Client;
+import net.runelite.api.IterableHashTable;
 import net.runelite.api.Model;
 import net.runelite.api.NPC;
 import org.junit.Before;
@@ -146,6 +148,39 @@ public class PoseCaptureTest
         when(actor.getAnimation()).thenReturn(422);
         assertTrue(PoseCapture.capture(client, actor, 2).isEmpty());
         verify(actor, never()).setPoseAnimation(anyInt());
+    }
+
+    @Test
+    public void anActorWithAGraphicOnItGivesNoClips()
+    {
+        // A graphic is part of the actor's model, and would stay frozen in every frame
+        IterableHashTable<ActorSpotAnim> graphics = mock(IterableHashTable.class);
+        when(graphics.iterator()).thenReturn(List.of(mock(ActorSpotAnim.class)).iterator());
+        when(actor.getSpotAnims()).thenReturn(graphics);
+        assertTrue(PoseCapture.capture(client, actor, 2).isEmpty());
+        verify(actor, never()).setPoseAnimation(anyInt());
+    }
+
+    @Test
+    public void allTheClipsTogetherKeepAtMostSoManyFrames()
+    {
+        for (int id : new int[]{IDLE, WALK, RUN})
+        {
+            Animation maya = mock(Animation.class);
+            when(maya.getId()).thenReturn(id);
+            when(maya.isMayaAnim()).thenReturn(true);
+            when(maya.getNumFrames()).thenReturn(PoseCapture.MOST_FRAMES);
+            when(client.loadAnimation(id)).thenReturn(maya);
+        }
+        List<Clip> clips = PoseCapture.capture(client, actor, 2);
+        int frames = 0;
+        for (Clip clip : clips)
+        {
+            frames += clip.frameCount();
+        }
+        assertTrue(frames + " frames", frames <= PoseCapture.MOST_FRAMES_IN_ALL);
+        // The first clips keep theirs whole; the last makes do with what's left, or is left out
+        assertEquals(PoseCapture.MOST_FRAMES, clips.get(0).frameCount());
     }
 
     @Test

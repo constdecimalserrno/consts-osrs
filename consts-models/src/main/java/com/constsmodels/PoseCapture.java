@@ -21,8 +21,14 @@ import net.runelite.api.Model;
 final class PoseCapture
 {
     /** The most frames a clip keeps. A longer animation keeps every 2nd, 3rd... frame, its timing kept whole. */
-    // ponytail: every nth frame past the cap, not sparse glTF targets; a 1,200-tick maya clip stays under ~4 MB
     static final int MOST_FRAMES = 240;
+
+    /**
+     * The most frames all the clips keep together: each is a model built on the client thread, and a GLB's weights grow
+     * with the square of the frames. A clip gets what's left, and none once it's spent.
+     */
+    // ponytail: every nth frame past the caps, not sparse glTF targets; 480 frames of 3,000 corners is ~17 MB in memory
+    static final int MOST_FRAMES_IN_ALL = 480;
 
     private static final String[] LABELS = {"Idle", "Turn left", "Turn right", "Walk", "Walk back", "Sidestep left",
         "Sidestep right", "Run"};
@@ -33,13 +39,13 @@ final class PoseCapture
 
     /**
      * The actor's pose animations, each one once, for a mesh of this many corners; none while the actor is busy with
-     * an action, which changes what its model shows. A clip whose model doesn't have that many corners is left out.
+     * an action, which changes what its model shows, or has a graphic on it, which would stay frozen in every frame. A clip whose model doesn't have that many corners is left out.
      * Call it on the client thread.
      */
     static List<Clip> capture(Client client, Actor actor, int corners)
     {
         List<Clip> clips = new ArrayList<>();
-        if (actor.getAnimation() != -1)
+        if (actor.getAnimation() != -1 || (actor.getSpotAnims() != null && actor.getSpotAnims().iterator().hasNext()))
         {
             return clips;
         }
@@ -54,17 +60,20 @@ final class PoseCapture
         {
             client.setAnimationInterpolationFilter(null);
             Set<Integer> seen = new HashSet<>();
-            for (int i = 0; i < ids.length; i++)
+            int left = MOST_FRAMES_IN_ALL;
+            for (int i = 0; i < ids.length && left > 0; i++)
             {
                 if (ids[i] < 0 || !seen.add(ids[i]))
                 {
                     continue;
                 }
                 Animation animation = client.loadAnimation(ids[i]);
-                Clip clip = animation == null ? null : clip(actor, ids[i], animation, LABELS[i], corners);
+                Clip clip = animation == null ? null
+                    : clip(actor, ids[i], animation, LABELS[i], corners, Math.min(MOST_FRAMES, left));
                 if (clip != null)
                 {
                     clips.add(clip);
+                    left -= clip.frameCount();
                 }
             }
         }
@@ -77,7 +86,7 @@ final class PoseCapture
         return clips;
     }
 
-    private static Clip clip(Actor actor, int id, Animation animation, String label, int corners)
+    private static Clip clip(Actor actor, int id, Animation animation, String label, int corners, int most)
     {
         // A classic animation's frames are keyframes, each some ticks long; a maya animation's are its ticks
         int frames = animation.getNumFrames();
@@ -86,7 +95,7 @@ final class PoseCapture
         {
             return null;
         }
-        int every = (frames + MOST_FRAMES - 1) / MOST_FRAMES;
+        int every = (frames + most - 1) / most;
         int kept = (frames + every - 1) / every;
         int[] ticks = new int[kept];
         float[][] x = new float[kept][];

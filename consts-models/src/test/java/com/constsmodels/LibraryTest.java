@@ -118,6 +118,35 @@ public class LibraryTest
     }
 
     @Test
+    public void aCaptureAskingForEndlessFramesIsDamaged() throws IOException
+    {
+        // CMD2 with no corners and a clip of two billion frames: refused, not a try at the memory
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (DataOutputStream data = new DataOutputStream(new GZIPOutputStream(out)))
+        {
+            data.writeInt(0x434D4432);
+            data.writeUTF("NPC Cow");
+            data.writeLong(99L);
+            data.writeInt(0);
+            data.writeInt(0);
+            data.writeInt(1);
+            data.writeUTF("Idle");
+            data.writeInt(808);
+            data.writeInt(0);
+            data.writeInt(2_000_000_000);
+        }
+        try
+        {
+            MeshFile.read(new ByteArrayInputStream(out.toByteArray()));
+            fail();
+        }
+        catch (IOException expected)
+        {
+            assertEquals("it's damaged", expected.getMessage());
+        }
+    }
+
+    @Test
     public void somethingThatIsntACaptureIsRefused()
     {
         try
