@@ -30,7 +30,9 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics2D;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -286,6 +288,28 @@ class ConfigSidePanel extends PluginPanel
     }
 
     /** Puts the tabs under the title, the settings tabs then the plugin's own, and shows the first. */
+    /** A tab with 6 px of padding a side instead of RuneLite's 10, so four tabs fit on one row. */
+    private MaterialTab tab(String title, JComponent view)
+    {
+        return new MaterialTab(title, tabGroup, view)
+        {
+            @Override
+            public Insets getInsets(Insets insets)
+            {
+                Insets padded = super.getInsets(insets);
+                padded.left -= 4;
+                padded.right -= 4;
+                return padded;
+            }
+
+            @Override
+            public Insets getInsets()
+            {
+                return getInsets(new Insets(0, 0, 0, 0));
+            }
+        };
+    }
+
     private void showTabs()
     {
         if (tabGroup == null)
@@ -303,13 +327,15 @@ class ConfigSidePanel extends PluginPanel
         // MaterialTabGroup can't put a tab before another, so it's built again with every tab in its place.
         tabGroup = new MaterialTabGroup(tabDisplay);
         tabGroup.setBorder(new EmptyBorder(0, 0, 6, 0));
+        // Tighter than RuneLite's 8 px apart, so four tabs fit on one row.
+        tabGroup.setLayout(new FlowLayout(FlowLayout.CENTER, 2, 0));
         for (SettingsTab tab : settingsTabs)
         {
-            tabGroup.addTab(new MaterialTab(tab.title, tabGroup, tab.view));
+            tabGroup.addTab(tab(tab.title, tab.view));
         }
         for (Map.Entry<String, JComponent> tab : tabs.entrySet())
         {
-            tabGroup.addTab(new MaterialTab(tab.getKey(), tabGroup, tab.getValue()));
+            tabGroup.addTab(tab(tab.getKey(), tab.getValue()));
         }
         header.add(tabGroup, BorderLayout.SOUTH);
         tabGroup.select(tabGroup.getTab(0));

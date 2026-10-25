@@ -115,6 +115,58 @@ public class ConstsExpStatusOverlayTest
     }
 
     @Test
+    public void theTickPendulumShouldSitUnderTheAlertsAndOverThePauseOnlyWhenOn()
+    {
+        enable(AlertType.IDLE);
+        when(plugin.getPauseRemainingMillis()).thenReturn(2_000L);
+        when(plugin.getPendulum()).thenReturn(new TickPendulum());
+        assertFalse(overlay.rows(NOW).stream().anyMatch(ConstsExpStatusOverlay.PendulumRow.class::isInstance));
+
+        when(config.tickPendulum()).thenReturn(true);
+        List<ConstsExpStatusOverlay.Row> rows = overlay.rows(NOW);
+        assertEquals(4, rows.size());
+        assertTrue(rows.get(1) instanceof ConstsExpStatusOverlay.AlertRow);
+        assertTrue(rows.get(2) instanceof ConstsExpStatusOverlay.PendulumRow);
+        assertEquals("Paused", ((ConstsExpStatusOverlay.TagRow) rows.get(3)).label);
+    }
+
+    @Test
+    public void theTickPendulumShouldSpanTheRowWithTheCountLeftAndThePingRight()
+    {
+        TickPendulum pendulum = new TickPendulum();
+        pendulum.world(0, "US", NOW);
+        // 180 ms after GameTick, the ball is in the middle of its swing, and the zone glows.
+        pendulum.tick(NOW - 180, 0);
+        when(plugin.getPendulum()).thenReturn(pendulum);
+        when(config.tickPendulum()).thenReturn(true);
+        ConstsExpStatusOverlay.Row row = overlay.rows(NOW).stream()
+            .filter(ConstsExpStatusOverlay.PendulumRow.class::isInstance).findFirst().orElseThrow();
+
+        BufferedImage image = render(row);
+        assertEquals(12, row.getBounds().height);
+        // The chips reach both edges of the row; the track between them is dark at its ends.
+        assertTrue(image.getRGB(0, 6) >>> 24 > 0);
+        assertTrue(image.getRGB(120, 6) >>> 24 > 0);
+        assertEquals(0, image.getRGB(24, 6) >>> 24);
+        assertEquals(0, image.getRGB(90, 6) >>> 24);
+        // The ball, mid-track.
+        boolean ball = false;
+        for (int x = 50; x < 70; x++)
+        {
+            ball |= (image.getRGB(x, 6) & 0xFFFFFF) == ConstsExpStatusOverlay.PendulumRow.BALL.getRGB() - 0xFF000000;
+        }
+        assertTrue("the ball is in the middle", ball);
+        // Before any click, the count is a dim 0: not the red of a count that just dropped.
+        for (int y = 0; y < 12; y++)
+        {
+            for (int x = 0; x < 23; x++)
+            {
+                assertNotEquals(0xFFFF3A3A, image.getRGB(x, y));
+            }
+        }
+    }
+
+    @Test
     public void eachAlertRowShouldShowItsIconNameAndValue()
     {
         enable(AlertType.IDLE, AlertType.INVENTORY_FULL, AlertType.FORESTRY);

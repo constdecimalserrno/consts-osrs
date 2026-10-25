@@ -2,7 +2,7 @@
 
 <img src="icon.png" alt="" width="48" height="72" align="right">
 
-RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
+RuneLite plugin for Old School RuneScape ( OSRS ), the all-in-one XP helper. Today that's AFK alerts, with presets for chinning, crabbing, mining, woodcutting, fishing and salvaging, and a tick pendulum for tick-perfect clicking. Each alert beeps, flashes the screen in its own color, and shows up as a bar in a top-right status panel. Pick a preset and only the alerts you need are on.
 
 ![The status panel on the Woodcutting preset: the line under Idle fills, then its row flashes yellow, Inv Full flashes magenta, then Forestry flashes lime and names the event](screenshots/status-panel.gif)
 
@@ -41,12 +41,13 @@ The bell in RuneLite's sidebar opens these settings in a panel of their own, the
 
 The switch beside the panel's title is the **Master Switch** (first in the plugin config too). Off silences consts-EXP, with no alerts, no status panel and no area lines, without turning the plugin off, so the bell stays in the sidebar. Turning it back on starts fresh, as logging in does.
 
-Under the title, three tabs split the settings: **Alerts**, which the panel opens on, **Skills** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded and General's start open; click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
+Under the title, four tabs split the settings: **Alerts**, which the panel opens on, **Skills**, **Tick & XP** and **General**. Each tab shows only its own sections. Alerts' and Skills' sections start folded, and Tick & XP's and General's start open; click a header to open or fold one. General ends with **Reset**, which puts every setting back to its default. RuneLite's Configuration panel shows the same sections in one list, in this order.
 
 | Tab | Sections |
 |---|---|
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
 | Skills | Woodcutting (the Forestry alert, with a checkbox per event), Sailing: Salvage, Sailing: Cargo Hold |
+| Tick & XP | Tick Pendulum (Enabled, Rhythm, Your Ping) |
 | General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
 Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
@@ -98,6 +99,23 @@ An event is spotted by the NPCs or objects that mark it, the same ones RuneLite'
 3. When the hold fills, the crew's chat message starts the Cargo Hold alert. Click anywhere to silence it, then empty the hold.
 
 The crew message arrives as a filtered (spam) game message; consts-EXP listens on that channel.
+
+## Tick pendulum
+
+![The tick pendulum under the Idle row: 12 ticks in a row on the left, the ball between the two orange lines with the zone glowing, and ~60 ms of ping on the right](screenshots/tick-pendulum.png)
+
+Off by default: turn it on under **Tick & XP** → **Tick Pendulum** → **Enabled**. It sits in the status panel under the alerts, as wide as their bars.
+
+- **The ball** crosses the track once a tick, left to right, then back. Each swing is one tick's click window: every click made during it is read by the server on the same tick.
+- **Click while the ball is between the two orange lines.** The space between them glows while it's time. The middle of the swing is the safest click, as far as it gets from both cutoffs.
+- **Every click** washes the track: bright green in the zone (perfect, with a green pip on the count), green elsewhere in the swing, red when it broke the rhythm.
+- **Left:** your ticks in a row. It hops yellow as it goes up, and flashes red and drops to 0 when a swing goes by without its click.
+- **Right:** the ping the pendulum follows. `~` means it's learned. The dot is green under 80 ms, yellow to 150 and orange above, and swells when your clicks correct it.
+- **Late ticks:** the ball waits where the tick will show and goes on when it comes.
+
+**Rhythm** picks what a swing wants: **Single click** (2-tick teaks, cooking, bloodwood), **Flick** (two clicks in one swing, like a prayer flick, with a wider zone), or **Every other swing** (2-tick harpooning: only the swing your hitsplat shows in takes a click, and the other is dimmed).
+
+**Your ping.** RuneLite can't tell a plugin your ping, so the pendulum learns where the click cutoff is from your prayer and run toggles. When one shows its result a tick later than the pendulum expected, or sooner, the cutoff moves to that click. Each world region starts from a guess (60 ms, plus the server's time for the world's player count), and keeps what it learned for the session. Skilling clicks don't teach it anything. If you know your ping, set **Your Ping**, and the pendulum follows that instead.
 
 ## Training guide
 
