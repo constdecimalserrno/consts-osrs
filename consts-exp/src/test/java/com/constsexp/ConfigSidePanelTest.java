@@ -357,7 +357,8 @@ public class ConfigSidePanelTest
         assertEquals("Preset", labels(tabs.getTab(0).getContent()).get(0));
         assertEquals(List.of("Health", "Prayer", "Aggro", "Potion", "Cannon", "Idle", "Logout", "Inventory Full",
             "Random Event"), sections(tabs.getTab(0).getContent()));
-        assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold", "Runecraft"),
+        assertEquals(List.of("Woodcutting", "Sailing: Salvage", "Sailing: Cargo Hold", "Thieving",
+            "Runecraft"),
             sections(tabs.getTab(1).getContent()));
         assertEquals(List.of("XP per Hour", "Tick Pendulum"), sections(tabs.getTab(2).getContent()));
         // Tick & XP opens with the live XP table, over its sections.

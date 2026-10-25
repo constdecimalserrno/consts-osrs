@@ -28,6 +28,7 @@ import net.runelite.api.NPCComposition;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectVolume;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.ChatMessage;
@@ -69,8 +70,8 @@ import net.runelite.http.api.worlds.WorldResult;
 
 @PluginDescriptor(
     name = "consts-EXP",
-    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events and a timer on each tree.",
-    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "tree", "timer", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum"}
+    description = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events, a timer on each tree and Stealing Artefacts' guards.",
+    tags = {"xp", "exp", "helper", "afk", "combat", "skilling", "chinning", "crabbing", "mining", "woodcutting", "forestry", "tree", "timer", "fishing", "sailing", "salvaging", "cargo", "salvage", "prayer", "health", "idle", "aggro", "logout", "potion", "random", "cannon", "inventory", "preset", "tick", "metronome", "pendulum", "thieving", "stealing", "artefacts"}
 )
 public class ConstsExpPlugin extends Plugin
 {
@@ -200,6 +201,9 @@ public class ConstsExpPlugin extends Plugin
     private final AggroArea aggroArea = new AggroArea();
 
     private final TickPendulum pendulum = new TickPendulum();
+    // Stealing Artefacts' two guards; their rows show while guardLuresShown.
+    private final GuardLures guardLures = new GuardLures();
+    private volatile boolean guardLuresShown;
     private final XpRates xpRates = new XpRates();
     // False from a login or hop until its first tick: until then the client's XP may still read 0, so the login's
     // StatChanged burst would look like drops.
@@ -277,7 +281,8 @@ public class ConstsExpPlugin extends Plugin
             ConstsExpConfig.idleSection, ConstsExpConfig.logoutSection, ConstsExpConfig.inventoryFullSection,
             ConstsExpConfig.randomSection);
         panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
-            ConstsExpConfig.cargoSection, ConstsExpConfig.runecraftSection);
+            ConstsExpConfig.cargoSection, ConstsExpConfig.thievingSection,
+            ConstsExpConfig.runecraftSection);
         panel.addSettingsTab("Tick & XP", new XpTable(plugin.getXpRates(), skillIconManager),
             ConstsExpConfig.xpSection, ConstsExpConfig.tickSection);
         panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
@@ -304,6 +309,8 @@ public class ConstsExpPlugin extends Plugin
         treeTimer.clear();
         // Off and on again may be another account.
         xpRates.clear();
+        guardLures.clear();
+        guardLuresShown = false;
         xpArmed = false;
     }
 
@@ -317,6 +324,12 @@ public class ConstsExpPlugin extends Plugin
         {
             // Logged out: XP/h starts again at the next login, on whichever account. Hops and loading keep it.
             xpRates.clear();
+        }
+        if (state == GameState.LOGIN_SCREEN || state == GameState.HOPPING)
+        {
+            // Another world's guards, or another account's.
+            guardLures.clear();
+            guardLuresShown = false;
         }
         if (state != GameState.LOADING)
         {
@@ -388,6 +401,8 @@ public class ConstsExpPlugin extends Plugin
             seedSkillXp();
             xpArmed = true;
         }
+        // Before the Master Switch's return, so the rows never outlive it.
+        guardLuresShown = config.masterSwitch() && config.guardLures() && readGuardLures();
         if (!config.masterSwitch())
         {
             return;
@@ -1261,6 +1276,26 @@ public class ConstsExpPlugin extends Plugin
     long getIdleDurationMillis()
     {
         return System.currentTimeMillis() - lastActivityMillis;
+    }
+
+    GuardLures getGuardLures()
+    {
+        return guardLures;
+    }
+
+    /** In Port Piscarilius with Guard Lures on, as of the last tick: the guards' rows show. */
+    boolean isGuardLuresShown()
+    {
+        return guardLuresShown;
+    }
+
+    /** Reads the guards; false outside Port Piscarilius, or with no local player yet (logging in). */
+    private boolean readGuardLures()
+    {
+        Player localPlayer = client.getLocalPlayer();
+        WorldView worldView = client.getTopLevelWorldView();
+        return localPlayer != null && worldView != null
+            && guardLures.update(localPlayer.getWorldLocation(), worldView.npcs());
     }
 
     /** Idle fires once you've been idle this long. */
