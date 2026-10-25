@@ -15,8 +15,10 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -29,6 +31,10 @@ import net.runelite.client.ui.FontManager;
  * <p>A click on the picture picks the piece of the model under it ({@link Pieces}), lit up in orange; Remove piece, or
  * Delete, takes it out of the model, for the view and Save alike, and Bring back puts every piece taken out back.
  * Those two show in the picture's top right corner while there's a piece picked or taken out.
+ *
+ * <p>A captured actor's animations ({@link Clip}) get a strip on the left of the bar: pick one, play or pause it
+ * (Space), step a frame back or on (Left, Right), and its frame number. It opens on the first one, playing. A step
+ * pauses and goes round; playing goes on from the clip's loop frame after its last, at the game's pace.
  */
 final class ViewerPanel extends JPanel
 {
@@ -40,6 +46,7 @@ final class ViewerPanel extends JPanel
     private final JComboBox<ExportFormat> format = new JComboBox<>(ExportFormat.values());
     private final JButton save = new JButton("Save");
     private BackgroundButton background;
+    private JComponent bar;
 
     // The model as it's shown and saved: the mesh with any pieces taken out, and each of its triangles' number in
     // the mesh
@@ -53,6 +60,18 @@ final class ViewerPanel extends JPanel
         "Take the piece you picked out of the model, for the view and Save (Delete)");
     private final JButton restore = quietButton("Bring back", "Put back every piece you took out");
 
+    // The animation shown, by its place in the mesh's clips, its frame, and whether it plays; the strip's dropdown,
+    // Play/Pause and frame number, all null for a mesh without animations
+    private int clip;
+    private int frame;
+    private boolean playing = true;
+    private JComboBox<String> animations;
+    private JButton play;
+    private JLabel frameLabel;
+    // Each frame's turn ends here, while the window is open and the animation plays
+    private final Timer timer = new Timer(0, e -> advance());
+    private boolean started;
+
     ViewerPanel(Mesh mesh, ViewerActions actions)
     {
         super(new BorderLayout());
@@ -64,10 +83,12 @@ final class ViewerPanel extends JPanel
         canvas.setBackgroundColor(actions.background());
         canvas.onPick(this::picked);
         canvas.setCorner(pieceButtons());
+        timer.setRepeats(false);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         add(canvas, BorderLayout.CENTER);
-        add(bar(), BorderLayout.SOUTH);
+        bar = bar();
+        add(bar, BorderLayout.SOUTH);
         refresh();
 
         // Cmd on a Mac, Ctrl elsewhere; a headless JVM (tests over SSH) has no menu key to ask for, so Ctrl
@@ -85,6 +106,28 @@ final class ViewerPanel extends JPanel
         key(KeyEvent.VK_DELETE, "remove piece", this::removePicked);
         key(KeyEvent.VK_BACK_SPACE, "remove piece", this::removePicked);
         key(KeyEvent.VK_ESCAPE, "let go", () -> picked(-1));
+        if (animations != null)
+        {
+            key(KeyEvent.VK_SPACE, "play", this::togglePlay);
+            key(KeyEvent.VK_LEFT, "back a frame", () -> step(-1));
+            key(KeyEvent.VK_RIGHT, "on a frame", () -> step(1));
+        }
+    }
+
+    /** Starts drawing, and the animation if it plays, once the window shows. */
+    void start()
+    {
+        canvas.start();
+        started = true;
+        schedule();
+    }
+
+    /** Stops drawing and the animation, once the window has closed. */
+    void stop()
+    {
+        started = false;
+        timer.stop();
+        canvas.stop();
     }
 
     private void key(int code, String name, Runnable action)
@@ -158,7 +201,160 @@ final class ViewerPanel extends JPanel
             BorderFactory.createMatteBorder(1, 0, 0, 0, ColorScheme.BORDER_COLOR),
             new EmptyBorder((BAR_HEIGHT - 28) / 2, 12, (BAR_HEIGHT - 28) / 2 - 1, 8)));
         bar.add(buttons, BorderLayout.EAST);
+        if (!mesh.clips.isEmpty())
+        {
+            bar.add(animationStrip(), BorderLayout.WEST);
+        }
         return bar;
+    }
+
+    /** The animation picked, back a frame, Play/Pause, on a frame, and the frame number. */
+    private JComponent animationStrip()
+    {
+        animations = new JComboBox<>(mesh.clips.stream().map(c -> c.label).toArray(String[]::new));
+        animations.setFont(FontManager.getRunescapeFont());
+        animations.setFocusable(false);
+        animations.setToolTipText("The animation shown");
+        animations.addActionListener(e -> choose(animations.getSelectedIndex()));
+        animations.setPreferredSize(new Dimension(animations.getPreferredSize().width, 28));
+
+        JButton back = quietButton("<", "Back a frame (Left)");
+        back.addActionListener(e -> step(-1));
+        play = quietButton("Pause", "Play or pause the animation (Space)");
+        // As wide as its longer word, so it doesn't jump as it flips
+        play.setPreferredSize(new Dimension(play.getPreferredSize().width + 8, 28));
+        play.addActionListener(e -> togglePlay());
+        JButton on = quietButton(">", "On a frame (Right)");
+        on.addActionListener(e -> step(1));
+
+        frameLabel = new JLabel();
+        frameLabel.setFont(FontManager.getRunescapeSmallFont());
+        frameLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+
+        JPanel strip = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        strip.setOpaque(false);
+        strip.add(animations);
+        strip.add(back);
+        strip.add(play);
+        strip.add(on);
+        strip.add(frameLabel);
+        updateStrip();
+        return strip;
+    }
+
+    /** Shows another animation, from its first frame, playing or paused as before. */
+    private void choose(int index)
+    {
+        if (index < 0 || index == clip && frame == 0)
+        {
+            return;
+        }
+        clip = index;
+        frame = 0;
+        frameChanged();
+    }
+
+    /** One frame back (-1) or on (1), going round, and pauses. */
+    void step(int by)
+    {
+        if (animations == null)
+        {
+            return;
+        }
+        int count = mesh.clips.get(clip).frameCount();
+        frame = Math.floorMod(frame + by, count);
+        playing = false;
+        frameChanged();
+    }
+
+    void togglePlay()
+    {
+        if (animations == null)
+        {
+            return;
+        }
+        playing = !playing;
+        updateStrip();
+        schedule();
+    }
+
+    /** The frame after this one while playing: the next, or after the last the clip's loop frame. */
+    static int next(Clip clip, int frame)
+    {
+        return frame + 1 < clip.frameCount() ? frame + 1 : clip.loopFrom;
+    }
+
+    /** How long a frame shows while playing, in milliseconds: its ticks, 20 ms each. */
+    static int delay(Clip clip, int frame)
+    {
+        return clip.ticks[frame] * Clip.TICK_MS;
+    }
+
+    /** A frame's turn is up: on to the next one. */
+    private void advance()
+    {
+        if (playing && started)
+        {
+            frame = next(mesh.clips.get(clip), frame);
+            frameChanged();
+        }
+    }
+
+    private void frameChanged()
+    {
+        updateStrip();
+        showView();
+        schedule();
+    }
+
+    /** Times the frame shown, while the window is open and the animation plays. */
+    private void schedule()
+    {
+        timer.stop();
+        if (started && playing && animations != null)
+        {
+            timer.setInitialDelay(delay(mesh.clips.get(clip), frame));
+            timer.start();
+        }
+    }
+
+    private void updateStrip()
+    {
+        if (animations == null)
+        {
+            return;
+        }
+        play.setText(playing ? "Pause" : "Play");
+        frameLabel.setText(frameText());
+    }
+
+    /** "Frame 3/12": the frame shown, counted from 1, of the animation's. */
+    String frameText()
+    {
+        return "Frame " + (frame + 1) + "/" + mesh.clips.get(clip).frameCount();
+    }
+
+    boolean playing()
+    {
+        return playing;
+    }
+
+    /** The animation dropdown, or null for a mesh without animations. */
+    JComboBox<String> animations()
+    {
+        return animations;
+    }
+
+    /** What the picture shows: the model, at the animation's frame if it has any. */
+    Mesh shown()
+    {
+        if (model.clips.isEmpty())
+        {
+            return model;
+        }
+        Clip shownClip = model.clips.get(clip);
+        return new Mesh(model.name, shownClip.x[frame], shownClip.y[frame], shownClip.z[frame],
+            model.a, model.b, model.c, model.color);
     }
 
     private static JButton quietButton(String text, String tip)
@@ -297,7 +493,7 @@ final class ViewerPanel extends JPanel
     /** Puts the model into the picture, the piece picked lit up, and the line about it in the corner. */
     private void showView()
     {
-        canvas.show(model, lightPicked());
+        canvas.show(shown(), lightPicked());
         canvas.setInfo(sizeText(model));
     }
 
@@ -327,6 +523,12 @@ final class ViewerPanel extends JPanel
         int g = ((rgb >> 8 & 0xFF) * 2 + (orange >> 8 & 0xFF) * 3) / 5;
         int b = ((rgb & 0xFF) * 2 + (orange & 0xFF) * 3) / 5;
         return r << 16 | g << 8 | b;
+    }
+
+    /** How wide the window can get before the bar's controls would overlap. */
+    int minimumWidth()
+    {
+        return bar.getPreferredSize().width;
     }
 
     ViewerCanvas canvas()
