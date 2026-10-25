@@ -88,7 +88,6 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.ProfileChanged;
 import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
@@ -194,14 +193,12 @@ class ConfigSidePanel extends PluginPanel
     /** True while the loaders write to the widgets, so their listeners don't save what they were just shown. */
     private boolean loading;
 
-    ConfigSidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager, Config config, Plugin plugin)
-    {
-        this(configManager, colorPickerManager, config, plugin, null);
-    }
-
-    /** switchKey: the boolean setting drawn as the master switch beside the title, or null for none. */
+    /**
+     * name and description: the plugin's, as its PluginDescriptor gives them, for the title and its tooltip. switchKey:
+     * the boolean setting drawn as the master switch beside the title, or null for none.
+     */
     ConfigSidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager, Config config, Plugin plugin,
-        String switchKey)
+        String name, String description, String switchKey)
     {
         super(false);
 
@@ -216,14 +213,9 @@ class ConfigSidePanel extends PluginPanel
         setLayout(new BorderLayout());
         setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-        PluginDescriptor about = plugin.getClass().getAnnotation(PluginDescriptor.class);
-        String name = about != null ? about.name() : group;
         JLabel title = new JLabel(name);
         title.setForeground(Color.WHITE);
-        if (about != null && !about.description().isEmpty())
-        {
-            title.setToolTipText("<html>" + name + ":<br>" + about.description() + "</html>");
-        }
+        title.setToolTipText("<html>" + name + ":<br>" + description + "</html>");
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
         topPanel.add(title);

@@ -31,10 +31,8 @@ package com.constsdestination.tilepacks.ui.panel.custom;
 import com.constsdestination.tilepacks.TilePackManager;
 import com.constsdestination.tilepacks.data.GroundMarkerPoint;
 import com.constsdestination.tilepacks.ui.panel.TilePacksListPanel;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import java.awt.Dimension;
-import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -135,18 +133,16 @@ public class CustomPackManagerPanel extends PluginPanel
             return "Must add tiles";
         }
         //check the format of the import points. We actually save the string, so this formatting is just to check it is valid.
-        List<GroundMarkerPoint> importPoints;
+        GroundMarkerPoint[] importPoints;
         try
         {
-            importPoints = gson.fromJson(tiles, new TypeToken<List<GroundMarkerPoint>>()
-            {
-            }.getType());
+            importPoints = gson.fromJson(tiles, GroundMarkerPoint[].class);
         }
         catch (Exception ex)
         {
             return "Error parsing tiles, check the formatting";
         }
-        if (importPoints == null || importPoints.isEmpty())
+        if (importPoints == null || importPoints.length == 0)
         {
             return "Error parsing tiles, check the formatting";
         }

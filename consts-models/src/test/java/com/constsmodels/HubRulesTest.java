@@ -27,7 +27,7 @@ public class HubRulesTest
         "LinkBrowser.open", "JFileChooser", "FileDialog", "java.awt.Desktop", "Desktop.getDesktop",
         "Runtime.getRuntime", "ProcessBuilder", "java.lang.reflect", "java.lang.invoke", "getMethod(",
         "getDeclaredMethod", "getField(", "getDeclaredField", "getDeclaredConstructor", "setAccessible(", "getAnnotation",
-        "Class.forName", "KeyboardFocusManager", ".interrupt()", "::interrupt");
+        "Class.forName", "TypeToken", "KeyboardFocusManager", ".interrupt()", "::interrupt");
 
     /** What Filepath's own methods take or throw, so a plugin may name them though they're java.nio.file's. */
     private static final List<String> ALLOWED = List.of("java.nio.file.StandardOpenOption",

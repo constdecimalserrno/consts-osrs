@@ -31,7 +31,6 @@ import com.constsdestination.tilepacks.data.GroundMarkerPoint;
 import com.constsdestination.tilepacks.data.TilePack;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -126,11 +125,7 @@ public class PointManager
                     continue;
                 }
 
-                List<GroundMarkerPoint> markers = gson.fromJson(
-                    pack.getValue().packTiles,
-                    new TypeToken<List<GroundMarkerPoint>>()
-                    {
-                    }.getType());
+                GroundMarkerPoint[] markers = gson.fromJson(pack.getValue().packTiles, GroundMarkerPoint[].class);
                 if (markers == null)
                 {
                     continue;

@@ -38,12 +38,15 @@ import net.runelite.client.util.ImageUtil;
  * second tab. And what a left-click goes past: ground items, or loot and campfires (ClickThrough).
  */
 @PluginDescriptor(
-    name = "consts-Destination",
-    description = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, lets a left-click go past loot, and draws your tile packs: sets of marked tiles you make or paste in",
+    name = ConstsDestinationPlugin.NAME,
+    description = ConstsDestinationPlugin.DESCRIPTION,
     tags = {"destination", "highlight", "tile", "cursor", "hover", "walk", "click", "outline", "interact", "npc", "object", "pack", "ground", "marker", "loot", "pickup", "forestry", "minigame"}
 )
 public class ConstsDestinationPlugin extends Plugin
 {
+    static final String NAME = "consts-Destination";
+    static final String DESCRIPTION = "Highlights the tile and anything you hover that you can act on, keeps what you clicked lit until you're done, lets a left-click go past loot, and draws your tile packs: sets of marked tiles you make or paste in";
+
     static final String TILE_PACKS_TAB = "Tile packs";
 
     @Inject
@@ -118,7 +121,8 @@ public class ConstsDestinationPlugin extends Plugin
     static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
         ConstsDestinationConfig config, Plugin plugin, JComponent tilePacksPanel)
     {
-        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin, ConstsDestinationConfig.MASTER_KEY);
+        ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin, NAME, DESCRIPTION,
+            ConstsDestinationConfig.MASTER_KEY);
         panel.addTab(TILE_PACKS_TAB, tilePacksPanel);
         return panel;
     }
