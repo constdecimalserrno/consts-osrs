@@ -85,7 +85,8 @@ public class ViewerPanelTest
     public void aStillCaptureHasNoAnimationControls()
     {
         Mesh mesh = OrbitCameraTest.box(0, 0, 0, 40, 40, 40, RED);
-        ViewerPanel panel = new ViewerPanel(mesh, actions(new ArrayList<>(), new int[]{ViewerCanvas.DEFAULT_BACKGROUND}));
+        ViewerPanel panel = new ViewerPanel(mesh,
+            actions(new ArrayList<>(), new int[]{ViewerCanvas.DEFAULT_BACKGROUND}));
         List<AbstractButton> buttons = new ArrayList<>();
         collect(panel, buttons);
         List<String> texts = buttons.stream().map(AbstractButton::getText).collect(Collectors.toList());
@@ -103,7 +104,8 @@ public class ViewerPanelTest
     public void anAnimationPlaysPausesAndStepsItsFrames()
     {
         Mesh mesh = TestMeshes.animated(OrbitCameraTest.box(0, 0, 0, 40, 40, 40, RED));
-        ViewerPanel panel = new ViewerPanel(mesh, actions(new ArrayList<>(), new int[]{ViewerCanvas.DEFAULT_BACKGROUND}));
+        ViewerPanel panel = new ViewerPanel(mesh,
+            actions(new ArrayList<>(), new int[]{ViewerCanvas.DEFAULT_BACKGROUND}));
 
         // Opens on the first animation, playing, at its first frame
         JComboBox<String> picker = panel.animations();
@@ -132,6 +134,11 @@ public class ViewerPanelTest
         panel.togglePlay();
         assertFalse(panel.playing());
 
+        // Space plays and pauses, so no button keeps the focus to take it
+        List<AbstractButton> buttons = new ArrayList<>();
+        collect(panel, buttons);
+        assertTrue(buttons.stream().noneMatch(Component::isFocusable));
+
         // Another animation starts at its first frame
         picker.setSelectedIndex(1);
         assertEquals("Frame 1/3", panel.frameText());
@@ -157,7 +164,8 @@ public class ViewerPanelTest
         TestMeshes.box(b, 0, 0, 0, 40, 40, 40, true, RED, RED);
         TestMeshes.box(b, 100, 0, 0, 140, 40, 40, true, BLUE, BLUE);
         Mesh mesh = TestMeshes.animated(b.build());
-        ViewerPanel panel = new ViewerPanel(mesh, actions(new ArrayList<>(), new int[]{ViewerCanvas.DEFAULT_BACKGROUND}));
+        ViewerPanel panel = new ViewerPanel(mesh,
+            actions(new ArrayList<>(), new int[]{ViewerCanvas.DEFAULT_BACKGROUND}));
         panel.step(1);
         panel.picked(0);
         panel.removePicked();

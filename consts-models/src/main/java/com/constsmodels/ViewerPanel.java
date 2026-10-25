@@ -1,6 +1,8 @@
 package com.constsmodels;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -11,6 +13,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.Arrays;
 import javax.swing.AbstractAction;
+import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -46,7 +49,7 @@ final class ViewerPanel extends JPanel
     private final JComboBox<ExportFormat> format = new JComboBox<>(ExportFormat.values());
     private final JButton save = new JButton("Save");
     private BackgroundButton background;
-    private JComponent bar;
+    private final JComponent bar;
 
     // The model as it's shown and saved: the mesh with any pieces taken out, and each of its triangles' number in
     // the mesh
@@ -108,9 +111,28 @@ final class ViewerPanel extends JPanel
         key(KeyEvent.VK_ESCAPE, "let go", () -> picked(-1));
         if (animations != null)
         {
+            // Space would press the last button clicked instead, so no button keeps the focus
+            unfocusable(this);
+            save.setToolTipText("Save the model as captured, any pieces you took out left out; GLB keeps its"
+                + " animations");
             key(KeyEvent.VK_SPACE, "play", this::togglePlay);
             key(KeyEvent.VK_LEFT, "back a frame", () -> step(-1));
             key(KeyEvent.VK_RIGHT, "on a frame", () -> step(1));
+        }
+    }
+
+    private static void unfocusable(Container parent)
+    {
+        for (Component c : parent.getComponents())
+        {
+            if (c instanceof AbstractButton)
+            {
+                c.setFocusable(false);
+            }
+            if (c instanceof Container)
+            {
+                unfocusable((Container) c);
+            }
         }
     }
 
@@ -230,6 +252,10 @@ final class ViewerPanel extends JPanel
         frameLabel = new JLabel();
         frameLabel.setFont(FontManager.getRunescapeSmallFont());
         frameLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        // As wide as the longest frame number, so the bar never grows as it counts
+        int most = mesh.clips.stream().mapToInt(Clip::frameCount).max().orElse(1);
+        frameLabel.setText("Frame " + most + "/" + most);
+        frameLabel.setPreferredSize(frameLabel.getPreferredSize());
 
         JPanel strip = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         strip.setOpaque(false);
@@ -245,7 +271,7 @@ final class ViewerPanel extends JPanel
     /** Shows another animation, from its first frame, playing or paused as before. */
     private void choose(int index)
     {
-        if (index < 0 || index == clip && frame == 0)
+        if (index < 0)
         {
             return;
         }
@@ -257,22 +283,15 @@ final class ViewerPanel extends JPanel
     /** One frame back (-1) or on (1), going round, and pauses. */
     void step(int by)
     {
-        if (animations == null)
-        {
-            return;
-        }
         int count = mesh.clips.get(clip).frameCount();
         frame = Math.floorMod(frame + by, count);
         playing = false;
         frameChanged();
     }
 
+    /** Plays a paused animation, or pauses a playing one. */
     void togglePlay()
     {
-        if (animations == null)
-        {
-            return;
-        }
         playing = !playing;
         updateStrip();
         schedule();
@@ -320,10 +339,6 @@ final class ViewerPanel extends JPanel
 
     private void updateStrip()
     {
-        if (animations == null)
-        {
-            return;
-        }
         play.setText(playing ? "Pause" : "Play");
         frameLabel.setText(frameText());
     }
