@@ -47,6 +47,7 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.game.WorldService;
 import net.runelite.client.input.MouseAdapter;
 import net.runelite.client.input.MouseListener;
@@ -151,6 +152,9 @@ public class ConstsExpPlugin extends Plugin
     @Inject
     private WorldService worldService;
 
+    @Inject
+    private SkillIconManager skillIconManager;
+
     // The sidebar button: the plugin's settings in a panel of their own.
     private ConfigSidePanel configPanel;
     private NavigationButton navButton;
@@ -181,6 +185,7 @@ public class ConstsExpPlugin extends Plugin
     private final AggroArea aggroArea = new AggroArea();
 
     private final TickPendulum pendulum = new TickPendulum();
+    private final XpRates xpRates = new XpRates();
     // The world the pendulum has its player count and region from; -1 until the world list has it.
     private int pendulumWorld = -1;
     private volatile long nextAggroAlertMillis;
@@ -216,7 +221,7 @@ public class ConstsExpPlugin extends Plugin
         overlayManager.add(flashOverlay);
         overlayManager.add(statusOverlay);
         overlayManager.add(aggroAreaOverlay);
-        configPanel = sidePanel(configManager, colorPickerManager, config, this);
+        configPanel = sidePanel(configManager, colorPickerManager, config, this, skillIconManager);
         eventBus.register(configPanel);
         navButton = NavigationButton.builder()
             .tooltip("consts-EXP")
@@ -239,10 +244,10 @@ public class ConstsExpPlugin extends Plugin
 
     /**
      * The sidebar panel: the title and Master Switch over four tabs of settings, Alerts, which it opens on, Skills,
-     * Tick & XP and General.
+     * Tick & XP (which opens with the live XP table) and General.
      */
     static ConfigSidePanel sidePanel(ConfigManager configManager, ColorPickerManager colorPickerManager,
-        ConstsExpConfig config, Plugin plugin)
+        ConstsExpConfig config, ConstsExpPlugin plugin, SkillIconManager skillIconManager)
     {
         ConfigSidePanel panel = new ConfigSidePanel(configManager, colorPickerManager, config, plugin,
             ConstsExpConfig.MASTER_KEY);
@@ -252,7 +257,8 @@ public class ConstsExpPlugin extends Plugin
             ConstsExpConfig.randomSection);
         panel.addSettingsTab("Skills", ConstsExpConfig.woodcuttingSection, ConstsExpConfig.salvageSection,
             ConstsExpConfig.cargoSection);
-        panel.addSettingsTab("Tick & XP", ConstsExpConfig.tickSection);
+        panel.addSettingsTab("Tick & XP", new XpTable(plugin.getXpRates(), skillIconManager),
+            ConstsExpConfig.xpSection, ConstsExpConfig.tickSection);
         panel.addSettingsTab("General", ConstsExpConfig.timingSection, ConstsExpConfig.soundsSection,
             ConstsExpConfig.flashSection);
         return panel;
@@ -279,6 +285,11 @@ public class ConstsExpPlugin extends Plugin
     {
         GameState state = event.getGameState();
         followAggroAreaAcrossLogins(state);
+        if (state == GameState.LOGIN_SCREEN)
+        {
+            // Logged out: XP/h starts again at the next login, on whichever account. Hops and loading keep it.
+            xpRates.clear();
+        }
         if (state == GameState.LOGGED_IN)
         {
             if (!sessionActive && config.masterSwitch())
@@ -370,6 +381,11 @@ public class ConstsExpPlugin extends Plugin
     TickPendulum getPendulum()
     {
         return pendulum;
+    }
+
+    XpRates getXpRates()
+    {
+        return xpRates;
     }
 
     private void tickPendulum(long now)
@@ -767,6 +783,7 @@ public class ConstsExpPlugin extends Plugin
         if (previousXp != null && currentXp > previousXp)
         {
             markActivityNow();
+            xpRates.gain(skill, currentXp - previousXp, System.currentTimeMillis());
         }
     }
 

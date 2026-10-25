@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.Skill;
+import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.client.util.ImageUtil;
 import org.junit.Before;
@@ -41,6 +42,7 @@ public class ConstsExpStatusOverlayTest
     private ConstsExpConfig config;
     private TooltipManager tooltips;
     private ConstsExpStatusOverlay overlay;
+    private final XpRates xpRates = new XpRates();
 
     @Before
     public void setUp()
@@ -53,7 +55,8 @@ public class ConstsExpStatusOverlayTest
         when(plugin.currentPreset()).thenReturn(Preset.WOODCUTTING);
         when(plugin.getCurrentAnimationId()).thenReturn(-1);
         when(plugin.getAggroArea()).thenReturn(new AggroArea());
-        overlay = new ConstsExpStatusOverlay(client, plugin, config, tooltips);
+        when(plugin.getXpRates()).thenReturn(xpRates);
+        overlay = new ConstsExpStatusOverlay(client, plugin, config, tooltips, new SkillIconManager());
     }
 
     @Test
@@ -128,6 +131,64 @@ public class ConstsExpStatusOverlayTest
         assertTrue(rows.get(1) instanceof ConstsExpStatusOverlay.AlertRow);
         assertTrue(rows.get(2) instanceof ConstsExpStatusOverlay.PendulumRow);
         assertEquals("Paused", ((ConstsExpStatusOverlay.TagRow) rows.get(3)).label);
+    }
+
+    @Test
+    public void xpPerHourShouldSitUnderTheAlertsAndOverThePendulumOnceASkillGainsXp()
+    {
+        enable(AlertType.IDLE);
+        when(config.tickPendulum()).thenReturn(true);
+        when(plugin.getPendulum()).thenReturn(new TickPendulum());
+        assertFalse("no XP yet", overlay.rows(NOW).stream().anyMatch(ConstsExpStatusOverlay.XpRow.class::isInstance));
+
+        // 24,000 XP an hour: 400 XP a minute after the first drop.
+        xpRates.gain(Skill.MINING, 100, NOW - 60_000);
+        xpRates.gain(Skill.MINING, 400, NOW);
+        List<ConstsExpStatusOverlay.Row> rows = overlay.rows(NOW);
+        assertEquals(4, rows.size());
+        assertTrue(rows.get(1) instanceof ConstsExpStatusOverlay.AlertRow);
+        ConstsExpStatusOverlay.XpRow xp = (ConstsExpStatusOverlay.XpRow) rows.get(2);
+        assertEquals("Mining", xp.label);
+        assertEquals("24.0k/h", xp.value);
+        assertNull("never lit", xp.fill);
+        assertTrue(xp.tooltip, xp.tooltip.contains("500 XP in 1:00"));
+        assertTrue(rows.get(3) instanceof ConstsExpStatusOverlay.PendulumRow);
+
+        // Reset: back to zero, the row stays.
+        xpRates.resetAll();
+        assertEquals("0/h", ((ConstsExpStatusOverlay.XpRow) overlay.rows(NOW).get(2)).value);
+
+        when(config.xpPerHour()).thenReturn(false);
+        assertFalse(overlay.rows(NOW).stream().anyMatch(ConstsExpStatusOverlay.XpRow.class::isInstance));
+    }
+
+    @Test
+    public void shiftRightClickShouldOfferResetXpPerHour()
+    {
+        assertTrue(overlay.getMenuEntries().stream().anyMatch(e -> "Reset XP/h".equals(e.getOption())));
+        xpRates.gain(Skill.MINING, 100, NOW);
+        assertTrue(overlay.rows(NOW).get(1).tooltip.contains("Shift + right-click"));
+    }
+
+    @Test
+    public void xpPerHourShouldDrawTheSkillsOwnIcon()
+    {
+        xpRates.gain(Skill.MINING, 100, NOW);
+        BufferedImage row = render(overlay.rows(NOW).get(1));
+
+        // Mining's pickaxe has colors no tinted mask has: more than two distinct opaque colors in the icon's slot.
+        java.util.Set<Integer> colors = new java.util.HashSet<>();
+        for (int y = 0; y < 15; y++)
+        {
+            for (int x = 0; x < 13; x++)
+            {
+                if (row.getRGB(x, y) >>> 24 == 255)
+                {
+                    colors.add(row.getRGB(x, y));
+                }
+            }
+        }
+        assertTrue(colors.toString(), colors.size() > 3);
     }
 
     @Test

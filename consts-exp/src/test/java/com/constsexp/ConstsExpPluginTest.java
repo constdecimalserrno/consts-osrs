@@ -35,12 +35,14 @@ import net.runelite.api.GameState;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.NPC;
 import net.runelite.api.Player;
+import net.runelite.api.Skill;
 import net.runelite.api.SoundEffectID;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameObjectDespawned;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.MenuOptionClicked;
@@ -127,6 +129,27 @@ public class ConstsExpPluginTest
     public void tearDown() throws Exception
     {
         invokePrivate("shutdownScheduler");
+    }
+
+    // XP per hour
+
+    @Test
+    public void xpPerHourCountsEachDropButNotALoginsFirstValuesAndClearsAtTheLoginScreen()
+    {
+        // The login's first values for each skill aren't drops.
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_000, 60, 60));
+        assertNull(plugin.getXpRates().shown());
+
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_035, 60, 60));
+        plugin.onStatChanged(new StatChanged(Skill.MINING, 50_070, 60, 60));
+        assertEquals(Skill.MINING, plugin.getXpRates().shown());
+        assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
+
+        // A hop keeps it; the login screen clears it.
+        plugin.onGameStateChanged(gameState(GameState.HOPPING));
+        assertEquals(70, plugin.getXpRates().gained(Skill.MINING));
+        plugin.onGameStateChanged(gameState(GameState.LOGIN_SCREEN));
+        assertNull(plugin.getXpRates().shown());
     }
 
     // Tick pendulum
