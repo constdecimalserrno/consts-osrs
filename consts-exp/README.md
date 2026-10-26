@@ -48,7 +48,7 @@ Under the title, four tabs split the settings: **Alerts**, which the panel opens
 | Alerts | Preset, then one section per alert: Health, Prayer, Aggro, Potion, Cannon, Idle, Logout, Inventory Full, Random Event |
 | Skills | Woodcutting (the Forestry alert, with a checkbox per event, then Tree Timer), Sailing: Salvage, Sailing: Cargo Hold, Thieving (Guard Lures), Runecraft (GOTR Autopilot) |
 | Tick & XP | The XP table, then XP per Hour (Enabled, Drop After), Tick Pendulum (Enabled, Rhythm, Your Ping) |
-| General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
+| General | Timing (Click Pause, Quiet After Dismiss, Give Up After, Startup Delay, Stay Logged In 25 Min), Sounds (Enabled, Sound, Custom Sound ID, Volume, Repeat Interval), Screen Flash (Enabled, Interval, Opacity) |
 
 Every alert's section has the same items in the same order: **Enabled** (read only by **Custom**), **Dismiss on Click**, **Color**, then its own options.
 
@@ -74,6 +74,8 @@ Every alert's section has the same items in the same order: **Enabled** (read on
 | Forestry | A Forestry event you picked starts nearby | A click, or Give Up After | Lime |
 
 "A click" means with **Dismiss on Click** on. **Give Up After** (General → Timing, `2 min`) ends a one-off alert nobody clicks away.
+
+**Stay Logged In 25 Min** (General → Timing, on by default) stretches the game's logout from 5 minutes without a click or key press to 25, the most it allows, as RuneLite's Logout Timer does, so you can turn that plugin off. Logout's warning comes at 24 minutes. Its countdown in the status panel follows whichever logout is set.
 
 ### Aggro area
 

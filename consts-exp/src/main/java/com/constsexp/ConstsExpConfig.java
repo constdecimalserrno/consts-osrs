@@ -182,7 +182,7 @@ public interface ConstsExpConfig extends Config
 
     @ConfigSection(
         name = "Timing",
-        description = "Click pause, quiet after dismiss, give up after and startup delay",
+        description = "Click pause, quiet after dismiss, give up after, startup delay and staying logged in",
         position = 17
     )
     String timingSection = "general";
@@ -323,6 +323,18 @@ public interface ConstsExpConfig extends Config
     default int startupDelayMs()
     {
         return 8000;
+    }
+
+    @ConfigItem(
+        keyName = "stayLoggedIn",
+        name = "Stay Logged In 25 Min",
+        description = "The game logs you out after 5 minutes without a click or key press. This makes it 25, the most the game allows, as RuneLite's Logout Timer does. Off puts the game's 5 minutes back",
+        section = timingSection,
+        position = 4
+    )
+    default boolean stayLoggedIn()
+    {
+        return true;
     }
 
     @ConfigItem(
