@@ -119,6 +119,7 @@ public class ConstsExpPluginTest
         when(config.enablePotionExpiryAlert()).thenReturn(true);
         when(config.interactionPauseMs()).thenReturn(3000);
         when(config.logoutWarningMs()).thenReturn(1_440_000);
+        when(client.getIdleTimeout()).thenReturn(75_000);
         when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
         when(client.getLocalPlayer()).thenReturn(player);
         when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, 3200, 0));
@@ -1206,6 +1207,35 @@ public class ConstsExpPluginTest
     {
         setField("lastUserInteractionMillis", System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(26L));
         assertEquals(0L, plugin.getLogoutTimerRemainingMillis());
+    }
+
+    @Test
+    public void stayLoggedInSetsTheGamesLogoutToTwentyFiveMinutes() throws Exception
+    {
+        when(config.stayLoggedIn()).thenReturn(true);
+
+        invokePrivate("followStayLoggedIn");
+
+        verify(client).setIdleTimeout(75_000);
+    }
+
+    @Test
+    public void stayLoggedInOffPutsTheGamesFiveMinutesBack() throws Exception
+    {
+        when(config.stayLoggedIn()).thenReturn(false);
+
+        invokePrivate("followStayLoggedIn");
+
+        verify(client).setIdleTimeout(15_000);
+    }
+
+    @Test
+    public void logoutTimerCountsDownFromTheGamesOwnLogout() throws Exception
+    {
+        when(client.getIdleTimeout()).thenReturn(15_000);
+        setField("lastUserInteractionMillis", System.currentTimeMillis());
+
+        assertTrue(plugin.getLogoutTimerRemainingMillis() <= TimeUnit.MINUTES.toMillis(5L));
     }
 
     // Master Switch

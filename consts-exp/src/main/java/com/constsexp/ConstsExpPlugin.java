@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.Constants;
 import net.runelite.api.GameState;
 import net.runelite.api.NPC;
 import net.runelite.api.NPCComposition;
@@ -78,7 +79,9 @@ public class ConstsExpPlugin extends Plugin
     static final String NAME = "consts-EXP";
     static final String DESCRIPTION = "The all-in-one XP helper: AFK alerts you can't sleep through, with presets per activity, Forestry events, a timer on each tree and Stealing Artefacts' guards.";
 
-    static final long LOGOUT_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(25L);
+    // The game's logout after no click or key press: its own 5 minutes, or the 25 Stay Logged In asks for.
+    private static final int GAME_LOGOUT_MINUTES = 5;
+    private static final int STAY_LOGGED_IN_MINUTES = 25;
 
     private static final long MIN_REPEAT_INTERVAL_MS = 100L;
     private static final long MIN_FLASH_INTERVAL_MS = 50L;
@@ -260,6 +263,7 @@ public class ConstsExpPlugin extends Plugin
         // Index 0 sees clicks before any other listener can consume them.
         mouseManager.registerMouseListener(0, clickListener);
         startupDelayUntilMillis = System.currentTimeMillis() + Math.max(0, config.startupDelayMs());
+        followStayLoggedIn();
         clientThread.invokeLater(() ->
         {
             if (client.getGameState() == GameState.LOGGED_IN && config.masterSwitch())
@@ -296,6 +300,7 @@ public class ConstsExpPlugin extends Plugin
     @Override
     protected void shutDown()
     {
+        setGameLogoutMinutes(GAME_LOGOUT_MINUTES);
         endSession();
         gotrAutopilot.setRunning(false);
         mouseManager.unregisterMouseListener(clickListener);
@@ -385,7 +390,19 @@ public class ConstsExpPlugin extends Plugin
             resetAlertState();
             evaluateAlerts();
             followGotrAutopilot();
+            followStayLoggedIn();
         });
+    }
+
+    // Stay Logged In is the Master Switch's exception: it isn't an alert, so it holds either way.
+    private void followStayLoggedIn()
+    {
+        setGameLogoutMinutes(config.stayLoggedIn() ? STAY_LOGGED_IN_MINUTES : GAME_LOGOUT_MINUTES);
+    }
+
+    private void setGameLogoutMinutes(int minutes)
+    {
+        client.setIdleTimeout((int) (TimeUnit.MINUTES.toMillis(minutes) / Constants.CLIENT_TICK_LENGTH));
     }
 
     // GOTR Autopilot runs while its switch and the Master Switch are on.
@@ -1314,7 +1331,7 @@ public class ConstsExpPlugin extends Plugin
         return currentPreset().holdsIdleWhileAnimating(config) && getCurrentAnimationId() != -1;
     }
 
-    /** Time since the last click or key press: the clock Logout's warning and the game's 25-minute logout run on. */
+    /** Time since the last click or key press: the clock Logout's warning and the game's logout run on. */
     long getMillisSinceUserInteraction()
     {
         return System.currentTimeMillis() - lastUserInteractionMillis;
@@ -1328,7 +1345,8 @@ public class ConstsExpPlugin extends Plugin
 
     long getLogoutTimerRemainingMillis()
     {
-        return Math.max(0L, LOGOUT_TIMEOUT_MS - getMillisSinceUserInteraction());
+        long gameLogoutMillis = (long) client.getIdleTimeout() * Constants.CLIENT_TICK_LENGTH;
+        return Math.max(0L, gameLogoutMillis - getMillisSinceUserInteraction());
     }
 
     long getPauseRemainingMillis()
